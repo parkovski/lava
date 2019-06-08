@@ -1,94 +1,106 @@
-#include "ash/symboltable.h"
+#include "ash/ash.h"
+#include "ash/terminal.h"
 #include "ash/lineeditor.h"
+#include "ash/sym/symboltable.h"
 
-#include <string>
-#include <string_view>
-#include <vector>
-#include <functional>
-#include <iostream>
-#include <future>
-
-#ifdef _WIN32
-
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-
-class ConsoleState {
-public:
-  explicit ConsoleState() noexcept {
-    _stdin = GetStdHandle(STD_INPUT_HANDLE);
-    _stdout = GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleMode(_stdin, &_stdinMode);
-    GetConsoleMode(_stdout, &_stdoutMode);
-    SetConsoleMode(_stdin, ENABLE_INSERT_MODE | ENABLE_QUICK_EDIT_MODE
-                           | ENABLE_EXTENDED_FLAGS
-                           | ENABLE_VIRTUAL_TERMINAL_INPUT);
-    SetConsoleMode(_stdout, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT
-                            | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-  }
-
-  ~ConsoleState() {
-    SetConsoleMode(_stdin, _stdinMode);
-    SetConsoleMode(_stdout, _stdoutMode);
-  }
-
-private:
-  HANDLE _stdin;
-  HANDLE _stdout;
-  DWORD _stdinMode;
-  DWORD _stdoutMode;
-};
-
-#else // !_WIN32
-
-#include <unistd.h>
-#include <termios.h>
-
-class ConsoleState {
-public:
-  explicit ConsoleState() noexcept {
-    tcgetattr(STDIN_FILENO, &_termAttrs);
-    struct termios newAttrs = _termAttrs;
-    newAttrs.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-    newAttrs.c_oflag |= (ONLCR);
-    newAttrs.c_cflag |= (CS8);
-    newAttrs.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-    newAttrs.c_cc[VMIN] = 1;
-    newAttrs.c_cc[VTIME] = 0;
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &newAttrs);
-  }
-
-  ~ConsoleState() {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &_termAttrs);
-  }
-
-private:
-  struct termios _termAttrs;
-};
-
-#endif // _WIN32
+#include <fstream>
 
 // symbol = index into list of interned strings
 // path = "string" of symbols (basic_string<index_t>).
 // a path can have data and attributes.
 // an attribute is also a path=>data mapping?
 
+using namespace ash;
+
+#if 0
+static Document getInteractiveDocument() {
+  Document doc("stdin");
+  //...
+  return doc;
+}
+
+static Document getSourceDocument(std::string_view path) {
+  //...
+}
+
+static Document getCommandLineDocument(int argc, char *argv[]) {
+  //...
+}
+#endif
+
+#if 0
+static int interactiveMain(int argc, char *argv[]) {
+  term::initialize();
+  term::setShellState();
+  ASH_SCOPEEXIT { term::restoreState(); };
+
+  /* Document doc("stdin");
+  LineEditor lned(&doc);
+  std::string line;
+  while (lned.readLine(line)) {
+    doc.append(line);
+  } */
+
+  return 0;
+}
+
+static int sourceMain(int argc, char *argv[]) {
+  // try to read the file.
+  if (std::ifstream file{argv[1], std::ios::binary | std::ios::ate}) {
+    auto size = file.tellg();
+    std::string text(size, '\0');
+    file.seekg(0);
+    if (!file.read(text.data(), size)) {
+      return 1;
+    }
+    Document doc(argv[1], std::move(text));
+  } else {
+    return 1;
+  }
+  return 0;
+}
+
+static int commandMain(int argc, char *argv[]) {
+  Document doc("command");
+  for (int i = 2; i < argc; ++i) {
+    doc.append(argv[i]);
+    doc.append(' ');
+  }
+  return 0;
+}
+#endif
+
 int main(int argc, char *argv[]) {
   using namespace ash;
-  [[maybe_unused]] ConsoleState _consoleState;
 
-  SymbolTable symtab;
-
-  std::string buf;
-  while (std::cin.good()) {
-    std::cout << "\033[91m+\033[m ";
-    std::getline(std::cin, buf);
-    if (buf == "\004") {
-      break;
-    }
-    std::cout << symtab.findOrInsertSymbol(buf).id() << "\n";
-    buf.clear();
+  if (argc == 1) {
+    // interactive mode
+    // return interactiveMain(argc, argv);
+  } else if (argc == 2) {
+    // argv[1] is a source file to execute.
+    // return sourceMain(argc, argv);
+  } else if (argv[1][0] == '-' && argv[1][1] == 'c' && argv[1][2] == '\0' &&
+             argc > 2) {
+    // treat the command line as a script
+    // return commandMain(argc, argv);
+  } else {
+    return 1;
   }
+
+  sym::SymbolTable symtab;
+  // DocumentAttributeSet pas(symtab);
+  // BaseLexer lexer;
+  // BaseParser parser;
+  // IrEmitter emitter;
+  // IrInterpreter interpreter;
+
+  // pas
+  //   .register<TextSpan>()
+  //   .register<>()
+  //   .register<>()
+  //   .register<>()
+
+  // Document prelude(pas);
 
   return 0;
 }

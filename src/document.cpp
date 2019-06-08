@@ -1,8 +1,42 @@
-#include <ash/document.h>
+#include "ash/document.h"
+
+#include <algorithm>
 
 using namespace ash;
 
-Document::Document() {
+// DocRangeAttributeIterator {{{
+// ========================================================================= //
+
+DocRangeAttributeIterator &DocRangeAttributeIterator::operator++() {
+  return *this;
+}
+
+DocRangeAttributeIterator &DocRangeAttributeIterator::operator--() {
+  return *this;
+}
+
+// ========================================================================= //
+// DocRangeAttributeIterator }}}
+
+// Document {{{
+// ========================================================================= //
+
+// Constructors {{{
+
+Document::Document(std::string name)
+  : _name{std::move(name)}
+{}
+
+Document::Document(std::string name, std::string text)
+  : _name{std::move(name)}, _buffer{std::move(text)}
+{}
+
+// Constructors }}}
+
+// Accessors {{{
+
+std::string_view Document::name() const {
+  return _name;
 }
 
 size_t Document::length() const {
@@ -47,6 +81,10 @@ size_t Document::fill(char *dest, size_t bufsize, size_t index,
   return count;
 }
 
+// Accessors }}}
+
+// Mutators {{{
+
 void Document::insert(size_t index, std::string_view str) {
   _buffer.insert(index, str);
 }
@@ -82,3 +120,74 @@ void Document::erase(size_t index, size_t count) {
 void Document::clear() {
   _buffer.clear();
 }
+
+// Mutators }}}
+
+// Range attribute definitions {{{
+
+size_t Document::findRangeAttributeDefIndex(std::string_view name) {
+  return (size_t)(-1);
+}
+
+// Range attribute definitions }}}
+
+// Range attributes {{{
+
+/// Find the first range that contains \c positiion.
+static size_t findFirstRangeIndex(const std::vector<DocRangeAttribute> &ranges,
+                                  size_t position) {
+  size_t lo = 0;
+  size_t hi = ranges.size();
+  size_t mid;
+  while (lo < hi) {
+    mid = (lo + hi) / 2;
+    auto const &attr = ranges[mid];
+    if (attr.begin > position) {
+    } else if (attr.end < position) {
+    } else {
+    }
+  }
+}
+
+DocRangeAttributeIterator Document::rangeAttributeBegin(size_t position,
+                                                        size_t kind) const {
+  // TODO: Find the index.
+  size_t index = 0;
+  return DocRangeAttributeIterator(this, position, index, kind);
+}
+
+DocRangeAttributeIterator Document::rangeAttributeEnd(size_t position,
+                                                      size_t kind) const {
+  return DocRangeAttributeIterator(this, position, kind);
+}
+
+DocRangeAttributeIterator Document::insertRangeAttribute(size_t kind,
+                                                         size_t begin,
+                                                         size_t end,
+                                                         void *data) {
+  // TODO: Find the index.
+  size_t index = 0;
+  return DocRangeAttributeIterator(this, begin, index, kind);
+}
+
+void
+Document::removeRangeAttribute(const DocRangeAttributeIterator &position) {
+  //
+}
+
+void Document::adjustRangeAttribute(DocRangeAttributeIterator &position,
+                                    size_t begin, size_t end) {
+}
+
+void Document::setRangeAttributeData(const DocRangeAttributeIterator &position,
+                                     void *data, void **oldData) {
+  void **pData = &_rangeAttributes[position._index].data;
+  if (oldData) {
+    *oldData = *pData;
+  } else {
+    rangeAttributeDef(position._kind)->destructor(*pData);
+  }
+  *pData = data;
+}
+
+// Range attributes }}}

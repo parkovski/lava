@@ -8,67 +8,144 @@
 
 namespace ash {
 
-class Document;
+struct DocRangeAttributeDef {
+  /// Name of the range attribute.
+  const char *name;
 
-class DocumentView {
-public:
-  explicit DocumentView(Document *document) noexcept
-    : _document{document}
+  /// Size of the data stored in this attribute.
+  size_t size;
+
+  void (*destructor)(void *data);
+
+  /// When true, attributes of the same kind may nest recursively.
+  bool allowNesting;
+
+  /// When true, multiple attributes of the same kind may start at the same
+  /// position.
+  bool allowOverlap;
+
+  template<typename T>
+  static DocRangeAttributeDef from(bool nest, bool overlap) {
+    return DocRangeAttributeDef {
+      T::reflectionName,
+      sizeof(T),
+      T::reflectionDestructor,
+      overlap,
+      overlap || nest,
+    };
+  }
+};
+
+struct DocRangeAttribute {
+  const DocRangeAttributeDef *def;
+  size_t begin;
+  size_t end;
+  void *data;
+};
+
+class DocRangeAttributeIterator {
+  friend class Document;
+  constexpr static size_t AnyKind = (size_t)(-1);
+
+  /// The document referred to by this iterator.
+  const Document *_document;
+  /// The text position in the document.
+  size_t _position;
+  /// The current attribute index referenced by the iterator.
+  size_t _index;
+  /// The kind of attribute we are iterating over.
+  size_t _kind;
+
+  /// End iterator constructor.
+  explicit DocRangeAttributeIterator(const Document *document,
+                                     size_t position,
+                                     size_t kind) noexcept
+    : _document{document},
+      _position{position},
+      _index{(size_t)(-1)},
+      _kind{kind}
   {}
-  virtual ~DocumentView() = 0;
 
-  virtual size_t size() const = 0;
+  /// Standard iterator constructor.
+  explicit DocRangeAttributeIterator(const Document *document,
+                                     size_t position,
+                                     size_t index,
+                                     size_t kind) noexcept
+    : _document{document},
+      _position{position},
+      _index{index},
+      _kind{kind}
+  {}
 
-  const Document *document() const
-  { return _document; }
+  /// Returns true if this iterator is comparable with \c other.
+  bool isComparable(const DocRangeAttributeIterator &other) const {
+    return _document == other._document
+        && _position == other._position;
+  }
 
-  Document *document()
-  { return _document; }
-
-private:
-  Document *_document;
-};
-
-/// Indexes a document by byte.
-class DocumentViewByte : public DocumentView {
 public:
-  using index_type = size_t;
+  DocRangeAttributeIterator(const DocRangeAttributeIterator &) = default;
 
-  using DocumentView::DocumentView;
+  DocRangeAttributeIterator &
+  operator=(const DocRangeAttributeIterator &) = default;
+
+  /// Returns true if \c *this and \c other refer to the same document,
+  /// position, and attribute index. The kind is ignored for comparisons,
+  /// as it just acts as an increment/decrement filter.
+  bool operator==(const DocRangeAttributeIterator &other) const {
+    return isComparable(other) && _index == other._index;
+  }
+
+  /// Returns true if any of the conditions of \c operator== are false.
+  bool operator!=(const DocRangeAttributeIterator &other) const {
+    return !(*this == other);
+  }
+
+  bool operator<(const DocRangeAttributeIterator &other) const {
+    return isComparable(other) && _index < other._index;
+  }
+
+  bool operator<=(const DocRangeAttributeIterator &other) const {
+    return isComparable(other) && _index <= other._index;
+  }
+
+  bool operator>(const DocRangeAttributeIterator &other) const {
+    return isComparable(other) && _index > other._index;
+  }
+
+  bool operator>=(const DocRangeAttributeIterator &other) const {
+    return isComparable(other) && _index >= other._index;
+  }
+
+  const DocRangeAttribute &operator*() const;
+
+  const DocRangeAttribute *operator->() const;
+
+  DocRangeAttributeIterator &operator++();
+
+  DocRangeAttributeIterator operator++(int) {
+    DocRangeAttributeIterator tmp(*this);
+    ++*this;
+    return tmp;
+  }
+
+  DocRangeAttributeIterator &operator--();
+
+  DocRangeAttributeIterator operator--(int) {
+    DocRangeAttributeIterator tmp(*this);
+    ++*this;
+    return tmp;
+  }
 };
-
-/// Indexes a document by UTF8 characters.
-class DocumentViewUtf8 : public DocumentView {
-public:
-  using index_type = size_t;
-
-  using DocumentView::DocumentView;
-};
-
-/// Indexes a document by line and column.
-class DocumentViewLine : public DocumentView {
-public:
-  struct index_type {
-    unsigned line;
-    unsigned column;
-  };
-
-  using DocumentView::DocumentView;
-};
-
-/// Indexes a document by persistent index.
-class DocumentViewPersistent : public DocumentView {
-  using index_type = size_t;
-
-  using DocumentView::DocumentView;
-};
-
 
 class Document {
 public:
-  explicit Document();
+  explicit Document(std::string name);
+  explicit Document(std::string name, std::string text);
 
-  // Accessing operations
+  // Accessing operations {{{
+
+  std::string_view name() const;
 
   /// Length in bytes of the document.
   size_t length() const;
@@ -110,7 +187,10 @@ public:
     return count + 1;
   }
 
-  // Mutating operations
+  // Accessing operations }}}
+
+  // Mutating operations {{{
+
   void insert(size_t index, std::string_view str);
   void insert(size_t index, char ch);
   void append(std::string_view str);
@@ -121,11 +201,93 @@ public:
   void erase(size_t index, size_t count);
   void clear();
 
+  // Mutating operations }}}
+
+  // Range attribute definitions {{{
+
+  static void defineRangeAttributes(const DocRangeAttributeDef *defs,
+                                    size_t count) {
+    _rangeAttributeDefs = defs;
+    _rangeAttributeDefCount = count;
+  }
+
+  static const DocRangeAttributeDef *rangeAttributeDef(size_t index)
+  { return _rangeAttributeDefs + index; }
+
+  static const size_t rangeAttributeDefCount()
+  { return _rangeAttributeDefCount; }
+
+  static size_t findRangeAttributeDefIndex(std::string_view name);
+
+  // Range attributes definitions }}}
+  
+  // Range attributes {{{
+
+  DocRangeAttributeIterator rangeAttributeBegin(size_t position,
+                                                size_t kind) const;
+
+  DocRangeAttributeIterator rangeAttributeBegin(size_t position) const
+  { return rangeAttributeBegin(position, DocRangeAttributeIterator::AnyKind); }
+
+  DocRangeAttributeIterator rangeAttributeEnd(size_t position,
+                                              size_t kind) const;
+
+  DocRangeAttributeIterator rangeAttributeEnd(size_t position) const
+  { return rangeAttributeEnd(position, DocRangeAttributeIterator::AnyKind); }
+
+  const DocRangeAttribute *
+  rangeAttributeForIterator(const DocRangeAttributeIterator &iterator) const
+  { return &_rangeAttributes[iterator._index]; }
+
+  DocRangeAttributeIterator insertRangeAttribute(size_t kind, size_t begin,
+                                                 size_t end, void *data);
+
+  void removeRangeAttribute(const DocRangeAttributeIterator &position);
+
+  /// Changes the applicable range for the attribute referred to by
+  /// \c position. The iterator is also updated to be valid for the new
+  /// position.
+  void adjustRangeAttribute(DocRangeAttributeIterator &position,
+                            size_t begin, size_t end);
+
+  const void *
+  rangeAttributeData(const DocRangeAttributeIterator &position) const {
+    return _rangeAttributes[position._index].data;
+  }
+
+  void *
+  rangeAttributeData(const DocRangeAttributeIterator &position) {
+    return _rangeAttributes[position._index].data;
+  }
+
+  /// \param position An iterator "pointer" to the attribute to update.
+  /// \param data The new data to place in the attribute.
+  /// \param oldData A pointer to receive the old data. If null, this
+  ///        parameter is ignored and the old data is deleted.
+  void setRangeAttributeData(const DocRangeAttributeIterator &position,
+                             void *data, void **oldData = nullptr);
+
+  // Range attributes }}}
+
 private:
+  std::string _name;
   std::string _buffer;
+
+  static const DocRangeAttributeDef *_rangeAttributeDefs;
+  static size_t _rangeAttributeDefCount;
+
+  std::vector<DocRangeAttribute> _rangeAttributes;
 };
 
+inline const DocRangeAttribute &DocRangeAttributeIterator::operator*() const {
+  return *_document->rangeAttributeForIterator(*this);
 }
+
+inline const DocRangeAttribute *DocRangeAttributeIterator::operator->() const {
+  return _document->rangeAttributeForIterator(*this);
+}
+
+} // namespace ash
 
 #endif /* ASH_DOCUMENT_H_ */
 

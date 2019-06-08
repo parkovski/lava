@@ -1,5 +1,5 @@
-#ifndef ASH_SYMBOL_H_
-#define ASH_SYMBOL_H_
+#ifndef ASH_SYM_SYMBOL_H_
+#define ASH_SYM_SYMBOL_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -7,7 +7,7 @@
 #include <functional>
 #include <limits>
 
-namespace ash {
+namespace ash::sym {
 
 /**
  * \brief Numeric type wrapper representing a unique interned string.
@@ -85,16 +85,16 @@ private:
   id_type _id;
 };
 
-} // namespace ash
+} // namespace ash::sym
 
 namespace std {
   /// Hash specialization for \c symbol_t equivalent to the \c id_type hash.
-  template<> struct hash<ash::symbol_t> {
-    size_t operator()(ash::symbol_t &s) const noexcept {
-      return s.id();
+  template<> struct hash<ash::sym::symbol_t> {
+    size_t operator()(ash::sym::symbol_t &s) const noexcept {
+      return hash<ash::sym::symbol_t::id_type>()(s.id());
     }
   };
 } // namespace std
 
-#endif /* ASH_SYMBOL_H_ */
+#endif /* ASH_SYM_SYMBOL_H_ */
 
