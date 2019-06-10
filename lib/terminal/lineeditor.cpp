@@ -1,6 +1,5 @@
-#include "ash/lineeditor.h"
-#include "ash/document.h"
-#include "ash/terminal.h"
+#include "ash/terminal/lineeditor.h"
+#include "ash/terminal/terminal.h"
 
 #include <cstdio>
 

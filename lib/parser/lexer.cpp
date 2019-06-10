@@ -1,277 +1,277 @@
-#include "ash/lexer.h"
+#include "ash/parser/lexer.h"
 
 #include <ostream>
 
 using namespace ash;
 
-std::ostream &ash::operator<<(std::ostream &os, Token token) {
+std::ostream &ash::operator<<(std::ostream &os, TokenKind token) {
   const char *text;
   switch (token) {
     default:
       text = "unknown";
       break;
 
-    case Token::Invalid:
+    case TokenKind::Invalid:
       text = "invalid";
       break;
 
-    case Token::Tilde:
+    case TokenKind::Tilde:
       text = "tilde";
       break;
 
-    case Token::At:
+    case TokenKind::At:
       text = "at";
       break;
 
-    case Token::Dollar:
+    case TokenKind::Dollar:
       text = "dollar";
       break;
 
-    case Token::LParen:
+    case TokenKind::LParen:
       text = "left parenthesis";
       break;
 
-    case Token::RParen:
+    case TokenKind::RParen:
       text = "right parenthesis";
       break;
 
-    case Token::LBracket:
+    case TokenKind::LBracket:
       text = "left square bracket";
       break;
 
-    case Token::RBracket:
+    case TokenKind::RBracket:
       text = "right square bracket";
       break;
 
-    case Token::LBrace:
+    case TokenKind::LBrace:
       text = "left brace";
       break;
 
-    case Token::RBrace:
+    case TokenKind::RBrace:
       text = "right brace";
       break;
 
-    case Token::Backslash:
+    case TokenKind::Backslash:
       text = "backslash";
       break;
 
-    case Token::Semi:
+    case TokenKind::Semi:
       text = "semi";
       break;
 
-    case Token::Comma:
+    case TokenKind::Comma:
       text = "comma";
       break;
 
-    case Token::Excl:
+    case TokenKind::Excl:
       text = "exclamation";
       break;
 
-    case Token::ExclEq:
+    case TokenKind::ExclEq:
       text = "exclamation equal";
       break;
 
-    case Token::Mod:
+    case TokenKind::Mod:
       text = "modulo";
       break;
 
-    case Token::ModEq:
+    case TokenKind::ModEq:
       text = "modulo equal";
       break;
 
-    case Token::Xor:
+    case TokenKind::Xor:
       text = "xor";
       break;
 
-    case Token::XorEq:
+    case TokenKind::XorEq:
       text = "xor equal";
       break;
 
-    case Token::Eq:
+    case TokenKind::Eq:
       text = "equal";
       break;
 
-    case Token::EqEq:
+    case TokenKind::EqEq:
       text = "double equal";
       break;
 
-    case Token::RArrowDbl:
+    case TokenKind::RArrowDbl:
       text = "right double arrow";
       break;
 
-    case Token::Minus:
+    case TokenKind::Minus:
       text = "minus";
       break;
 
-    case Token::MinusMinus:
+    case TokenKind::MinusMinus:
       text = "double minus";
       break;
 
-    case Token::MinusEq:
+    case TokenKind::MinusEq:
       text = "minus equal";
       break;
 
-    case Token::RArrowSng:
+    case TokenKind::RArrowSng:
       text = "right single arrow";
       break;
 
-    case Token::And:
+    case TokenKind::And:
       text = "and";
       break;
 
-    case Token::AndAnd:
+    case TokenKind::AndAnd:
       text = "double and";
       break;
 
-    case Token::AndEq:
+    case TokenKind::AndEq:
       text = "and equal";
       break;
 
-    case Token::Plus:
+    case TokenKind::Plus:
       text = "plus";
       break;
 
-    case Token::PlusPlus:
+    case TokenKind::PlusPlus:
       text = "double plus";
       break;
 
-    case Token::PlusEq:
+    case TokenKind::PlusEq:
       text = "plus equal";
       break;
 
-    case Token::Star:
+    case TokenKind::Star:
       text = "star";
       break;
 
-    case Token::StarStar:
+    case TokenKind::StarStar:
       text = "double star";
       break;
 
-    case Token::StarEq:
+    case TokenKind::StarEq:
       text = "star equal";
       break;
 
-    case Token::Gt:
+    case TokenKind::Gt:
       text = "greater";
       break;
 
-    case Token::Shr:
+    case TokenKind::Shr:
       text = "shift right";
       break;
 
-    case Token::GtEq:
+    case TokenKind::GtEq:
       text = "greater equal";
       break;
 
-    case Token::ShrEq:
+    case TokenKind::ShrEq:
       text = "shift right equal";
       break;
 
-    case Token::Colon:
+    case TokenKind::Colon:
       text = "colon";
       break;
 
-    case Token::ColonColon:
+    case TokenKind::ColonColon:
       text = "double colon";
       break;
 
-    case Token::Dot:
+    case TokenKind::Dot:
       text = "dot";
       break;
 
-    case Token::DotDot:
+    case TokenKind::DotDot:
       text = "double dot";
       break;
 
-    case Token::DotDotDot:
+    case TokenKind::DotDotDot:
       text = "triple dot";
       break;
 
-    case Token::Or:
+    case TokenKind::Or:
       text = "or";
       break;
 
-    case Token::OrOr:
+    case TokenKind::OrOr:
       text = "double or";
       break;
 
-    case Token::OrEq:
+    case TokenKind::OrEq:
       text = "or equal";
       break;
 
-    case Token::RTriangle:
+    case TokenKind::RTriangle:
       text = "right triangle";
       break;
 
-    case Token::Lt:
+    case TokenKind::Lt:
       text = "less";
       break;
 
-    case Token::Shl:
+    case TokenKind::Shl:
       text = "shift left";
       break;
 
-    case Token::LtEq:
+    case TokenKind::LtEq:
       text = "less equal";
       break;
 
-    case Token::ShlEq:
+    case TokenKind::ShlEq:
       text = "shift left equal";
       break;
 
-    case Token::Spaceship:
+    case TokenKind::Spaceship:
       text = "spaceship";
       break;
 
-    case Token::LTriangle:
+    case TokenKind::LTriangle:
       text = "left triangle";
       break;
 
-    case Token::LArrowSng:
+    case TokenKind::LArrowSng:
       text = "left single arrow";
       break;
 
-    case Token::Slash:
+    case TokenKind::Slash:
       text = "slash";
       break;
 
-    case Token::SlashEq:
+    case TokenKind::SlashEq:
       text = "slash equal";
       break;
 
-    case Token::Eof:
+    case TokenKind::Eof:
       text = "EOF";
       break;
 
-    case Token::Whitespace:
+    case TokenKind::Whitespace:
       text = "whitespace";
       break;
 
-    case Token::NewLine:
+    case TokenKind::NewLine:
       text = "new line";
       break;
 
-    case Token::LineComment:
+    case TokenKind::LineComment:
       text = "line comment";
       break;
 
-    case Token::BlockComment:
+    case TokenKind::BlockComment:
       text = "block comment";
       break;
 
-    case Token::Id:
+    case TokenKind::Id:
       text = "id";
       break;
 
-    case Token::Integer:
+    case TokenKind::Integer:
       text = "integer";
       break;
 
-    case Token::Float:
+    case TokenKind::Float:
       text = "float";
       break;
 
-    case Token::String:
+    case TokenKind::String:
       text = "string";
       break;
   }
@@ -302,37 +302,42 @@ void Lexer::newLine() {
 
 Token Lexer::lex() {
   if (_cur.pos >= _text.length()) {
-    return Token::Eof;
+    return {TokenKind::Eof, _cur.pos};
   }
   _prev = _cur;
 
   auto c = current();
+  TokenKind tk;
+
   if (c == ' ' || c == '\t') {
-    return lexWhitespace();
+    tk = lexWhitespace();
   } else if (c == '\r' || c == '\n') {
-    return lexNewLine();
+    tk = lexNewLine();
   } else if ((c >= 'a' && c <= 'z')
              || (c >= 'A' && c <= 'Z')
              || c == '_')
   {
-    return lexId();
+    tk = lexId();
   } else if (c >= '0' && c <= '9') {
-    return lexNumber();
+    tk = lexNumber();
   } else if (c == '\'' || c == '"' || c == '`') {
-    return lexString();
+    tk = lexString();
+  } else {
+    tk = lexOperator();
   }
-  return lexOperator();
+
+  return {tk, _prev.pos};
 }
 
-Token Lexer::lexWhitespace() {
+TokenKind Lexer::lexWhitespace() {
   int c = current();
   while (c == ' ' || c == '\t') {
     c = next();
   }
-  return Token::Whitespace;
+  return TokenKind::Whitespace;
 }
 
-Token Lexer::lexNewLine() {
+TokenKind Lexer::lexNewLine() {
   if (current() == '\r') {
     if (next() == '\n') {
       next();
@@ -342,10 +347,10 @@ Token Lexer::lexNewLine() {
     next();
     newLine();
   }
-  return Token::NewLine;
+  return TokenKind::NewLine;
 }
 
-Token Lexer::lexId() {
+TokenKind Lexer::lexId() {
   int c = next();
   while ((c >= 'a' && c <= 'z')
          || (c >= 'A' && c <= 'Z')
@@ -354,10 +359,10 @@ Token Lexer::lexId() {
   {
     c = next();
   }
-  return Token::Id;
+  return TokenKind::Id;
 }
 
-Token Lexer::lexNumber() {
+TokenKind Lexer::lexNumber() {
   int c = next();
   while (c >= '0' && c <= '9') {
     c = next();
@@ -367,28 +372,28 @@ Token Lexer::lexNumber() {
     while (c >= '0' && c <= '9') {
       c = next();
     }
-    return Token::Float;
+    return TokenKind::Float;
   }
-  return Token::Integer;
+  return TokenKind::Integer;
 }
 
-Token Lexer::lexString() {
+TokenKind Lexer::lexString() {
   int c = next();
   int quote = c;
   while (c != quote) {
     if (c == '\\') {
       next();
     } else if (c == '\r' || c == '\n' || c == 0) {
-      return Token::Invalid;
+      return TokenKind::Invalid;
     }
 
     c = next();
   }
   next();
-  return Token::String;
+  return TokenKind::String;
 }
 
-Token Lexer::lexLineComment() {
+TokenKind Lexer::lexLineComment() {
   int c = next();
   while (true) {
     if (c == '\r') {
@@ -396,27 +401,27 @@ Token Lexer::lexLineComment() {
         next();
       }
       newLine();
-      return Token::LineComment;
+      return TokenKind::LineComment;
     } else if (c == '\n') {
       next();
       newLine();
-      return Token::LineComment;
+      return TokenKind::LineComment;
     } else if (c == 0) {
-      return Token::LineComment;
+      return TokenKind::LineComment;
     } else {
       c = next();
     }
   }
 }
 
-Token Lexer::lexBlockComment() {
+TokenKind Lexer::lexBlockComment() {
   next();
   int c = next();
   while (true) {
     if (c == '*') {
       if (next() == '/') {
         next();
-        return Token::BlockComment;
+        return TokenKind::BlockComment;
       }
     } else if (c == '\r') {
       if ((c = next()) == '\n') {
@@ -427,149 +432,149 @@ Token Lexer::lexBlockComment() {
       c = next();
       newLine();
     } else if (c == 0) {
-      return Token::Invalid;
+      return TokenKind::Invalid;
     } else {
       c = next();
     }
   }
 }
 
-Token Lexer::lexOperator() {
+TokenKind Lexer::lexOperator() {
   int c;
 
   switch (current()) {
     default:
       next();
-      return Token::Invalid;
+      return TokenKind::Invalid;
 
     case '~':
       next();
-      return Token::Tilde;
+      return TokenKind::Tilde;
 
     case '@':
       next();
-      return Token::At;
+      return TokenKind::At;
 
     case '#':
       next();
-      return Token::Hash;
+      return TokenKind::Hash;
 
     case '$':
       next();
-      return Token::Dollar;
+      return TokenKind::Dollar;
 
     case '(':
       next();
-      return Token::LParen;
+      return TokenKind::LParen;
 
     case ')':
       next();
-      return Token::RParen;
+      return TokenKind::RParen;
 
     case '[':
       next();
-      return Token::LBracket;
+      return TokenKind::LBracket;
 
     case ']':
       next();
-      return Token::RBrace;
+      return TokenKind::RBrace;
 
     case '{':
       next();
-      return Token::LBrace;
+      return TokenKind::LBrace;
 
     case '}':
       next();
-      return Token::RBrace;
+      return TokenKind::RBrace;
 
     case '\\':
       next();
-      return Token::Backslash;
+      return TokenKind::Backslash;
 
     case ';':
       next();
-      return Token::Semi;
+      return TokenKind::Semi;
 
     case ',':
       next();
-      return Token::Comma;
+      return TokenKind::Comma;
 
     case '!':
       if (next() == '=') {
         next();
-        return Token::ExclEq;
+        return TokenKind::ExclEq;
       }
-      return Token::Excl;
+      return TokenKind::Excl;
 
     case '%':
       if (next() == '%') {
         next();
-        return Token::ModEq;
+        return TokenKind::ModEq;
       }
-      return Token::Mod;
+      return TokenKind::Mod;
 
     case '^':
       if (next() == '=') {
         next();
-        return Token::XorEq;
+        return TokenKind::XorEq;
       }
-      return Token::Xor;
+      return TokenKind::Xor;
 
     case '=':
       c = next();
       if (c == '=') {
         next();
-        return Token::EqEq;
+        return TokenKind::EqEq;
       } else if (c == '>') {
         next();
-        return Token::RArrowDbl;
+        return TokenKind::RArrowDbl;
       }
-      return Token::Eq;
+      return TokenKind::Eq;
 
     case '-':
       c = next();
       if (c == '-') {
         next();
-        return Token::MinusMinus;
+        return TokenKind::MinusMinus;
       } else if (c == '=') {
         next();
-        return Token::MinusEq;
+        return TokenKind::MinusEq;
       } else if (c == '>') {
         next();
-        return Token::RArrowSng;
+        return TokenKind::RArrowSng;
       }
-      return Token::Minus;
+      return TokenKind::Minus;
 
     case '&':
       c = next();
       if (c == '&') {
         next();
-        return Token::AndAnd;
+        return TokenKind::AndAnd;
       } else if (c == '=') {
         next();
-        return Token::AndEq;
+        return TokenKind::AndEq;
       }
-      return Token::And;
+      return TokenKind::And;
 
     case '+':
       c = next();
       if (c == '+') {
         next();
-        return Token::PlusPlus;
+        return TokenKind::PlusPlus;
       } else if (c == '=') {
         next();
-        return Token::PlusEq;
+        return TokenKind::PlusEq;
       }
-      return Token::Plus;
+      return TokenKind::Plus;
 
     case '*':
       c = next();
       if (c == '*') {
         next();
-        return Token::StarStar;
+        return TokenKind::StarStar;
       } else if (c == '=') {
         next();
-        return Token::StarEq;
+        return TokenKind::StarEq;
       }
 
     case '>':
@@ -577,73 +582,73 @@ Token Lexer::lexOperator() {
       if (c == '>') {
         if (next() == '=') {
           next();
-          return Token::ShrEq;
+          return TokenKind::ShrEq;
         }
-        return Token::Shr;
+        return TokenKind::Shr;
       } else if (c == '=') {
         next();
-        return Token::GtEq;
+        return TokenKind::GtEq;
       }
 
     case ':':
       if (next() == ':') {
         next();
-        return Token::ColonColon;
+        return TokenKind::ColonColon;
       }
-      return Token::Colon;
+      return TokenKind::Colon;
 
     case '.':
       if (next() == '.') {
         if (next() == '.') {
           next();
-          return Token::DotDotDot;
+          return TokenKind::DotDotDot;
         }
-        return Token::DotDot;
+        return TokenKind::DotDot;
       }
-      return Token::Dot;
+      return TokenKind::Dot;
 
     case '|':
       c = next();
       if (c == '|') {
         next();
-        return Token::OrOr;
+        return TokenKind::OrOr;
       } else if (c == '=') {
         next();
-        return Token::OrEq;
+        return TokenKind::OrEq;
       } else if (c == '>') {
         next();
-        return Token::RTriangle;
+        return TokenKind::RTriangle;
       }
-      return Token::Or;
+      return TokenKind::Or;
 
     case '<':
       c = next();
       if (c == '<') {
         if (next() == '=') {
           next();
-          return Token::ShlEq;
+          return TokenKind::ShlEq;
         }
-        return Token::Shl;
+        return TokenKind::Shl;
       } else if (c == '=') {
         if (next() == '>') {
           next();
-          return Token::Spaceship;
+          return TokenKind::Spaceship;
         }
-        return Token::LtEq;
+        return TokenKind::LtEq;
       } else if (c == '|') {
         next();
-        return Token::LTriangle;
+        return TokenKind::LTriangle;
       } else if (c == '-') {
         next();
-        return Token::LArrowSng;
+        return TokenKind::LArrowSng;
       }
-      return Token::Lt;
+      return TokenKind::Lt;
 
     case '/':
       if (next() == '=') {
         next();
-        return Token::SlashEq;
+        return TokenKind::SlashEq;
       }
-      return Token::Slash;
+      return TokenKind::Slash;
   }
 }

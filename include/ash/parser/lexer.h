@@ -6,7 +6,7 @@
 
 namespace ash {
 
-enum class Token {
+enum class TokenKind {
   Invalid = 0,
   Tilde,
   At,
@@ -77,12 +77,25 @@ enum class Token {
   String,
 };
 
-std::ostream &operator<<(std::ostream &, Token);
+struct Token {
+  TokenKind kind;
+  size_t position;
+
+  explicit Token() noexcept
+    : kind(TokenKind::Invalid), position(0)
+  {}
+
+  Token(TokenKind kind, size_t position) noexcept
+    : kind(kind), position(position)
+  {}
+};
+
+std::ostream &operator<<(std::ostream &, TokenKind);
 
 class Lexer {
 public:
   struct Position {
-    unsigned pos;
+    size_t pos;
     unsigned column;
     unsigned line;
   };
@@ -134,14 +147,14 @@ private:
   int next();
   void newLine();
 
-  Token lexWhitespace();
-  Token lexNewLine();
-  Token lexId();
-  Token lexNumber();
-  Token lexString();
-  Token lexLineComment();
-  Token lexBlockComment();
-  Token lexOperator();
+  TokenKind lexWhitespace();
+  TokenKind lexNewLine();
+  TokenKind lexId();
+  TokenKind lexNumber();
+  TokenKind lexString();
+  TokenKind lexLineComment();
+  TokenKind lexBlockComment();
+  TokenKind lexOperator();
 
   std::string_view _text;
   Position _prev;

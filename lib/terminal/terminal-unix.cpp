@@ -1,4 +1,4 @@
-#include "ash/terminal.h"
+#include "ash/terminal/terminal.h"
 
 #include <unistd.h>
 #include <termios.h>

@@ -1,29 +1,32 @@
 #include "ash/ash.h"
-#include "ash/sym/symboltable.h"
-#include "ash/lexer.h"
-#include "ash/lineeditor.h"
-#include "ash/terminal.h"
+#include "ash/terminal/terminal.h"
+#include "ash/terminal/lineeditor.h"
+#include "ash/parser/lexer.h"
+#include "ash/parser/parser.h"
+#include "ash/symbol/symboltable.h"
 
 #include <iostream>
 
 using namespace ash;
 
 int main() {
-  Lexer lexer;
-  LineEditor ed;
-  std::string line;
-
   term::initialize();
   ASH_SCOPEEXIT noexcept { term::restoreState(); };
+
+  LineEditor ed;
+  std::string line;
+  Lexer lexer;
+  Parser parser;
 
   while (ed.readLine(line)) {
     lexer.setText(line);
     Token t;
-    while ((t = lexer.lex()) != Token::Eof) {
+    do {
+      Token t = lexer.lex();
       auto const &p = lexer.currentPosition();
       std::cout << "\n(" << p.line << ":" << p.column << "): "
-                << t << ": \"" << lexer.currentText() << "\"\n";
-    }
+                << t.kind << ": \"" << lexer.currentText() << "\"\n";
+    } while (t.kind != TokenKind::Eof);
   }
   return 0;
 }

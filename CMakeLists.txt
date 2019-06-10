@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14.4 FATAL_ERROR)
 
 project(ash VERSION 0.1.0)
 
@@ -11,29 +11,26 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BUILD_TESTS "Build tests" OFF)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
-# find_package(rope CONFIG REQUIRED)
-
-set(SOURCES lexer.cpp lineeditor.cpp)
-
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/bin")
 if(WIN32)
-  list(APPEND SOURCES terminal-windows.cpp)
-elseif(UNIX)
-  list(APPEND SOURCES terminal-unix.cpp)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 else()
-  message(FATAL_ERROR "Unrecognized platform")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/lib")
 endif()
 
-list(TRANSFORM SOURCES PREPEND "src/")
+set(ASH_INCLUDE_DIR
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
+set(ASH_CONTRIB_INCLUDE_DIR
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/contrib>
+  $<INSTALL_INTERFACE:contrib/ash>
+)
 
-add_library(ashlib STATIC ${SOURCES})
-add_executable(ash src/main.cpp)
-target_link_libraries(ash ashlib)
-
+add_subdirectory(contrib)
+add_subdirectory(lib)
+add_subdirectory(bin)
 if(BUILD_TESTS)
   add_subdirectory(test)
 endif()

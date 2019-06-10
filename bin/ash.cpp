@@ -1,7 +1,7 @@
 #include "ash/ash.h"
-#include "ash/terminal.h"
-#include "ash/lineeditor.h"
-#include "ash/sym/symboltable.h"
+#include "ash/terminal/terminal.h"
+#include "ash/terminal/lineeditor.h"
+#include "ash/symbol/symboltable.h"
 
 #include <fstream>
 
