@@ -3,6 +3,7 @@
 #include <cmath>
 #include <type_traits>
 #include <algorithm>
+#include <functional>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -39,7 +40,7 @@ class Tree {
     static constexpr color_t Red = true;
 
     /// Construct a new node with empty children.
-    Node(Node *parent, ptrdiff_t offset, size_t length, unsigned kind, T &&data)
+    Node(Node *parent, ptrdiff_t offset, size_t length, T &&data)
       noexcept(std::is_nothrow_move_constructible_v<T>)
       : _parent(parent),
         _left(nullptr),
@@ -48,7 +49,6 @@ class Tree {
         _length(length),
         _min_offset(0),
         _max_offset(0),
-        _kind(kind),
         _data(std::move(data))
     {}
 
@@ -61,7 +61,6 @@ class Tree {
         _length(other.length()),
         _min_offset(other.min_offset()),
         _max_offset(other.max_offset()),
-        _kind(other.kind()),
         _data(std::move(other).data())
     {
       other.unlink();
@@ -89,7 +88,6 @@ class Tree {
       set_offset(other.offset());
       set_length(other.length());
       set_min_max(other.min_offset(), other.max_offset());
-      set_kind(other.kind());
       set_data(std::move(other).data());
 
       return *this;
@@ -104,7 +102,6 @@ class Tree {
         _offset(other.offset()),
         _length(other.length()),
         _max_length(other.max_length()),
-        _kind(other.kind()),
         _data(other.data())
     {
       const Node *other_parent = other.parent();
@@ -180,7 +177,6 @@ class Tree {
 
       set_length(other.length());
       set_max_length(other.max_length());
-      set_kind(other.kind());
       set_data(other.data());
 
       return *this;
@@ -393,14 +389,6 @@ class Tree {
       _max_offset = max_offset;
     }
 
-    unsigned kind() const {
-      return _kind;
-    }
-
-    void set_kind(unsigned new_kind) {
-      _kind = new_kind;
-    }
-
     const T &data() const & {
       return _data;
     }
@@ -421,13 +409,13 @@ class Tree {
       _data = new_data;
     }
 
-    unsigned print(ptrdiff_t parent_pos, unsigned cursor) {
-      const ptrdiff_t pos = _offset + parent_pos;
+    unsigned print(size_t parent_pos, unsigned cursor) {
+      const size_t pos = _offset + static_cast<ptrdiff_t>(parent_pos);
 
-      const auto min = min_offset() + parent_pos,
-                 max = max_offset() + parent_pos;
+      const size_t min = min_offset() + parent_pos,
+                   max = max_offset() + parent_pos;
 
-      const size_t textlen
+      const unsigned textlen
         = unsigned(1 + log10(pos))
         + unsigned(1 + log10(length()))
         + unsigned(1 + log10(pos + length()))
@@ -447,7 +435,7 @@ class Tree {
 
       const auto selfmid = textlen / 2;
       if (selfmid > leftlen) {
-        leftlen = unsigned(selfmid);
+        leftlen = selfmid;
       }
 
       std::cout << "\x1bM\x1b[" << (cursor + leftlen + 1) << "G/ \\"
@@ -491,8 +479,6 @@ class Tree {
     ptrdiff_t _max_offset;
     /// Interval length and node color.
     size_t _length;
-    /// Data type identifier.
-    unsigned _kind;
     /// Associated data.
     T _data;
   };
@@ -513,10 +499,10 @@ public:
     node_type _node;
 
     // Position of the current node.
-    ptrdiff_t _position;
+    size_t _position;
 
   public:
-    explicit Iterator(Node *node, ptrdiff_t position) noexcept
+    explicit Iterator(Node *node, size_t position) noexcept
       : _node(node),
         _position(position + node->offset())
     {}
@@ -528,20 +514,22 @@ public:
     {}
 
   private:
-    static bool no_condition(node_type, ptrdiff_t) {
+    static bool no_condition(node_type, size_t) {
       return true;
     }
 
   protected:
     template<typename F,
-             typename = std::is_invocable_r<bool, F, node_type, ptrdiff_t>>
+             typename = std::is_invocable_r<bool, F, const Node *, size_t>>
     [[nodiscard]] bool move_up_if(const F &condition) {
       auto parent = _node->parent();
-      if (!parent || !condition(parent, _position - _node->offset())) {
+      size_t parent_position = static_cast<ptrdiff_t>(_position)
+                               - _node->offset();
+      if (!parent || !condition(parent, parent_position)) {
         return false;
       }
 
-      _position -= _node->offset();
+      _position = parent_position;
       _node = parent;
       return true;
     }
@@ -551,15 +539,20 @@ public:
     }
 
     template<typename F,
-             typename = std::is_invocable_r<bool, F, node_type, ptrdiff_t>>
+             typename = std::is_invocable_r<bool, F, node_type, size_t>>
     [[nodiscard]] bool move_left_if(const F &condition) {
       auto left = _node->left();
-      if (!left || !condition(left, _position + left->offset())) {
+      if (!left) {
+        return false;
+      }
+      size_t left_position = static_cast<ptrdiff_t>(_position)
+                             + left->offset();
+      if (!condition(left, left_position)) {
         return false;
       }
 
       _node = left;
-      _position += _node->offset();
+      _position = left_position;
       return true;
     }
 
@@ -568,15 +561,20 @@ public:
     }
 
     template<typename F,
-             typename = std::is_invocable_r<bool, F, node_type, ptrdiff_t>>
+             typename = std::is_invocable_r<bool, F, node_type, size_t>>
     [[nodiscard]] bool move_right_if(const F &condition) {
       auto right = _node->right();
-      if (!right || !condition(right, _position + right->offset())) {
+      if (!right) {
+        return false;
+      }
+      size_t right_position = static_cast<ptrdiff_t>(_position)
+                              + right->offset();
+      if (!condition(right, right_position)) {
         return false;
       }
 
       _node = right;
-      _position += _node->offset();
+      _position = right_position;
       return true;
     }
 
@@ -585,7 +583,7 @@ public:
     }
 
     template<typename F,
-             typename = std::is_invocable_r<bool, F, node_type, ptrdiff_t>>
+             typename = std::is_invocable_r<bool, F, node_type, size_t>>
     [[nodiscard]] bool move_next_if(const F &condition) {
       auto node = _node;
       auto position = _position;
@@ -625,7 +623,7 @@ public:
     }
 
     template<typename F,
-             typename = std::is_invocable_r<bool, F, node_type, ptrdiff_t>>
+             typename = std::is_invocable_r<bool, F, node_type, size_t>>
     [[nodiscard]] bool move_prev_if(const F &condition) {
       auto node = _node;
       auto position = _position;
@@ -696,7 +694,8 @@ public:
       return !(*this == other);
     }
 
-    std::enable_if_t<!IsConst, T &> operator*() {
+    template<typename R = std::enable_if_t<!IsConst, T &>>
+    R operator*() {
       return _node->data();
     }
 
@@ -704,7 +703,8 @@ public:
       return _node->data();
     }
 
-    std::enable_if_t<!IsConst, T *> operator->() {
+    template<typename R = std::enable_if_t<!IsConst, T *>>
+    R operator->() {
       return &_node->data();
     }
 
@@ -718,10 +718,6 @@ public:
 
     size_t length() const {
       return _node->length();
-    }
-
-    unsigned kind() const {
-      return _node->kind();
     }
 
     Iterator &operator++() {
@@ -758,16 +754,17 @@ public:
 
     friend class BaseSearchIterator<true>;
 
-    ptrdiff_t _start;
-    ptrdiff_t _end;
+    size_t _start;
+    size_t _end;
 
-    explicit BaseSearchIterator(node_type node, ptrdiff_t position,
-                                ptrdiff_t start, ptrdiff_t end) noexcept
+    explicit BaseSearchIterator(node_type node, size_t position,
+                                size_t start, size_t end) noexcept
       : Iterator<IsConst>(node, position),
         _start(start),
         _end(end)
     {}
 
+  public:
     using typename Iterator<IsConst>::difference_type;
     using typename Iterator<IsConst>::value_type;
     using typename Iterator<IsConst>::pointer;
@@ -794,6 +791,7 @@ public:
     }
 
     bool operator==(const BaseSearchIterator &other) const {
+      return _node == other._node;
     }
 
     bool operator!=(const BaseSearchIterator &other) const {
@@ -813,40 +811,81 @@ public:
     using typename Iterator<IsConst>::node_type;                               \
                                                                                \
   public:                                                                      \
-    explicit Class(node_type node, ptrdiff_t position, ptrdiff_t start,        \
-                   ptrdiff_t end) noexcept                                     \
-      : BaseSearchIterator<IsConst>(node, position, start, end)                \
-    {                                                                          \
-      find_first();                                                            \
-    }                                                                          \
-                                                                               \
     using typename BaseSearchIterator<IsConst>::difference_type;               \
     using typename BaseSearchIterator<IsConst>::value_type;                    \
     using typename BaseSearchIterator<IsConst>::pointer;                       \
     using typename BaseSearchIterator<IsConst>::reference;                     \
     using typename BaseSearchIterator<IsConst>::iterator_category;             \
                                                                                \
-    /* All search iterators may be constructed or assigned from another. */    \
-    Class(const BaseSearchIterator<IsConst> &other) noexcept                   \
+    explicit Class(node_type node, size_t position, size_t start,              \
+                   size_t end) noexcept                                        \
+      : BaseSearchIterator<IsConst>(node, position, start, end)                \
+    {                                                                          \
+      if (node) {                                                              \
+        find_first();                                                          \
+      }                                                                        \
+    }                                                                          \
+                                                                               \
+    /* Copy constructor */                                                     \
+    Class(const Class &other) noexcept                                         \
       : BaseSearchIterator<IsConst>(other)                                     \
     {}                                                                         \
                                                                                \
-    /* All search iterators may be constructed or assigned from another. */    \
+    /* Convert from iterator to const_iterator. */                             \
     template<typename = std::enable_if_t<IsConst>>                             \
-    Class(const BaseSearchIterator<false> &other) noexcept                     \
+    Class(const Class<false> &other) noexcept                                  \
       : BaseSearchIterator<true>(other)                                        \
-    {}                                                                         \
+    {                                                                          \
+    }                                                                          \
                                                                                \
-    /* All search iterators may be constructed or assigned from another. */    \
-    Class &operator=(const BaseSearchIterator<IsConst> &other) noexcept {      \
-      BaseSearchIterator<IsConst>::operator=(other);                           \
+    /* Copy assignment */                                                      \
+    Class &operator=(const Class &other) noexcept {                            \
+      BaseSearchIterator::operator=(other);                                    \
+      return *this;                                                            \
+    }                                                                          \
+                                                                               \
+    /* Convert from iterator to const_iterator. */                             \
+    template<typename R = std::enable_if_t<IsConst, Class &>>                  \
+    R operator=(const Class<false> &other) noexcept {                          \
+      BaseSearchIterator::operator=(other);                                    \
       return *this;                                                            \
     }                                                                          \
                                                                                \
     /* All search iterators may be constructed or assigned from another. */    \
+    Class(const BaseSearchIterator<IsConst> &other) noexcept                   \
+      : BaseSearchIterator<IsConst>(other)                                     \
+    {                                                                          \
+      if (!is_match()) {                                                       \
+        find_first();                                                          \
+      }                                                                        \
+    }                                                                          \
+                                                                               \
+    /* Convert from iterator to const_iterator. */                             \
+    template<typename = std::enable_if_t<IsConst>>                             \
+    Class(const BaseSearchIterator<false> &other) noexcept                     \
+      : BaseSearchIterator<true>(other)                                        \
+    {                                                                          \
+      if (!is_match()) {                                                       \
+        find_first();                                                          \
+      }                                                                        \
+    }                                                                          \
+                                                                               \
+    /* All search iterators may be constructed or assigned from another. */    \
+    Class &operator=(const BaseSearchIterator<IsConst> &other) noexcept {      \
+      BaseSearchIterator<IsConst>::operator=(other);                           \
+      if (!is_match()) {                                                       \
+        find_first();                                                          \
+      }                                                                        \
+      return *this;                                                            \
+    }                                                                          \
+                                                                               \
+    /* Convert from iterator to const_iterator. */                             \
     template<typename R = std::enable_if_t<IsConst, Class &>>                  \
     R operator=(const BaseSearchIterator<false> &other) noexcept {             \
       BaseSearchIterator<true>::operator=(other);                              \
+      if (!is_match()) {                                                       \
+        find_first();                                                          \
+      }                                                                        \
       return *this;                                                            \
     }                                                                          \
                                                                                \
@@ -868,10 +907,43 @@ public:
       return BaseSearchIterator<IsConst>::operator!=(other);                   \
     }                                                                          \
                                                                                \
+    Class &operator++() {                                                      \
+      auto const is_possible_search_node =                                     \
+        [this](const Node * node, size_t pos) {                                \
+          return this->is_possible_search_node(node, pos);                     \
+        };                                                                     \
+                                                                               \
+      while (move_next_if(is_possible_search_node)) {                          \
+        if (is_match()) {                                                      \
+          return *this;                                                        \
+        }                                                                      \
+      }                                                                        \
+                                                                               \
+      /* Nothing found. */                                                     \
+      _node = nullptr;                                                         \
+      return *this;                                                            \
+    }                                                                          \
+                                                                               \
     Class operator++(int) {                                                    \
       Class current = *this;                                                   \
       ++*this;                                                                 \
       return current;                                                          \
+    }                                                                          \
+                                                                               \
+    Class &operator--() {                                                      \
+      auto const is_possible_search_node =                                     \
+        [this](const Node * node, size_t pos) {                                \
+          return this->is_possible_search_node(node, pos);                     \
+        };                                                                     \
+                                                                               \
+      while (move_prev_if(is_possible_search_node)) {                          \
+        if (is_match()) {                                                      \
+          return *this;                                                        \
+        }                                                                      \
+      }                                                                        \
+                                                                               \
+      _node = nullptr;                                                         \
+      return *this;                                                            \
     }                                                                          \
                                                                                \
     Class operator--(int) {                                                    \
@@ -882,22 +954,73 @@ public:
                                                                                \
   private:                                                                     \
 
-  // This iterator finds ranges that are outside the search range. That is,
-  // all returned ranges fully overlap the search range.
+  // This iterator finds ranges that are fully outside the search range. That
+  // is, all returned ranges fully overlap the search range.
   template<bool IsConst>
   class OuterSearchIterator final : public BaseSearchIterator<IsConst> {
     IMPLEMENT_SEARCH_ITERATOR(OuterSearchIterator)
 
+    bool is_possible_search_node(const Node *node, size_t pos) const {
+      const size_t search_length = _end - _start;
+      const size_t parent_pos = pos - node->offset();
+
+      return node->length() >= search_length &&
+             node->min_offset() + parent_pos <= _start &&
+             node->max_offset() + parent_pos >= _end;
+    }
+
+    bool is_match() const {
+      return _position <= _start &&
+             _position + _node->length() >= _end;
+    }
+
     void find_first() {
-    }
+      auto const search_length = _end - _start;
 
-  public:
-    OuterSearchIterator &operator++() {
-      return *this;
-    }
+      // First find the subtree with lengths greater or equal to the search
+      // length.
+      while (true) {
+        auto const node_length = _node->length();
+        if (node_length >= search_length) {
+          break;
+        }
 
-    OuterSearchIterator &operator--() {
-      return *this;
+        if (!move_right()) {
+          // No match found.
+          _node = nullptr;
+          return;
+        }
+      }
+
+      // Look down the left side until max - min is too small.
+      node_type matching_node = nullptr;
+      size_t matching_position;
+      auto const is_possible_search_node =
+        [this](const Node * node, size_t pos) {
+          return this->is_possible_search_node(node, pos);
+        };
+
+      while (move_left_if(is_possible_search_node)) {
+        if (is_match()) {
+          matching_node = _node;
+          matching_position = _position;
+        }
+      }
+      if (matching_node) {
+        _node = matching_node;
+        _position = matching_position;
+        return;
+      }
+
+      // Is it to the right?
+      while (move_next_if(is_possible_search_node)) {
+        if (is_match()) {
+          return;
+        }
+      }
+
+      // Didn't find anything.
+      _node = nullptr;
     }
   };
 
@@ -906,16 +1029,63 @@ public:
   class InnerSearchIterator final : public BaseSearchIterator<IsConst> {
     IMPLEMENT_SEARCH_ITERATOR(InnerSearchIterator)
 
+    bool is_possible_search_node(const Node *node, size_t pos) {
+      const size_t parent_pos = pos - node->offset();
+
+      return node->min_offset() + parent_pos < _end &&
+             node->max_offset() + parent_pos > _start;
+    }
+
+    bool is_match() const {
+      return _position >= _start &&
+             _position + _node->length() <= _end;
+    }
+
     void find_first() {
-    }
+      auto const search_length = _end - _start;
 
-  public:
-    InnerSearchIterator &operator++() {
-      return *this;
-    }
+      // First find the subtree with lengths less or equal to the search length.
+      while (true) {
+        auto const node_length = _node->length();
+        if (node_length <= search_length) {
+          break;
+        }
 
-    InnerSearchIterator &operator--() {
-      return *this;
+        if (!move_left()) {
+          // No match found.
+          _node = nullptr;
+          return;
+        }
+      }
+
+      // Look down the left side until min is too high or max is too low.
+      node_type matching_node = nullptr;
+      size_t matching_position;
+      auto const is_possible_search_node =
+        [this](const Node * node, size_t pos) {
+          return this->is_possible_search_node(node, pos);
+        };
+
+      while (move_left_if(is_possible_search_node)) {
+        if (is_match()) {
+          matching_node = _node;
+          matching_position = _position;
+        }
+      }
+      if (matching_node) {
+        _node = matching_node;
+        _position = matching_position;
+        return;
+      }
+
+      while (move_next_if(is_possible_search_node)) {
+        if (is_match()) {
+          return;
+        }
+      }
+
+      // Didn't find anything.
+      _node = nullptr;
     }
   };
 
@@ -924,16 +1094,50 @@ public:
   class OverlapSearchIterator final : public BaseSearchIterator<IsConst> {
     IMPLEMENT_SEARCH_ITERATOR(OverlapSearchIterator)
 
+    bool is_possible_search_node(const Node *node, size_t pos) const {
+      const size_t parent_pos = pos - node->offset();
+      const size_t min_pos = node->min_offset() + parent_pos;
+      const size_t max_pos = node->max_offset() + parent_pos;
+      
+      return min_pos < _end && max_pos > _start;
+    }
+
+    bool is_match() const {
+      return _position < _end && _position + _node->length() > _start;
+    }
+
     void find_first() {
-    }
+      auto const is_possible_search_node =
+        [this](const Node * node, size_t pos) {
+          return this->is_possible_search_node(node, pos);
+        };
 
-  public:
-    OverlapSearchIterator &operator++() {
-      return *this;
-    }
+      // We have to search everything that meets is_possible_search_node.
+      // Just start from the left, and if we don't find anything start looking
+      // at the right subtree.
+      node_type matching_node = nullptr;
+      size_t matching_position;
 
-    OverlapSearchIterator &operator--() {
-      return *this;
+      while (move_left_if(is_possible_search_node)) {
+        if (is_match()) {
+          matching_node = _node;
+          matching_position = _position;
+        }
+      }
+      if (matching_node) {
+        _node = matching_node;
+        _position = matching_position;
+        return;
+      }
+
+      while (move_next_if(is_possible_search_node)) {
+        if (is_match()) {
+          return;
+        }
+      }
+
+      // Nothing matching was found.
+      _node = nullptr;
     }
   };
 
@@ -942,8 +1146,31 @@ public:
   class EqualSearchIterator final : public BaseSearchIterator<IsConst> {
     IMPLEMENT_SEARCH_ITERATOR(EqualSearchIterator)
 
+    // Rule out any nodes whose length is not equal to the target length
+    // or whose min and max are out of range.
+    bool is_possible_search_node(const Node *node, size_t pos) const {
+      const size_t search_length = _end - _start;
+      const size_t parent_pos = pos - node->offset();
+      const size_t min_pos = node->min_offset() + parent_pos;
+      const size_t max_pos = node->max_offset() + parent_pos;
+
+      if (node->length() != search_length) {
+        return false;
+      }
+      if (min_pos > _start || max_pos < _end) {
+        return false;
+      }
+
+      return true;
+    }
+
+    bool is_match() const {
+      // is_possible_search_node already made sure lengths are equal.
+      return _position == _start;
+    }
+
     void find_first() {
-      const size_t search_length = static_cast<size_t>(_end - _start);
+      const size_t search_length = _end - _start;
       // First find the subtree with matching length, if it exists.
       while (true) {
         auto const node_length = _node->length();
@@ -967,40 +1194,23 @@ public:
 
       // Find the first element with a matching start position.
       // Min must be <= _start and max must be >= _end.
-      auto parent_pos = _position - _node->offset();
-
-      if (_node->min_offset() + parent_pos > _start ||
-          _node->max_offset() + parent_pos < _end) {
+      size_t parent_pos = _position - _node->offset();
+      if (static_cast<size_t>(_node->min_offset() + parent_pos) > _start ||
+          static_cast<size_t>(_node->max_offset() + parent_pos) < _end) {
         // The whole subtree is out of range, so there is no matching node.
         _node = nullptr;
         return;
       }
 
-      // Rule out any nodes whose length is not equal to the target length
-      // or whose min and max are out of range.
+      node_type matching_node = nullptr;
       auto const is_possible_search_node =
-        [this, search_length]
-        (node_type node, ptrdiff_t pos) -> bool {
-          if (!node) {
-            return false;
-          }
-          if (node->length() != search_length) {
-            return false;
-          }
-          if (node->min_offset() + pos - node->offset() > _start ||
-              node->max_offset() + pos - node->offset() < _end) {
-            return false;
-          }
-
-          return true;
+        [this](const Node * node, size_t pos) {
+          return this->is_possible_search_node(node, pos);
         };
 
-      auto top_node = _node;
-      auto top_position = _position;
-      node_type matching_node = nullptr;
       // First try to find the node in the left subtree.
-      while (move_prev_if(is_possible_search_node)) {
-        if (_position == _start) {
+      while (move_left_if(is_possible_search_node)) {
+        if (is_match()) {
           matching_node = _node;
         }
       }
@@ -1010,33 +1220,15 @@ public:
         return;
       }
 
-      // No match so far, was it the top node?
-      _node = top_node;
-      _position = top_position;
-      if (top_position == _start) {
-        return;
-      }
-
-      // Finally, check the right subtree.
+      // If it wasn't found, look to the right.
       while (move_next_if(is_possible_search_node)) {
-        if (_position == _start) {
+        if (is_match()) {
           return;
         }
       }
 
       // No match found.
       _node = nullptr;
-    }
-
-  public:
-    EqualSearchIterator &operator++() {
-      // TODO
-      return *this;
-    }
-
-    EqualSearchIterator &operator--() {
-      // TODO
-      return *this;
     }
   };
 
@@ -1045,8 +1237,8 @@ public:
   using const_iterator = Iterator<true>;
   using iterator = Iterator<false>;
 
-  using const_basic_search_iterator = BaseSearchIterator<true>;
-  using basic_search_iterator = BaseSearchIterator<false>;
+  using const_base_search_iterator = BaseSearchIterator<true>;
+  using base_search_iterator = BaseSearchIterator<false>;
 
   using const_outer_search_iterator = OuterSearchIterator<true>;
   using outer_search_iterator = OuterSearchIterator<false>;
@@ -1059,8 +1251,6 @@ public:
 
   using const_equal_search_iterator = EqualSearchIterator<true>;
   using equal_search_iterator = EqualSearchIterator<false>;
-
-  const static unsigned AnyKind = (unsigned)(-1);
 
   explicit Tree() noexcept
     : _root(nullptr)
@@ -1108,46 +1298,45 @@ public:
     return end();
   }
 
-  outer_search_iterator find_outer(ptrdiff_t start, ptrdiff_t end) {
+  outer_search_iterator find_outer(size_t start, size_t end) {
     return outer_search_iterator(_root, 0, start, end);
   }
 
-  const_outer_search_iterator find_outer(ptrdiff_t start, ptrdiff_t end) const {
+  const_outer_search_iterator find_outer(size_t start, size_t end) const {
     return const_outer_search_iterator(_root, 0, start, end);
   }
 
-  inner_search_iterator find_inner(ptrdiff_t start, ptrdiff_t end) {
+  inner_search_iterator find_inner(size_t start, size_t end) {
     return inner_search_iterator(_root, 0, start, end);
   }
 
-  const_inner_search_iterator find_inner(ptrdiff_t start, ptrdiff_t end) const {
+  const_inner_search_iterator find_inner(size_t start, size_t end) const {
     return const_inner_search_iterator(_root, 0, start, end);
   }
 
-  overlap_search_iterator find_overlap(ptrdiff_t start, ptrdiff_t end) {
+  overlap_search_iterator find_overlap(size_t start, size_t end) {
     return overlap_search_iterator(_root, 0, start, end);
   }
 
-  const_overlap_search_iterator find_overlap(ptrdiff_t start, ptrdiff_t end) const {
+  const_overlap_search_iterator find_overlap(size_t start, size_t end) const {
     return const_overlap_search_iterator(_root, 0, start, end);
   }
 
-  equal_search_iterator find_equal(ptrdiff_t start, ptrdiff_t end) {
+  equal_search_iterator find_equal(size_t start, size_t end) {
     return equal_search_iterator(_root, 0, start, end);
   }
 
-  const_equal_search_iterator find_equal(ptrdiff_t start, ptrdiff_t end) const {
+  const_equal_search_iterator find_equal(size_t start, size_t end) const {
     return const_equal_search_iterator(_root, 0, start, end);
   }
 
-  T &insert(ptrdiff_t position, size_t length, unsigned kind, T &&data) {
+  T &insert(size_t position, size_t length, T &&data) {
+    ptrdiff_t offset = static_cast<ptrdiff_t>(position);
     if (!_root) {
-      _root = new Node(nullptr, static_cast<ptrdiff_t>(position), length, kind,
-                       std::move(data));
+      _root = new Node(nullptr, offset, length, std::move(data));
       return _root->data();
     }
 
-    ptrdiff_t offset = static_cast<ptrdiff_t>(position);
     Node *node = _root;
     while (true) {
       offset -= node->offset();
@@ -1157,7 +1346,7 @@ public:
           node = node->left();
           continue;
         }
-        node = node->set_left(new Node(node, offset, length, kind,
+        node = node->set_left(new Node(node, offset, length,
                                        std::move(data)));
         break;
       } else {
@@ -1165,7 +1354,7 @@ public:
           node = node->right();
           continue;
         }
-        node = node->set_right(new Node(node, offset, length, kind,
+        node = node->set_right(new Node(node, offset, length,
                                         std::move(data)));
         break;
       }
@@ -1237,25 +1426,76 @@ int main() {
   GetConsoleMode(hstdout, &outmode);
   SetConsoleMode(hstdout, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
 
-  tree.insert(1, 5, 0, 0);
-  tree.insert(2, 3, 0, 0);
-  tree.insert(4, 7, 0, 0);
-  tree.insert(3, 9, 0, 0);
-  tree.insert(2, 4, 0, 0);
-  tree.insert(1, 9, 0, 0);
-  tree.insert(4, 5, 0, 0);
-  tree.insert(2, 6, 0, 0);
-  tree.insert(8, 9, 0, 0);
-  tree.insert(5, 8, 0, 0);
-  tree.insert(5, 9, 0, 0);
-  tree.insert(1, 2, 0, 0);
+  tree.insert(1, 5, 0);
+  tree.insert(2, 3, 0);
+  tree.insert(4, 7, 0);
+  tree.insert(3, 9, 0);
+  tree.insert(2, 4, 0);
+  tree.insert(1, 9, 0);
+  tree.insert(4, 5, 0);
+  tree.insert(2, 6, 0);
+  tree.insert(8, 9, 0);
+  tree.insert(5, 8, 0);
+  tree.insert(5, 9, 0);
+  tree.insert(1, 2, 0);
 
   tree.print();
-  auto it = tree.find_equal(2, 6);
-  if (it != tree.end()) {
-    std::cout << "Found (" << it.position() << ", " << it.position() + it.length() << ")\n";
-  } else {
-    std::cout << "Not found!\n";
+
+  std::string inp;
+  std::cout << "Search modes: [ou]tside, [i]nside, [ov]erlap, [e]qual.\n";
+  while (true) {
+    int mode = 0;
+    std::cout << "Mode > ";
+    std::getline(std::cin, inp);
+    if (inp.length()) {
+      if (inp[0] == 'o' && inp.length() > 1) {
+        if (inp[1] == 'u') {
+          mode = 1;
+        } else if (inp[1] == 'v') {
+          mode = 3;
+        }
+      } else if (inp[0] == 'i') {
+        mode = 2;
+      } else if (inp[0] == 'e') {
+        mode = 4;
+      }
+    }
+    std::cout << mode << "\n";
+    if (mode == 0) {
+      break;
+    }
+    std::cout << "Start> ";
+    std::getline(std::cin, inp);
+    int start = atoi(inp.c_str());
+    std::cout << "End  > ";
+    std::getline(std::cin, inp);
+    int end = atoi(inp.c_str());
+
+    auto printmatches = [&tree](auto it) {
+      auto end = tree.end();
+      while (it != end) {
+        std::cout << "Found (" << it.position() << ", "
+                  << it.position() + it.length() << ")\n";
+        ++it;
+      }
+    };
+
+    switch (mode) {
+    case 1:
+      printmatches(tree.find_outer(start, end));
+      break;
+    case 2:
+      printmatches(tree.find_inner(start, end));
+      break;
+    case 3:
+      printmatches(tree.find_overlap(start, end));
+      break;
+    case 4:
+      printmatches(tree.find_equal(start, end));
+      break;
+    default:
+      __assume(0);
+    }
   }
 
   SetConsoleMode(hstdout, outmode);
