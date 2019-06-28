@@ -88,19 +88,11 @@ int main(int argc, char *argv[]) {
   }
 
   sym::SymbolTable symtab;
-  // DocumentAttributeSet pas(symtab);
+  // Document document;
   // BaseLexer lexer;
   // BaseParser parser;
   // IrEmitter emitter;
   // IrInterpreter interpreter;
-
-  // pas
-  //   .register<TextSpan>()
-  //   .register<>()
-  //   .register<>()
-  //   .register<>()
-
-  // Document prelude(pas);
 
   return 0;
 }
