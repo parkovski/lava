@@ -57,140 +57,17 @@ struct Node {
       _offset(offset),
       _length(length),
       _min_offset(0),
-      _max_offset(0),
+      _max_offset(length),
       _data(std::move(data))
   {}
 
-  /// Construct a node by moving out of \c other. The color defaults to black.
-  Node(Node &&other) noexcept(std::is_nothrow_move_constructible_v<T>)
-    : _parent(other.parent()),
-      _left(other.left()),
-      _right(other.right()),
-      _offset(other.offset()),
-      _length(other.length()),
-      _min_offset(other.min_offset()),
-      _max_offset(other.max_offset()),
-      _data(std::move(other).data())
-  {
-    other.unlink();
-  }
+  // Nodes cannot be moved or copied, so it is ok to hold pointers to their
+  // inner data.
 
-  /// Move \c other into this node. Delete's this node's previous children
-  /// if they exist. Does not adjust this node's color.
-  Node &operator=(Node &&other)
-    noexcept(std::is_nothrow_move_assignable_v<T>)
-  {
-    set_parent(other.parent());
-
-    if (left()) {
-      delete left();
-    }
-    set_left(other.left());
-
-    if (right()) {
-      delete right();
-    }
-    set_right(other.right());
-
-    other.unlink();
-
-    set_offset(other.offset());
-    set_length(other.length());
-    set_min_max(other.min_offset(), other.max_offset());
-    set_data(std::move(other).data());
-
-    return *this;
-  }
-
-#if 0
-  /// Construct a node by copying from \c other. Makes a deep recursive copy
-  /// of the entire subtree. The new node's parent is empty (it is a root
-  /// node).
-  Node(const Node &other)
-    : _parent(nullptr),
-      _offset(other.offset()),
-      _length(other.length()),
-      _max_length(other.max_length()),
-      _data(other.data())
-  {
-    const Node *other_parent = other.parent();
-    while (other_parent) {
-      set_offset(offset() + other_parent->offset());
-      other_parent = other_parent->parent();
-    }
-
-    if (other.left()) {
-      // Temporarily erase parent so we don't do a recursive offset
-      // calculation for every node.
-      // Note: other is const so this won't work...
-      auto parent_tmp = other.left()->parent();
-      other.left->set_parent(nullptr);
-
-      set_left(new Node(*other.left()));
-      left()->set_parent(this);
-
-      other.left()->set_parent(parent_tmp);
-    } else {
-      set_left(nullptr);
-    }
-
-    if (other.right()) {
-      // Prevent recursive offset calculation.
-      auto parent_tmp = other.right()->parent();
-      other.right()->set_parent(nullptr);
-
-      set_right(new Node(*other.right()));
-      right()->set_parent(this);
-
-      other.right()->set_parent(parent_tmp);
-    } else {
-      set_right(nullptr);
-    }
-  }
-
-  Node &operator=(const Node &other) {
-    set_parent(nullptr);
-
-    set_offset(other.offset);
-    const Node *other_parent = other.parent();
-    while (other_parent) {
-      set_offset(offset() + other_parent->offset());
-      other_parent = other_parent->parent();
-    }
-
-    if (other.left()) {
-      // Prevent recursive offset calculation.
-      auto parent_tmp = other.left()->parent();
-      other.left()->set_parent(nullptr);
-
-      set_left(new Node(*other.left()));
-      left()->set_parent(this);
-
-      other.left()->set_parent(parent_tmp);
-    } else {
-      set_left(nullptr);
-    }
-
-    if (other.right()) {
-      // Prevent recursive offset calculation.
-      auto parent_tmp = other.right()->parent();
-      other.right()->set_parent(nullptr);
-
-      set_right(new Node(*other.right()));
-      right()->set_parent(this);
-
-      other.right()->set_parent(parent_tmp);
-    } else {
-      set_right(nullptr);
-    }
-
-    set_length(other.length());
-    set_max_length(other.max_length());
-    set_data(other.data());
-
-    return *this;
-  }
-#endif
+  Node(const Node &) = delete;
+  Node &operator=(const Node &) = delete;
+  Node(Node &&) = delete;
+  Node &operator=(Node &&) = delete;
 
   // Recursively delete children.
   ~Node() {
@@ -203,7 +80,7 @@ struct Node {
   }
 
   // Removes references to this node's parent, left and right, but does _not_
-  // remove their references to it.
+  // remove their references to this.
   void unlink() {
     set_parent(nullptr);
     set_left(nullptr);
@@ -213,30 +90,27 @@ struct Node {
   // Update this node's subtree length by comparing its length and its
   // children's subtree lengths.
   bool update_min_max() {
-    ptrdiff_t my_min, my_max;
     ptrdiff_t left_min, left_max;
     ptrdiff_t right_min, right_max;
-
-    my_min = 0;
-    my_max = length();
+    const ptrdiff_t my_min = 0;
+    const ptrdiff_t my_max = length();
 
     if (left()) {
-      left_min = left()->min_offset();
-      left_max = left()->max_offset();
+      left_min = left()->min_offset() + left()->offset();
+      left_max = left()->max_offset() + left()->offset();
     } else {
       left_min = left_max = 0;
     }
 
     if (right()) {
-      right_min = right()->min_offset();
-      right_max = right()->max_offset();
+      right_min = right()->min_offset() + right()->offset();
+      right_max = right()->max_offset() + right()->offset();
     } else {
       right_min = right_max = 0;
     }
 
-    // TODO: Self relative offsets
-    auto min = std::min({my_min, left_min, right_min}) + offset();
-    auto max = std::max({my_max, left_max, right_max}) + offset();
+    auto min = std::min({my_min, left_min, right_min});
+    auto max = std::max({my_max, left_max, right_max});
 
     if (min != _min_offset || max != _max_offset) {
       set_min_max(min, max);
@@ -259,13 +133,13 @@ struct Node {
     // When inserting, the ranges can only grow. When deleting, they can only
     // shrink.
     if constexpr (Inserting) {
-      if (_max_offset + parent->_offset > parent->_max_offset ||
-          _min_offset + parent->_offset < parent->_min_offset) {
+      if (_max_offset - _offset > parent->_max_offset ||
+          _min_offset - _offset < parent->_min_offset) {
         parent->update_min_max_recursive<true>();
       }
     } else {
-      if (_max_offset + parent->_offset < parent->_max_offset ||
-          _min_offset + parent->_offset > parent->_min_offset) {
+      if (_max_offset - _offset < parent->_max_offset ||
+          _min_offset - _offset > parent->_min_offset) {
         parent->update_min_max_recursive<false>();
       }
     }
@@ -339,22 +213,6 @@ struct Node {
     _offset = new_offset;
   }
 
-  // TODO: Make offsets relative to self.
-  size_t min_pos(size_t position) const {
-    return position - _offset + _min_offset;
-  }
-
-  size_t max_pos(size_t position) const {
-    return position - _offset + _max_offset;
-  }
-
-  void set_min_max_pos(size_t position, size_t min_position,
-                       size_t max_position)
-  {
-    _min_offset = min_position - position;
-    _max_offset = max_position - position;
-  }
-
   ptrdiff_t min_offset() const {
     return _min_offset;
   }
@@ -366,6 +224,33 @@ struct Node {
   void set_min_max(ptrdiff_t min_offset, ptrdiff_t max_offset) {
     _min_offset = min_offset;
     _max_offset = max_offset;
+  }
+
+  size_t parent_position(size_t position) const {
+    return position - _offset;
+  }
+
+  size_t position(size_t parent_pos) const {
+    return parent_pos + _offset;
+  }
+
+  void set_position(size_t parent_pos, size_t new_pos) {
+    _offset = static_cast<ptrdiff_t>(new_pos) - parent_pos;
+  }
+
+  size_t min_pos(size_t position) const {
+    return position + _min_offset;
+  }
+
+  size_t max_pos(size_t position) const {
+    return position + _max_offset;
+  }
+
+  void set_min_max_pos(size_t position, size_t min_position,
+                       size_t max_position)
+  {
+    _min_offset = min_position - position;
+    _max_offset = max_position - position;
   }
 
   const T &data() const & {
@@ -452,9 +337,9 @@ private:
   Node *_right;
   /// Interval start position offset from parent's start.
   ptrdiff_t _offset;
-  /// Minimum offset of subtree.
+  /// Minimum offset of subtree relative to my position.
   ptrdiff_t _min_offset;
-  /// Maximum offset of subtree.
+  /// Maximum offset of subtree relative to my position.
   ptrdiff_t _max_offset;
   /// Interval length and node color.
   size_t _length;
@@ -495,9 +380,11 @@ public:
     size_t _position;
 
   public:
+    /// \param node The initial node pointed to by this iterator.
+    /// \param position The position of \c node.
     explicit Iterator(node_type node, size_t position) noexcept
       : _node(node),
-        _position(position + node->offset())
+        _position(position)
     {}
 
     // End iterator constructor.
@@ -520,8 +407,7 @@ public:
     >
     [[nodiscard]] bool move_up_if(const F &condition) {
       auto parent = _node->parent();
-      size_t parent_position = static_cast<ptrdiff_t>(_position)
-                               - _node->offset();
+      auto parent_position = _node->parent_position(_position);
       if (!parent || !condition(parent, parent_position)) {
         return false;
       }
@@ -546,8 +432,7 @@ public:
       if (!left) {
         return false;
       }
-      size_t left_position = static_cast<ptrdiff_t>(_position)
-                             + left->offset();
+      auto left_position = left->position(_position);
       if (!condition(left, left_position)) {
         return false;
       }
@@ -572,8 +457,7 @@ public:
       if (!right) {
         return false;
       }
-      size_t right_position = static_cast<ptrdiff_t>(_position)
-                              + right->offset();
+      auto right_position = right->position(_position);
       if (!condition(right, right_position)) {
         return false;
       }
@@ -598,12 +482,12 @@ public:
       auto position = _position;
 
       if (node->right() &&
-          condition(node->right(), position + node->right()->offset())) {
+          condition(node->right(), node->right()->position(position))) {
         // If there is a right subtree, go all the way to its left side.
         node = node->right();
         position += node->offset();
         while (node->left() &&
-               condition(node->left(), position + node->left()->offset())) {
+               condition(node->left(), node->left()->position(position))) {
           node = node->left();
           position += node->offset();
         }
@@ -615,7 +499,7 @@ public:
           node = node->parent();
         }
         if (!node->parent() ||
-            !condition(node->parent(), position - node->offset())) {
+            !condition(node->parent(), node->parent_position(position))) {
           return false;
         }
         position -= node->offset();
@@ -643,11 +527,11 @@ public:
 
       // Do the same as move_next_if, but in reverse.
       if (node->left() &&
-          condition(node->left(), position + node->left()->offset())) {
+          condition(node->left(), node->left()->position(position))) {
         node = node->left();
         position += node->offset();
         while (node->right() &&
-               condition(node->right(), position + node->right()->offset())) {
+               condition(node->right(), node->right()->position(position))) {
           node = node->right();
           position += node->offset();
         }
@@ -657,7 +541,7 @@ public:
           node = node->parent();
         }
         if (!node->parent() ||
-            !condition(node->parent(), position - node->offset())) {
+            !condition(node->parent(), node->parent_position(position))) {
           return false;
         }
         position -= node->offset();
@@ -1268,13 +1152,13 @@ public:
   // Returns an iterator over all elements in the tree, starting with the
   // shortest.
   iterator begin() {
-    return iterator();
+    return iterator(_root, _root->offset());
   }
 
   // Returns a const_iterator over all elements in the tree, starting with the
   // shortest.
   const_iterator begin() const {
-    return const_iterator();
+    return const_iterator(_root, _root->offset());
   }
 
   // Returns a const_iterator over all elements in the tree, starting with the
@@ -1301,46 +1185,46 @@ public:
   // Returns an iterator over all nodes that entirely overlap the range
   // [start, end).
   outer_search_iterator find_outer(size_t start, size_t end) {
-    return outer_search_iterator(_root, 0, start, end);
+    return outer_search_iterator(_root, _root->offset(), start, end);
   }
 
   // Returns a const_iterator over all nodes that entirely overlap the range
   // [start, end).
   const_outer_search_iterator find_outer(size_t start, size_t end) const {
-    return const_outer_search_iterator(_root, 0, start, end);
+    return const_outer_search_iterator(_root, _root->offset(), start, end);
   }
 
   // Returns an iterator over all nodes inside the range [start, end).
   inner_search_iterator find_inner(size_t start, size_t end) {
-    return inner_search_iterator(_root, 0, start, end);
+    return inner_search_iterator(_root, _root->offset(), start, end);
   }
 
   // Returns a const_iterator over all nodes inside the range [start, end).
   const_inner_search_iterator find_inner(size_t start, size_t end) const {
-    return const_inner_search_iterator(_root, 0, start, end);
+    return const_inner_search_iterator(_root, _root->offset(), start, end);
   }
 
   // Returns an iterator over nodes that overlap [start, end) at any point.
   overlap_search_iterator find_overlap(size_t start, size_t end) {
-    return overlap_search_iterator(_root, 0, start, end);
+    return overlap_search_iterator(_root, _root->offset(), start, end);
   }
 
   // Returns a const_iterator over nodes that overlap [start, end) at any
   // point.
   const_overlap_search_iterator find_overlap(size_t start, size_t end) const {
-    return const_overlap_search_iterator(_root, 0, start, end);
+    return const_overlap_search_iterator(_root, _root->offset(), start, end);
   }
 
   // Returns an iterator over all nodes with the same range as the search
   // range.
   equal_search_iterator find_equal(size_t start, size_t end) {
-    return equal_search_iterator(_root, 0, start, end);
+    return equal_search_iterator(_root, _root->offset(), start, end);
   }
 
   // Returns a const_iterator over all nodes with the same range as the search
   // range.
   const_equal_search_iterator find_equal(size_t start, size_t end) const {
-    return const_equal_search_iterator(_root, 0, start, end);
+    return const_equal_search_iterator(_root, _root->offset(), start, end);
   }
 
   // Adds an interval to the tree.
@@ -1375,10 +1259,14 @@ public:
       }
     }
 
+    // Fix interval tracking.
+    node->parent()->update_min_max_recursive<true>();
     // Fix red-black properties.
     fix_for_insert(node);
-    // Fix interval tracking.
-    node->update_min_max_recursive<true>();
+
+    std::cout << "INSERTING (S=" << position << ", E=" << (position + length)
+              << ", L=" << length << ")\n\n";
+    print();
 
     return node->data();
   }
@@ -1411,7 +1299,7 @@ public:
       child = next_node->right();
 
       if (child) {
-        child->set_offset(next_node->offset() + child->offset());
+        child->set_offset(child->offset() + next_node->offset());
       }
 
       auto next_parent = next_node->parent();
@@ -1421,33 +1309,47 @@ public:
         } else {
           parent->set_right(next_node);
         }
+        next_node->set_position(node->parent_position(position), next_position);
       } else {
         next_node->set_parent(nullptr);
+        next_node->set_position(0, next_position);
         _root = next_node;
       }
 
-      parent = next_parent;
-      // It's possible that parent == node, so it's important that these
+      // It's possible that next_parent == node, so it's important that these
       // links get set before the ones on next_node below.
-      if (next_node == parent->left()) {
-        parent->set_left(child);
+      if (next_node == next_parent->left()) {
+        next_parent->set_left(child);
+        parent = next_parent;
       } else {
-        parent->set_right(child);
+        // If it's to the right, it has to be directly right of node, therefore
+        // next_parent == node. The child, currently node's right, will be
+        // moved under next_node.
+        next_parent->set_right(child);
+        parent = next_node;
       }
 
-      node->set_color(next_node->color());
       next_node->set_color(color);
-      next_node->set_offset(next_position - position + node->offset());
-      auto left = node->left(), right = node->right();
+
+      auto left = node->left();
       next_node->set_left(left);
       if (left) {
-        left->set_offset(position + left->offset() - next_position);
-      }
-      next_node->set_right(right);
-      if (right) {
-        right->set_offset(position + right->offset() - next_position);
+        left->set_position(next_position, left->position(position));
+        left->update_min_max();
       }
 
+      auto right = node->right();
+      next_node->set_right(right);
+      if (right) {
+        right->set_position(next_position, right->position(position));
+        right->update_min_max();
+      }
+
+      // Because the removed node was above parent here, its subtree cannot
+      // have gotten any smaller, but may have gotten larger. Nodes above
+      // next_node may have smaller subtrees, however, but these recursive
+      // calls will not overlap.
+      parent->update_min_max_recursive<true>();
       next_node->update_min_max_recursive<false>();
     } else {
       // Zero or one child. Just move the child up to node's position.
@@ -1455,20 +1357,24 @@ public:
         child = node->left();
       }
       // Move child into the place of node.
-      if (child) {
-        child->set_offset(child->offset() + node->offset());
-      }
       if (parent) {
         if (node == parent->left()) {
           parent->set_left(child);
         } else {
           parent->set_right(child);
         }
+        if (child) {
+          child->set_offset(child->offset() + node->offset());
+        }
         // Because a node was removed, the subtree length may now be smaller.
         parent->update_min_max_recursive<false>();
       } else {
         _root = child;
-        child->set_parent(nullptr);
+        if (child) {
+          child->set_parent(nullptr);
+          child->set_offset(child->offset() + node->offset());
+          child->update_min_max();
+        }
       }
     }
 
@@ -1569,7 +1475,7 @@ private:
     grandparent->set_color(Red);
   }
 
-  // Assumes node is red, original node was black, parent is valid.
+  // Assumes node is black, parent is valid.
   void fix_for_erase(Node *node) {
     auto parent = node->parent();
     auto sibling = node->sibling();
@@ -1644,7 +1550,8 @@ private:
     old_pivot->set_offset(-new_pivot_offset);
     new_pivot->set_offset(old_pivot_offset + new_pivot_offset);
 
-    new_pivot->set_min_max(old_pivot->min_offset(), old_pivot->max_offset());
+    new_pivot->set_min_max(old_pivot->min_offset() - new_pivot_offset,
+                           old_pivot->max_offset() - new_pivot_offset);
     old_pivot->update_min_max();
 
     if (old_pivot == _root) {
@@ -1685,18 +1592,18 @@ int main() {
   GetConsoleMode(hstdout, &outmode);
   SetConsoleMode(hstdout, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
 
-  tree.insert(1, 5, 1);
-  tree.insert(2, 3, 2);
-  tree.insert(4, 7, 3);
-  tree.insert(3, 9, 4);
-  tree.insert(2, 4, 5);
-  tree.insert(1, 9, 6);
-  tree.insert(4, 5, 7);
-  tree.insert(2, 6, 8);
-  tree.insert(8, 9, 9);
-  tree.insert(5, 8, 10);
-  tree.insert(5, 9, 11);
-  tree.insert(1, 2, 12);
+  tree.insert(1, 5, 1050);
+  tree.insert(2, 3, 2030);
+  tree.insert(4, 7, 4070);
+  tree.insert(3, 9, 3090);
+  tree.insert(2, 4, 2040);
+  tree.insert(1, 9, 1090);
+  tree.insert(4, 5, 4050);
+  tree.insert(2, 6, 2060);
+  tree.insert(8, 9, 8090);
+  tree.insert(5, 8, 5080);
+  tree.insert(5, 9, 5090);
+  tree.insert(1, 2, 1020);
 
   tree.print();
 
