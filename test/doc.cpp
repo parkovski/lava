@@ -1,9 +1,7 @@
 #include "ash/ash.h"
 #include "ash/terminal/terminal.h"
 #include "ash/terminal/lineeditor.h"
-
-#define USE_INTERVAL_TREE_NAMESPACE
-#include "intervaltree/IntervalTree.h"
+#include "ash/collections/intervaltree.h"
 
 #include "rope/rope.h"
 
@@ -360,7 +358,7 @@ public:
 
 private:
   rope *_text;
-  interval_tree::IntervalTree<size_t, AttributeData *> _tree;
+  ash::collections::IntervalTree<AttributeData> _tree;
 };
 
 bool readpair(const std::string &s, size_t &first, size_t &second) {
