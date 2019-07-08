@@ -3,28 +3,44 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
+#include <iostream>
+
 using ash::collections::IntervalTree;
 
-int main() {
-  IntervalTree<int> tree;
+template<typename Tree>
+void print(const Tree &tree) {
+  for (auto const it : tree) {
+    std::cout << *it << " | ";
+  }
+  std::cout << "\n";
+}
 
-  tree.insert(1, 5, 1050);
-  tree.insert(2, 3, 2030);
-  tree.insert(4, 7, 4070);
-  tree.insert(3, 9, 3090);
-  tree.insert(2, 4, 2040);
-  tree.insert(1, 9, 1090);
-  tree.insert(4, 5, 4050);
-  tree.insert(2, 6, 2060);
-  tree.insert(8, 9, 8090);
-  tree.insert(5, 8, 5080);
-  tree.insert(5, 9, 5090);
-  tree.insert(1, 2, 1020);
+int main() {
+  IntervalTree<const char *> tree;
+
+#define MAKE_PAIR(a, b) #a ", " #b
+#define INSERT(a, b) tree.insert(a, b, MAKE_PAIR(a, b))
+  INSERT(1, 5);
+  INSERT(2, 3);
+  INSERT(4, 7);
+  INSERT(3, 9);
+  INSERT(2, 4);
+  INSERT(1, 9);
+  INSERT(4, 5);
+  INSERT(2, 6);
+  INSERT(8, 9);
+  INSERT(5, 8);
+  INSERT(5, 9);
+  INSERT(1, 2);
+
+  print(tree);
 
   tree.erase(tree.find_equal(4, 7));
   tree.erase(tree.find_inner(3, 10));
   tree.erase(tree.find_outer(6, 7));
   tree.erase(tree.find_overlap(1, 2));
+
+  print(tree);
 
   return 0;
 }

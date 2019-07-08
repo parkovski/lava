@@ -7,60 +7,57 @@ template<typename T>
 class EqualSearchIterator final : public SearchIteratorBase<T> {
   ASH_IMPLEMENT_SEARCH_ITERATOR(EqualSearchIterator)
 
-  // Rule out any nodes whose length is not equal to the target length
-  // or whose min and max are out of range.
+  // Rule out any nodes whose position is different from the start position or
+  // whose max is too small.
   bool is_possible_search_node(const Key<T> &key) const {
-    if (key.length() != _end - _start) {
-      return false;
-    }
-    if (key.node()->min_pos(key.begin()) > _start ||
-        key.node()->max_pos(key.begin()) < _end) {
+    if (key.start_pos() != _start ||
+        key.node()->max_pos(key.start_pos()) < _end) {
       return false;
     }
 
     return true;
   }
 
-  // A match has to start and end exactly on the search range.
+  // A match has to start and end exactly on the search range. We only need to
+  // compare the end position, since we will only be looking at nodes with
+  // equal start positions.
   bool is_match() const {
-    return _key.begin() == _start &&
-           _key.end()   == _end;
+    return _key.end_pos() == _end;
   }
 
   void find_first() {
-    const size_t search_length = _end - _start;
-
-    // First find the subtree with matching length, if it exists, making
-    // sure to only look at subtrees with a valid min and max.
-    while (_key.node()->min_pos(_key.begin()) <= _start
-        && _key.node()->max_pos(_key.begin()) >= _end) {
-      auto const node_length = _key.length();
-      if (node_length > search_length) {
+    // Find the top-most node with a matching start position.
+    while (true) {
+      if (_start < _key.start_pos()) {
         if (!move_left()) {
-          // No matching length exists.
           _key = nullptr;
           return;
         }
-      } else if (node_length < search_length) {
+      } else if (_start > _key.start_pos()) {
         if (!move_right()) {
-          // No matching length exists.
           _key = nullptr;
           return;
         }
       } else {
-        // Lengths are equal.
         break;
       }
     }
 
-    // Find the first element with a matching start position.
+    // If the whole subtree is too small, since this is the top-most node,
+    // there is no match in the tree.
+    if (_key.node()->max_pos(_key.start_pos()) < _end) {
+      _key = nullptr;
+      return;
+    }
+
     using namespace std::placeholders;
     auto const is_possible_search_node = std::bind(
       &EqualSearchIterator::is_possible_search_node,
       this, _1
     );
 
-    // First move as far left as possible.
+    // There may be more than one node with the same start position, so first
+    // move as far left as possible.
     while (move_left_if(is_possible_search_node)) {
     }
 

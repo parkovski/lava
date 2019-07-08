@@ -8,35 +8,27 @@ template<typename T>
 class OuterSearchIterator final : public SearchIteratorBase<T> {
   ASH_IMPLEMENT_SEARCH_ITERATOR(OuterSearchIterator)
 
-  // For an outer range search, we only care about the subtree with lengths
-  // of at least the search length, where the min is at or before the start
-  // and the max is at or after the end.
+  // For an outer range search, we only care about nodes starting at or before
+  // the search start with a max at or after the search end.
   bool is_possible_search_node(const Key<T> &key) const {
-    const size_t search_length = _end - _start;
-
-    return key.length() >= search_length &&
-           key.node()->min_pos(key.begin()) <= _start &&
-           key.node()->max_pos(key.begin()) >= _end;
+    return key.start_pos() <= _start &&
+           key.node()->max_pos(key.start_pos()) >= _end;
   }
 
-  // Checks whether the current node fully covers the search range.
+  // Checks whether the current node fully covers the search range. We already
+  // excluded nodes after the start, so just compare with the end.
   bool is_match() const {
-    return _key.begin() <= _start &&
-           _key.end()   >= _end;
+    return _key.end_pos() >= _end;
   }
 
   // Find the shortest (left-most) interval that satisfies the search.
   void find_first() {
     auto const search_length = _end - _start;
 
-    // First find the subtree with lengths greater or equal to the search
-    // length.
-    while (_key.length() < search_length) {
-      if (!move_right()) {
-        // No match found.
-        _key = nullptr;
-        return;
-      }
+    // First find the smallest subtree with a max greater or equal to end.
+    while (move_left_if([=](const Key<T> &key) {
+                          return key.node()->max_pos(key.start_pos()) >= _end;
+                        })) {
     }
 
     using namespace std::placeholders;
@@ -44,10 +36,6 @@ class OuterSearchIterator final : public SearchIteratorBase<T> {
       &OuterSearchIterator::is_possible_search_node,
       this, _1
     );
-
-    // Look down the left side until max - min is too small.
-    while (move_left_if(is_possible_search_node)) {
-    }
 
     // Is it the minimum possible?
     if (is_match()) {

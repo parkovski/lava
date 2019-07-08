@@ -126,15 +126,11 @@ struct Key {
     return *this;
   }
 
-  // Equality comparison between two keys, regardless of constness of T.
-  template<typename U, typename = if_noconst_same_t<T, U>>
-  bool operator==(const Key<U> &other) {
+  bool operator==(const Key<const T> &other) const {
     return _node == other._node;
   }
 
-  // Inequality comparison between two keys, regardless of constness of T.
-  template<typename U, typename = if_noconst_same_t<T, U>>
-  bool operator!=(const Key<U> &other) {
+  bool operator!=(const Key<const T> &other) const {
     return !(*this == other);
   }
 
@@ -144,12 +140,12 @@ struct Key {
   }
 
   // The start position (inclusive) of the interval.
-  size_t begin() const {
+  size_t start_pos() const {
     return _position;
   }
 
   // The end position (exclusive) of the interval.
-  size_t end() const {
+  size_t end_pos() const {
     return _position + _node->length();
   }
 

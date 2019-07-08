@@ -7,18 +7,18 @@ template<typename T>
 class OverlapSearchIterator final : public SearchIteratorBase<T> {
   ASH_IMPLEMENT_SEARCH_ITERATOR(OverlapSearchIterator)
 
-  // For overlapping nodes, length doesn't matter and we have to look at
-  // any node with a min before end and a max after start.
+  // For overlapping nodes, we have to look at any node starting before end
+  // with a max after start.
   bool is_possible_search_node(const Key<T> &key) const {
-    return key.node()->min_pos(key.begin()) < _end &&
-           key.node()->max_pos(key.begin()) > _start;
+    return key.start_pos() < _end &&
+           key.node()->max_pos(key.start_pos()) > _start;
   }
 
   // A match is any node that starts before the end of the search range and
-  // ends after its start.
+  // ends after its start. We ruled out anything starting after the search
+  // end already, so just compare to the start.
   bool is_match() const {
-    return _key.begin() < _end &&
-           _key.end()   > _start;
+    return _key.end_pos() > _start;
   }
 
   void find_first() {
@@ -28,10 +28,16 @@ class OverlapSearchIterator final : public SearchIteratorBase<T> {
       this, _1
     );
 
-    // We have to search everything that meets is_possible_search_node.
-    // Just start from the left, and if we don't find anything start looking
-    // at the right subtree.
-    while (move_left_if(is_possible_search_node)) {
+    // Move to the node with the smallest possible max.
+    while (move_left_if([=](const Key<T> &key) {
+                          return key.node()->max_pos(key.start_pos()) > _start;
+                        })) {
+    }
+
+    // If the start position is too high, there are no matches.
+    if (_key.start_pos() >= _end) {
+      _key = nullptr;
+      return;
     }
 
     // If it's here, it's the left-most one.

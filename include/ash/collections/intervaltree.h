@@ -54,19 +54,31 @@ public:
   }
 
   // Returns an iterator over all elements in the tree, starting with the
-  // shortest.
+  // left-most.
   iterator begin() {
-    return iterator(_root, _root->offset());
+    auto node = _root;
+    size_t position = _root->offset();
+    while (node->left()) {
+      node = node->left();
+      position += node->offset();
+    }
+    return iterator(node, position);
   }
 
   // Returns a const_iterator over all elements in the tree, starting with the
-  // shortest.
+  // left-most.
   const_iterator begin() const {
-    return const_iterator(_root, _root->offset());
+    auto node = _root;
+    size_t position = _root->offset();
+    while (node->left()) {
+      node = node->left();
+      position += node->offset();
+    }
+    return const_iterator(node, position);
   }
 
   // Returns a const_iterator over all elements in the tree, starting with the
-  // shortest.
+  // left-most.
   const_iterator cbegin() const {
     return begin();
   }
@@ -119,6 +131,16 @@ public:
     return const_overlap_search_iterator(_root, _root->offset(), start, end);
   }
 
+  // Returns an iterator over nodes that contain position.
+  overlap_search_iterator find(size_t position) {
+    return find_overlap(position, position + 1);
+  }
+
+  // Returns an iterator over nodes that contain position.
+  const_overlap_search_iterator find(size_t position) const {
+    return find_overlap(position, position + 1);
+  }
+
   // Returns an iterator over all nodes with the same range as the search
   // range.
   equal_search_iterator find_equal(size_t start, size_t end) {
@@ -131,46 +153,97 @@ public:
     return const_equal_search_iterator(_root, _root->offset(), start, end);
   }
 
+  /// Insert an interval by constructing the data in place.
+  /// \param start The start position of the interval (inclusive).
+  /// \param end The end position of the interval (exclusive).
+  /// \param args The arguments to pass to the data constructor.
   template<typename... Args>
   T &insert(size_t start, size_t end, Args &&...args) {
     return insert_node(start, end, new node_t<T>(std::forward<Args>(args)...));
   }
 
+  /// Remove an interval from the tree.
+  /// \param where An iterator pointing to the interval to remove.
   void erase(const_iterator where) {
     delete extract(where);
   }
 
-  iterator move(iterator where, size_t new_start, size_t new_end) {
-    node_t<T> *node;
-    // This pushes the node down to the bottom of the tree. It would be better
-    // to move it up ala splay tree.
-    insert_node(new_start, new_end, node = extract(where));
-    return iterator(node, new_start);
+  /// Shifts intervals by inserting or removing space. Overlapping intervals
+  /// are expanded or shortened. Intervals entirely inside removed space are
+  /// removed from the tree.
+  /// \param position The position to insert or remove space at.
+  /// \param space The amount of space to insert if positive, or to remove if
+  ///        negative.
+  void shift(size_t position, ptrdiff_t space) {
+    if (space == 0 || !_root) {
+      return;
+    }
+
+    // For both inserting and removing, nodes left of position are unchanged.
+    auto end = this->end();
+    if (space > 0) {
+      // Inserting.
+      // - Nodes containing position will have their length expanded.
+      // - Nodes to the right of position will have their start position
+      //   shifted right.
+
+      // First shift everything right of position to the right.
+      for (auto it = find_inner(position + 1, _root->max_offset());
+           it != end; ++it) {
+      }
+      // Now find all nodes overlapping position and grow them. This may
+      // involve moving nodes to maintain sorting.
+      for (auto it = find(position); it != end; ++it) {
+        // resize(it->node(), it->length() + space);
+      }
+    } else {
+      // Removing. Note space is negative in this case.
+      // - Nodes inside [position, position - space) are removed.
+      // - Nodes overlapping the interval on the left have their length reduced.
+      // - Nodes overlapping the interval only on the right have their length
+      //   reduced and are also shifted left.
+      // - Nodes to the right of that interval are shifted left.
+
+      // First remove inside nodes.
+      for (auto it = find_inner(position, position - space); it != end; ++it) {
+      }
+
+      // Adjust overlapping nodes.
+      for (auto it = find_overlap(position,  position - space); it != end;
+           ++it) {
+      }
+
+      // Shift nodes right to the left.
+      for (auto it = find_inner(position - space, _root->max_offset());
+           it != end; ++it) {
+      }
+    }
   }
 
 private:
-  // Adds an interval to the tree. Sets the node's position, offset, min, max,
+  // Adds an interval to the tree. Sets the node's position, offset, max,
   // parent, and color. Does not clear left and right for pre-existing nodes.
   T &insert_node(size_t start, size_t end, node_t<T> *node) {
     size_t length = end - start;
-    ptrdiff_t offset = static_cast<ptrdiff_t>(start);
 
     node->set_length(length);
-    node->set_min_max(0, length);
+    node->set_max_offset(length);
 
     if (!_root) {
-      node->set_offset(offset);
+      node->set_offset(start);
       node->set_parent(nullptr);
       node->set_color(Black);
       return (_root = node)->data();
     }
 
-    // Find the appropriate leaf for the new node.
+    // Find the appropriate leaf for the new node. Nodes are ordered by start
+    // position.
     node_t<T> *parent = _root;
+    size_t position = 0;
     while (true) {
-      offset -= parent->offset();
+      position += parent->offset();
 
-      if (length < parent->length()) {
+      if (start < position) {
         if (parent->left()) {
           parent = parent->left();
           continue;
@@ -187,9 +260,9 @@ private:
       }
     }
 
-    node->set_offset(offset);
+    node->set_offset(static_cast<ptrdiff_t>(start) - position);
     // Fix interval tracking.
-    parent->update_min_max_recursive<true>();
+    parent->update_max_recursive<true>();
     // Fix red-black properties.
     fix_for_insert(node);
 
@@ -203,7 +276,7 @@ private:
     // to this node somewhere, we just don't want to go digging around trying
     // to find it.
     auto node = const_cast<node_t<T> *>(where->node());
-    auto position = where->begin();
+    auto position = where->start_pos();
     auto parent = node->parent();
     auto color = node->color();
     node_t<T> *child;
@@ -221,7 +294,7 @@ private:
       // the successor's child into the successor's place.
       ++where;
       auto next_node = const_cast<node_t<T> *>(where->node());
-      auto next_position = where->begin();
+      auto next_position = where->start_pos();
       child = next_node->right();
 
       if (child) {
@@ -261,22 +334,22 @@ private:
       next_node->set_left(left);
       if (left) {
         left->set_position(next_position, left->position(position));
-        left->update_min_max();
+        left->update_max();
       }
 
       auto right = node->right();
       next_node->set_right(right);
       if (right) {
         right->set_position(next_position, right->position(position));
-        right->update_min_max();
+        right->update_max();
       }
 
       // Because the removed node was above parent here, its subtree cannot
       // have gotten any smaller, but may have gotten larger. Nodes above
       // next_node may have smaller subtrees, however, but these recursive
       // calls will not overlap.
-      parent->update_min_max_recursive<true>();
-      next_node->update_min_max_recursive<false>();
+      parent->update_max_recursive<true>();
+      next_node->update_max_recursive<false>();
     } else {
       // Zero or one child. Just move the child up to node's position.
       if (!(child = node->right())) {
@@ -293,13 +366,13 @@ private:
           child->set_offset(child->offset() + node->offset());
         }
         // Because a node was removed, the subtree length may now be smaller.
-        parent->update_min_max_recursive<false>();
+        parent->update_max_recursive<false>();
       } else {
         _root = child;
         if (child) {
           child->set_parent(nullptr);
           child->set_offset(child->offset() + node->offset());
-          child->update_min_max();
+          child->update_max();
         }
       }
     }
@@ -471,9 +544,8 @@ private:
     old_pivot->set_offset(-new_pivot_offset);
     new_pivot->set_offset(old_pivot_offset + new_pivot_offset);
 
-    new_pivot->set_min_max(old_pivot->min_offset() - new_pivot_offset,
-                           old_pivot->max_offset() - new_pivot_offset);
-    old_pivot->update_min_max();
+    new_pivot->set_max_offset(old_pivot->max_offset() - new_pivot_offset);
+    old_pivot->update_max();
 
     if (old_pivot == _root) {
       (_root = new_pivot)->set_parent(nullptr);

@@ -56,31 +56,27 @@ struct Node {
 
   // Update this node's subtree length by comparing its length and its
   // children's subtree lengths.
-  bool update_min_max() {
-    ptrdiff_t left_min, left_max;
-    ptrdiff_t right_min, right_max;
-    const ptrdiff_t my_min = 0;
+  bool update_max() {
+    ptrdiff_t left_max;
+    ptrdiff_t right_max;
     const ptrdiff_t my_max = length();
 
     if (left()) {
-      left_min = left()->min_offset() + left()->offset();
       left_max = left()->max_offset() + left()->offset();
     } else {
-      left_min = left_max = 0;
+      left_max = 0;
     }
 
     if (right()) {
-      right_min = right()->min_offset() + right()->offset();
       right_max = right()->max_offset() + right()->offset();
     } else {
-      right_min = right_max = 0;
+      right_max = 0;
     }
 
-    auto min = std::min({my_min, left_min, right_min});
     auto max = std::max({my_max, left_max, right_max});
 
-    if (min != _min_offset || max != _max_offset) {
-      set_min_max(min, max);
+    if (max != _max_offset) {
+      set_max_offset(max);
       return true;
     }
 
@@ -90,8 +86,8 @@ struct Node {
   // Keeps updating the subtree lengths of the parent until one of them
   // contains a length that is not dependent on the updated node's length.
   template<bool Inserting>
-  void update_min_max_recursive() {
-    bool updated = update_min_max();
+  void update_max_recursive() {
+    bool updated = update_max();
     auto parent = this->parent();
     if (!updated || !parent) {
       return;
@@ -100,14 +96,12 @@ struct Node {
     // When inserting, the ranges can only grow. When deleting, they can only
     // shrink.
     if constexpr (Inserting) {
-      if (_max_offset - _offset > parent->_max_offset ||
-          _min_offset - _offset < parent->_min_offset) {
-        parent->update_min_max_recursive<true>();
+      if (_max_offset - _offset > parent->_max_offset) {
+        parent->update_max_recursive<true>();
       }
     } else {
-      if (_max_offset - _offset < parent->_max_offset ||
-          _min_offset - _offset > parent->_min_offset) {
-        parent->update_min_max_recursive<false>();
+      if (_max_offset - _offset < parent->_max_offset) {
+        parent->update_max_recursive<false>();
       }
     }
   }
@@ -188,16 +182,11 @@ struct Node {
     _offset = new_offset;
   }
 
-  ptrdiff_t min_offset() const {
-    return _min_offset;
-  }
-
   ptrdiff_t max_offset() const {
     return _max_offset;
   }
 
-  void set_min_max(ptrdiff_t min_offset, ptrdiff_t max_offset) {
-    _min_offset = min_offset;
+  void set_max_offset(ptrdiff_t max_offset) {
     _max_offset = max_offset;
   }
 
@@ -213,18 +202,11 @@ struct Node {
     _offset = static_cast<ptrdiff_t>(new_pos) - parent_pos;
   }
 
-  size_t min_pos(size_t position) const {
-    return position + _min_offset;
-  }
-
   size_t max_pos(size_t position) const {
     return position + _max_offset;
   }
 
-  void set_min_max_pos(size_t position, size_t min_position,
-                       size_t max_position)
-  {
-    _min_offset = min_position - position;
+  void set_max_pos(size_t position, size_t max_position) {
     _max_offset = max_position - position;
   }
 
@@ -265,8 +247,6 @@ private:
   Node *_right = nullptr;
   /// Interval start position offset from parent's start.
   ptrdiff_t _offset = 0;
-  /// Minimum offset of subtree relative to my position.
-  ptrdiff_t _min_offset = 0;
   /// Maximum offset of subtree relative to my position.
   ptrdiff_t _max_offset = 0;
   /// Interval length and node color.

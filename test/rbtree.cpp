@@ -1264,10 +1264,6 @@ public:
     // Fix red-black properties.
     fix_for_insert(node);
 
-    std::cout << "INSERTING (S=" << position << ", E=" << (position + length)
-              << ", L=" << length << ")\n\n";
-    print();
-
     return node->data();
   }
 
