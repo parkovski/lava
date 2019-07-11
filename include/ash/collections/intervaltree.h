@@ -22,8 +22,8 @@ public:
   using const_search_iterator = SearchIteratorBase<const T>;
   using search_iterator = SearchIteratorBase<T>;
 
-  using const_outer_search_iterator = OuterSearchIterator<const T>;
-  using outer_search_iterator = OuterSearchIterator<T>;
+  // using const_outer_search_iterator = OuterSearchIterator<const T>;
+  // using outer_search_iterator = OuterSearchIterator<T>;
 
   using const_inner_search_iterator = InnerSearchIterator<const T>;
   using inner_search_iterator = InnerSearchIterator<T>;
@@ -100,15 +100,15 @@ public:
 
   // Returns an iterator over all nodes that entirely overlap the range
   // [start, end).
-  outer_search_iterator find_outer(size_t start, size_t end) {
-    return outer_search_iterator(_root, _root->offset(), start, end);
-  }
+  // outer_search_iterator find_outer(size_t start, size_t end) {
+  //   return outer_search_iterator(_root, _root->offset(), start, end);
+  // }
 
   // Returns a const_iterator over all nodes that entirely overlap the range
   // [start, end).
-  const_outer_search_iterator find_outer(size_t start, size_t end) const {
-    return const_outer_search_iterator(_root, _root->offset(), start, end);
-  }
+  // const_outer_search_iterator find_outer(size_t start, size_t end) const {
+  //   return const_outer_search_iterator(_root, _root->offset(), start, end);
+  // }
 
   // Returns an iterator over all nodes inside the range [start, end).
   inner_search_iterator find_inner(size_t start, size_t end) {
@@ -175,11 +175,11 @@ public:
   /// \param space The amount of space to insert if positive, or to remove if
   ///        negative.
   void shift(size_t position, ptrdiff_t space) {
-    if (space == 0 || !_root) {
+    if (!_root || space == 0 ||
+        position >= static_cast<size_t>(_root->max_pos(_root->offset()))) {
       return;
     }
 
-    // For both inserting and removing, nodes left of position are unchanged.
     auto end = this->end();
     if (space > 0) {
       // Inserting.
@@ -188,39 +188,109 @@ public:
       //   shifted right.
 
       // First shift everything right of position to the right.
-      for (auto it = find_inner(position + 1, _root->max_offset());
-           it != end; ++it) {
-      }
-      // Now find all nodes overlapping position and grow them. This may
-      // involve moving nodes to maintain sorting.
+      shift_upper(position + 1, space);
+
+      // Now find all nodes overlapping position and grow them.
       for (auto it = find(position); it != end; ++it) {
-        // resize(it->node(), it->length() + space);
+        auto node = const_cast<node_t<T> *>(it->node());
+        node->set_length(it->length() + space);
+        node->update_max_recursive<true>();
       }
     } else {
       // Removing. Note space is negative in this case.
       // - Nodes inside [position, position - space) are removed.
-      // - Nodes overlapping the interval on the left have their length reduced.
-      // - Nodes overlapping the interval only on the right have their length
-      //   reduced and are also shifted left.
+      // - Nodes overlapping the interval on the left are shortened.
+      // - Nodes overlapping the interval only on the right are shortened and
+      //   are also shifted left.
       // - Nodes to the right of that interval are shifted left.
+      size_t cut_end = position - space;
 
-      // First remove inside nodes.
-      for (auto it = find_inner(position, position - space); it != end; ++it) {
+      // First remove inside nodes. Note the postfix increment - the order
+      // of the tree is maintained, but we have to move the iterator before
+      // removing the node it points to.
+      for (auto it = find_inner(position, cut_end); it != end; erase(it++)) {
       }
 
-      // Adjust overlapping nodes.
-      for (auto it = find_overlap(position,  position - space); it != end;
-           ++it) {
+      // Shorten the overlapping nodes and move nodes starting inside the
+      // removal interval to its start. After this loop is complete, nothing
+      // will be left that starts within the removal interval, so even though
+      // some nodes may move by different distances, all nodes on their left
+      // either start before the interval and are unaffected, or are also moved
+      // left to the start of the interval.
+      for (auto it = find_overlap(position, cut_end); it != end; ++it) {
+        auto node = const_cast<node_t<T> *>(it->node());
+        auto length = node->length();
+
+        if (it->start_pos() > position) {
+          // Right overlap only.
+          length -= cut_end - it->start_pos();
+          node->set_length(length);
+
+          // Adjust the offset and fix the child offsets.
+          auto start_ofs = it->start_pos() - position;
+          node->set_offset(node->offset() - start_ofs);
+          if (auto left = node->left(); left) {
+            left->set_offset(left->offset() + start_ofs);
+          }
+          if (auto right = node->right(); right) {
+            right->set_offset(right->offset() + start_ofs);
+          }
+
+          node->update_max_recursive<false>();
+          continue;
+        }
+
+        if (it->end_pos() < cut_end) {
+          // Left overlap only.
+          length -= it->end_pos() - position;
+        } else {
+          // Both overlap.
+          length += space;
+        }
+        node->set_length(length);
+        node->update_max_recursive<false>();
       }
 
-      // Shift nodes right to the left.
-      for (auto it = find_inner(position - space, _root->max_offset());
-           it != end; ++it) {
-      }
+      // Now the only thing left is to move nodes to the right of the interval
+      // left by the interval distance.
+      shift_upper(cut_end, space);
     }
   }
 
 private:
+  /// Shift the position of all nodes above a certain point.
+  /// \param position The start point to apply the shift.
+  /// \param shift The amount to add to or subtract from the positions.
+  void shift_upper(size_t position, ptrdiff_t shift) {
+    size_t current_pos = 0;
+    auto node = _root;
+    // Because node positions are represented as offsets from their parent,
+    // we only need to add the shift amount to the highest nodes, and then
+    // correct left children starting left of the position.
+    do {
+      current_pos += node->offset();
+      if (current_pos < position) {
+        node = node->right();
+        continue;
+      }
+
+      node->set_offset(node->offset() + shift);
+      // Don't update current_pos with the new offset here, as we still need
+      // to correct nodes that may have crossed position but shouldn't.
+      // Also don't update the max, because it is relative to self position.
+      do {
+        node = node->left();
+        if (!node) {
+          return;
+        }
+        current_pos += node->offset();
+      } while (current_pos >= position);
+
+      node->set_offset(node->offset() - shift);
+      node = node->right();
+    } while (node);
+  }
+
   // Adds an interval to the tree. Sets the node's position, offset, max,
   // parent, and color. Does not clear left and right for pre-existing nodes.
   T &insert_node(size_t start, size_t end, node_t<T> *node) {
@@ -537,17 +607,21 @@ private:
   }
 
   void fix_for_rotate(node_t<T> *old_pivot, node_t<T> *new_pivot,
-                      node_t<T> *parent) {
+                      node_t<T> *parent, node_t<T> *child) {
     auto old_pivot_offset = old_pivot->offset();
     auto new_pivot_offset = new_pivot->offset();
 
     old_pivot->set_offset(-new_pivot_offset);
     new_pivot->set_offset(old_pivot_offset + new_pivot_offset);
 
+    if (child) {
+      child->set_offset(child->offset() + new_pivot_offset);
+    }
+
     new_pivot->set_max_offset(old_pivot->max_offset() - new_pivot_offset);
     old_pivot->update_max();
 
-    if (old_pivot == _root) {
+    if (!parent) {
       (_root = new_pivot)->set_parent(nullptr);
     } else if (old_pivot == parent->left()) {
       parent->set_left(new_pivot);
@@ -559,19 +633,19 @@ private:
   void rotate_left(node_t<T> *pivot) {
     auto new_pivot = pivot->right();
     auto parent = pivot->parent();
-    pivot->set_right(new_pivot->left());
+    auto child = pivot->set_right(new_pivot->left());
     new_pivot->set_left(pivot);
 
-    fix_for_rotate(pivot, new_pivot, parent);
+    fix_for_rotate(pivot, new_pivot, parent, child);
   }
 
   void rotate_right(node_t<T> *pivot) {
     auto new_pivot = pivot->left();
     auto parent = pivot->parent();
-    pivot->set_left(new_pivot->right());
+    auto child = pivot->set_left(new_pivot->right());
     new_pivot->set_right(pivot);
 
-    fix_for_rotate(pivot, new_pivot, parent);
+    fix_for_rotate(pivot, new_pivot, parent, child);
   }
 
   node_t<T> *_root;

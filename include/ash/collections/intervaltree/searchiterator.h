@@ -185,7 +185,7 @@ protected:
                                                                                \
   private:                                                                     \
 
-#include "outersearchiterator.h"
+//#include "outersearchiterator.h"
 #include "innersearchiterator.h"
 #include "overlapsearchiterator.h"
 #include "equalsearchiterator.h"

@@ -6,5 +6,3 @@ target_link_libraries(symtab ashdocument ashparser ashsymbol ashterminal)
 
 add_executable(intervaltree intervaltree.cpp)
 target_link_libraries(intervaltree ashcollections)
-
-add_executable(rbtree rbtree.cpp)

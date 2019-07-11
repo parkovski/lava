@@ -7,62 +7,70 @@ template<typename T>
 class InnerSearchIterator final : public SearchIteratorBase<T> {
   ASH_IMPLEMENT_SEARCH_ITERATOR(InnerSearchIterator)
 
-  // Subtrees of interest have a start position between the search range.
-  // We only need to compare against the end since we skip everything before
-  // start.
+  // Based on starting at the lowest possible start and moving to eligible
+  // higher nodes.
   bool is_possible_search_node(const Key<T> &key) {
-    return key.start_pos() <= _end;
+    if (key.start_pos() < _start) {
+      return key.node()->max_pos(key.start_pos()) > _start;
+    }
+    // If the current key is valid, we have to look at the next node.
+    return _key.start_pos() < _end;
   }
 
-  // A match starts at or after the search start and ends at or before the
-  // search end. We already ruled out nodes left of the search start, so
-  // just look at the end.
+  // Is the current interval inside the search interval?
   bool is_match() const {
-    return _key.end_pos() <= _end;
+    return _key.start_pos() >= _start && _key.end_pos() <= _end;
   }
 
   void find_first() {
-    // Find the top-most node that starts inside the search interval.
+    // Find the left-most node that starts inside the search interval.
     while (true) {
+      // On the left side of start: must move right if possible.
       if (_key.start_pos() < _start) {
-        if (!move_right()) {
-          _key = nullptr;
-          return;
+        if (move_right_if([=](const Key<T> &key) {
+                            return key.node()->max_pos(key.start_pos()) >
+                                   _start;
+                          })) {
+          continue;
         }
-      } else if (_key.start_pos() > _end) {
-        if (!move_left()) {
-          _key = nullptr;
-          return;
+        _key = nullptr;
+        return;
+      }
+
+      // On the right side of end: must move left.
+      if (_key.start_pos() >= _end) {
+        if (move_left()) {
+          continue;
         }
-      } else {
+        _key = nullptr;
+        return;
+      }
+
+      // Inside the interval. Move as far left as possible.
+      if (!move_left_if([=](const Key<T> &key) {
+                          return key.start_pos() >= _start;
+                        })) {
         break;
       }
     }
 
-    // Find the node that starts closest to the search start.
-    while (move_left_if([=](const Key<T> &key) {
-                          return key.start_pos() >= _start; })) {
-    }
-
-    // This would be the minimum match.
-    if (is_match()) {
-      return;
-    }
-
-    using namespace std::placeholders;
-    auto const is_possible_search_node = std::bind(
-      &InnerSearchIterator::is_possible_search_node,
-      this, _1
-    );
-
-    // Otherwise look at greater nodes.
-    while (move_next_if(is_possible_search_node)) {
-      if (is_match()) {
+    // We're inside the interval. Recursively search the left subtree, then look
+    // at this, then the right subtree.
+    auto top = _key;
+    if (move_left()) {
+      find_first();
+      if (_key) {
         return;
       }
     }
-
-    // Didn't find anything.
-    _key = nullptr;
+    _key = top;
+    if (is_match()) {
+      return;
+    }
+    if (move_right()) {
+      find_first();
+    } else {
+      _key = nullptr;
+    }
   }
 };

@@ -164,7 +164,8 @@ struct Key {
     return _node->is_right();
   }
 
-  // Gets the associated node.
+  // Gets a mutable pointer to the associated node. Unlike the data, the
+  // mutable node is only accessible from a mutable key reference.
   node_t<T> *node() {
     return _node;
   }
