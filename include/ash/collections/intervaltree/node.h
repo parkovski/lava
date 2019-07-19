@@ -107,11 +107,16 @@ struct Node {
   }
 
   Node *parent() const {
+    return reinterpret_cast<Node *>(reinterpret_cast<size_t>(_parent)
+                                    & static_cast<size_t>(-2));
     return _parent;
   }
 
   Node *set_parent(Node *new_parent) {
-    return _parent = new_parent;
+    size_t color_mask = reinterpret_cast<size_t>(_parent) & 1;
+    _parent = reinterpret_cast<Node *>(reinterpret_cast<size_t>(new_parent)
+                                       | color_mask);
+    return new_parent;
   }
 
   Node *sibling() const {
@@ -155,22 +160,24 @@ struct Node {
   }
 
   size_t length() const {
-    return _length & ~ColorBit;
+    return _length;
   }
 
   void set_length(size_t new_length) {
-    _length = (_length & ColorBit) | (new_length & ~ColorBit);
+    _length = new_length;
   }
 
   color_t color() const {
-    return (_length & ColorBit) == ColorBit;
+    return reinterpret_cast<size_t>(_parent) & 1;
   }
 
   void set_color(color_t new_color) {
     if (new_color == Red) {
-      _length |= ColorBit;
+      _parent = reinterpret_cast<Node *>(reinterpret_cast<size_t>(_parent)
+                                         | 1);
     } else {
-      _length &= ~ColorBit;
+      _parent = reinterpret_cast<Node *>(reinterpret_cast<size_t>(_parent)
+                                         & static_cast<size_t>(-2));
     }
   }
 
@@ -237,9 +244,7 @@ struct Node {
   }
 
 private:
-  /// This bit in length stores the node color.
-  static constexpr size_t ColorBit = ((size_t)0xf) << (sizeof(size_t) - 1);
-  /// Parent node or null if root.
+  /// Parent node or null if root. LSB contains node color.
   Node *_parent = nullptr;
   /// Left child.
   Node *_left = nullptr;

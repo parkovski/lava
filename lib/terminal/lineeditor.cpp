@@ -15,6 +15,7 @@ void LineEditor::defaultPrompt() {
 }
 
 bool LineEditor::readLine(std::string &line) {
+  printf("\033[G");
   _prompt();
   line.clear();
   cursorPos = 0;
@@ -31,11 +32,11 @@ bool LineEditor::readLine(std::string &line) {
       // End of input.
       return false;
     } else if (ch == 11) { // ^K
-      // Clear the screen.
+      // Clear the current line.
       printf("\033[2K\033[G");
       _prompt();
     } else if (ch == 12) { // ^L
-      // Clear the current line.
+      // Clear the screen.
       printf("\033[2J\033[H");
       _prompt();
     } else if (ch == '\r' || ch == '\n') {

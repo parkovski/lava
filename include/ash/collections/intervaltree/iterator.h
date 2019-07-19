@@ -1,85 +1,13 @@
 #ifndef ASH_COLLECTIONS_INTERVALTREE_ITERATORS_H_
 #define ASH_COLLECTIONS_INTERVALTREE_ITERATORS_H_
 
+#include "../detail.h"
 #include "node.h"
 
 #include <iterator>
 #include <type_traits>
 
 namespace ash::collections::itree {
-
-// Yields U if T and U are the same ignoring const.
-template<typename T, typename U>
-struct if_noconst_same {
-};
-
-// Specialization for same T.
-template<typename T>
-struct if_noconst_same<T, T> {
-  using type = T;
-};
-
-// Specialization for U = const T.
-template<typename T>
-struct if_noconst_same<T, const T> {
-  using type = const T;
-};
-
-// Specialization for T = const U.
-template<typename T>
-struct if_noconst_same<const T, T> {
-  using type = T;
-};
-
-// Yields U if T and U are the same ignoring const.
-template<typename T, typename U>
-using if_noconst_same_t = typename if_noconst_same<T, U>::type;
-
-// Yields T if T is const.
-template<typename T>
-struct if_const {
-};
-
-// Specialization for const T.
-template<typename T>
-struct if_const<const T> {
-  using type = const T;
-};
-
-// Yields T if T is const.
-template<typename T>
-using if_const_t = typename if_const<T>::type;
-
-// Yields T if T is not const.
-template<typename T>
-struct if_mutable {
-  using type = T;
-};
-
-// Empty specialization for const T.
-template<typename T>
-struct if_mutable<const T> {
-};
-
-// Yields T if T is not const.
-template<typename T>
-using if_mutable_t = typename if_mutable<T>::type;
-
-// Yields mutable T when T is const, const T otherwise.
-template<typename T>
-struct opposite_const {
-  using type = const T;
-};
-
-// Specialization to map const T -> T.
-template<typename T>
-struct opposite_const<const T> {
-  using type = T;
-};
-
-// Yields mutable T when T is const, const T otherwise.
-template<typename T>
-using opposite_const_t = typename opposite_const<T>::type;
 
 template<typename T>
 class IntervalTree;
@@ -101,7 +29,7 @@ class IntervalTree;
 // All the "weird stuff" here around const exists to enable this behavior.
 template<typename T>
 struct Key {
-  friend struct Key<opposite_const_t<T>>;
+  friend struct Key<detail::opposite_const_t<T>>;
 
   // Construct an invalid key.
   Key() = default;
@@ -162,12 +90,6 @@ struct Key {
   // Determines of the node is on the parent's right.
   bool is_right() const {
     return _node->is_right();
-  }
-
-  // Gets a mutable pointer to the associated node. Unlike the data, the
-  // mutable node is only accessible from a mutable key reference.
-  node_t<T> *node() {
-    return _node;
   }
 
   // Gets the associated node.
@@ -232,7 +154,7 @@ template<typename T>
 class Iterator {
 public:
   // Allow access to private members for conversion and comparison.
-  friend class Iterator<opposite_const_t<T>>;
+  friend class Iterator<detail::opposite_const_t<T>>;
 
   // Allow the tree to access the node and position.
   friend class IntervalTree<T>;
@@ -258,7 +180,7 @@ public:
   Iterator(const Iterator &other) = default;
 
   // Conversion from iterator to const_iterator.
-  template<typename = if_const_t<T>>
+  template<typename = detail::if_const_t<T>>
   Iterator(const Iterator<std::remove_const_t<T>> &other) noexcept
     : _key(other._key)
   {}
@@ -267,20 +189,20 @@ public:
   Iterator &operator=(const Iterator &other) = default;
 
   // Conversion from iterator to const_iterator.
-  template<typename = if_const_t<T>>
+  template<typename = detail::if_const_t<T>>
   Iterator &operator=(const Iterator<std::remove_const_t<T>> &other) noexcept {
     _key = other._key;
     return *this;
   }
 
   // Equality comparison against const or mutable iterators.
-  template<typename U, typename = if_noconst_same_t<T, U>>
+  template<typename U, typename = detail::if_noconst_same_t<T, U>>
   bool operator==(const Iterator<U> &other) const {
     return _key == other._key;
   }
 
   // Inequality comparison against const or mutable iterators.
-  template<typename U, typename = if_noconst_same_t<T, U>>
+  template<typename U, typename = detail::if_noconst_same_t<T, U>>
   bool operator!=(const Iterator<U> &other) const {
     return !(*this == other);
   }

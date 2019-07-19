@@ -5,6 +5,8 @@
 
 namespace ash::collections::itree {
 
+using namespace ash::collections::detail;
+
 template<typename T>
 class SearchIteratorBase : public Iterator<T> {
   friend class SearchIteratorBase<opposite_const_t<T>>;
