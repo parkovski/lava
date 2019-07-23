@@ -10,6 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 option(BUILD_TESTS "Build tests" OFF)
+option(BUILD_EXAMPLES "Build examples" OFF)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/bin")
 if(WIN32)
@@ -33,6 +34,10 @@ set(ASH_CONTRIB_INCLUDE_DIR
 add_subdirectory(contrib)
 add_subdirectory(lib)
 add_subdirectory(bin)
+if(BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 if(BUILD_TESTS)
+  find_package(Catch2 CONFIG REQUIRED)
   add_subdirectory(test)
 endif()

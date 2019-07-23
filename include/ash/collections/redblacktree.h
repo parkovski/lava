@@ -7,15 +7,627 @@
 namespace ash::collections {
 namespace rbtree {
 
-struct RedBlackTraits {
-  using position_type = size_t;
-  using offset_type = ptrdiff_t;
+/** Concepts:
+ *  - NodeType:
+ *    + get/set left, right, parent
+ *    + get/set color
+ *    + get is_left, is_right, sibling
+ *  - KeyType: comparable
+ *  - ValueType: *
+ *  - Pointer: act as Node*
+ *  - Reference: swappable
+ */
 
-  template<typename T>
-  using node_type = Node<T, position_type, offset_type>;
+template<typename Self>
+class RedBlackTreeBase {
+public:
+  using node_type = typename Self::node_type;
+
+  using key_type = typename node_type::key_type;
+  using value_type = typename node_type::value_type;
+
+  using pointer = typename node_type::pointer;
+  using reference = typename node_type::reference;
+  using const_reference = typename node_type::const_reference;
+
+  using iterator = typename Self::iterator;
+  using const_iterator = typename Self::const_iterator;
+
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+  using dfs_iterator = typename Self::dfs_iterator;
+  using const_dfs_iterator = typename Self::const_dfs_iterator;
+
+  using reverse_dfs_iterator = std::reverse_iterator<dfs_iterator>;
+  using const_reverse_dfs_iterator = std::reverse_iterator<const_dfs_iterator>;
+
+  explicit RedBlackTreeBase() noexcept
+    : _root(nullptr)
+  {}
+
+  RedBlackTreeBase(RedBlackTreeBase &&other) = default;
+
+  RedBlackTreeBase &operator=(RedBlackTreeBase &&other) noexcept {
+    if (_root) {
+      delete _root;
+    }
+    _root = other._root;
+    other._root = nullptr;
+    return *this;
+  }
+
+  ~RedBlackTreeBase() {
+    if (_root) {
+      delete _root;
+    }
+  }
+
+  // Returns an in-order iterator over all elements in the tree, starting with
+  // the left-most.
+  iterator begin() {
+    if (!_root) {
+      return end();
+    }
+    pointer value(_root);
+    while (value->left()) {
+      value = value.left();
+    }
+    return iterator(value);
+  }
+
+  // Returns an in-order const_iterator over all elements in the tree, starting
+  // with the left-most.
+  const_iterator begin() const {
+    return const_cast<RedBlackTreeBase *>(this)->begin();
+  }
+
+  // Returns an in-order const_iterator over all elements in the tree, starting
+  // with the left-most.
+  const_iterator cbegin() const {
+    return begin();
+  }
+
+  // Returns a past-the-end iterator.
+  iterator end() {
+    return iterator();
+  }
+
+  // Returns a past-the-end const_iterator.
+  const_iterator end() const {
+    return const_iterator();
+  }
+
+  // Returns a past-the-end const_iterator.
+  const_iterator cend() const {
+    return const_iterator();
+  }
+
+  // Returns an iterator over all elements in the tree from top to bottom.
+  dfs_iterator begin_dfs() {
+    return dfs_iterator(value_type(_root));
+  }
+
+  // Returns an iterator over all elements in the tree from top to bottom.
+  const_dfs_iterator begin_dfs() const {
+    return const_cast<RedBlackTreeBase *>(this)->begin_dfs();
+  }
+
+  // Returns an iterator over all elements in the tree from top to bottom.
+  const_dfs_iterator cbegin_dfs() const {
+    return begin_dfs();
+  }
+
+  // Returns a past-the-end DFS iterator.
+  dfs_iterator end_dfs() {
+    return dfs_iterator();
+  }
+
+  // Returns a past-the-end const DFS iterator.
+  const_dfs_iterator end_dfs() const {
+    return const_dfs_iterator();
+  }
+
+  // Returns a past-the-end const DFS iterator.
+  const_dfs_iterator cend_dfs() const {
+    return const_dfs_iterator();
+  }
+
+  // Returns a reverse order iterator over all elements in the tree, starting
+  // with the right-most.
+  reverse_iterator rbegin() {
+    if (!_root) {
+      return rend();
+    }
+    pointer node(_root);
+    while (node->right()) {
+      node = node->right();
+    }
+    return std::make_reverse_iterator(iterator(node));
+  }
+
+  // Returns an reverse order const_iterator over all elements in the tree,
+  // starting with the right-most.
+  const_reverse_iterator rbegin() const {
+    return const_cast<RedBlackTreeBase *>(this)->rbegin();
+  }
+
+  // Returns an reverse order const_iterator over all elements in the tree,
+  // starting with the right-most.
+  const_reverse_iterator crbegin() const {
+    return rbegin();
+  }
+
+  // Returns a past-the-end reverse iterator.
+  reverse_iterator rend() {
+    return std::make_reverse_iterator(end());
+  }
+
+  // Returns a past-the-end const reverse iterator.
+  const_reverse_iterator rend() const {
+    return std::make_reverse_iterator(end());
+  }
+
+  // Returns a past-the-end const reverse iterator.
+  const_reverse_iterator crend() const {
+    return std::make_reverse_iterator(end());
+  }
+
+  // Returns an iterator over all elements in the tree from bottom to top.
+  reverse_dfs_iterator rbegin_dfs() {
+    if (!_root) {
+      return rend_dfs();
+    }
+    return std::make_reverse_iterator(dfs_iterator(*rbegin()));
+  }
+
+  // Returns a const_iterator over all elements in the tree from bottom to top.
+  const_reverse_dfs_iterator rbegin_dfs() const {
+    return const_cast<RedBlackTreeBase *>(this)->rbegin_dfs();
+  }
+
+  // Returns a const_iterator over all elements in the tree from bottom to top.
+  const_reverse_dfs_iterator crbegin_dfs() const {
+    return const_cast<RedBlackTreeBase *>(this)->rbegin_dfs();
+  }
+
+  // Returns a past-the-end reverse DFS iterator.
+  reverse_dfs_iterator rend_dfs() {
+    return std::make_reverse_iterator(dfs_iterator());
+  }
+
+  // Returns a past-the-end const reverse DFS iterator.
+  const_reverse_dfs_iterator rend_dfs() const {
+    return std::make_reverse_iterator(const_dfs_iterator());
+  }
+
+  // Returns a past-the-end const reverse DFS iterator.
+  const_reverse_dfs_iterator crend_dfs() const {
+    return std::make_reverse_iterator(const_dfs_iterator());
+  }
+
+protected:
+  // Find the first node moving left from position.
+  template<bool Inclusive>
+  auto find_left(const key_type &key) {
+    std::conditional_t<Inclusive, std::less<key_type>,
+                       std::less_equal<key_type>> cmp{};
+
+    pointer node(_root);
+
+    // Move left until we're less than (or less/equal to) the target key.
+    while (!cmp(node->key(), key)) {
+      if (!node->left()) {
+        return rend();
+      }
+      node = node->left();
+    }
+
+    // The first node is either here or in the right subtree somewhere.
+    auto next = node->right();
+    while (next) {
+      if (cmp(next->key(), key)) {
+        node = next;
+        next = next->right();
+      } else {
+        next = next->left();
+      }
+    }
+    return std::make_reverse_iterator(iterator(node));
+  }
+
+  // Find the first node moving right from position.
+  template<bool Inclusive>
+  auto find_right(const key_type &key) {
+    std::conditional_t<Inclusive, std::greater<key_type>,
+                       std::greater_equal<key_type>> cmp{};
+
+    pointer node(_root);
+
+    // Move right until we're greater than (or greater/equal to) position.
+    while (!cmp(node->key(), key)) {
+      if (!node->right()) {
+        return end();
+      }
+      node = node->right();
+    }
+
+    // The first node is either here or in the left subtree somewhere.
+    auto next = node->left();
+    while (next) {
+      if (cmp(next->key(), key)) {
+        node = next;
+        next = next->left();
+      } else {
+        next = next->right();
+      }
+    }
+
+    return iterator(node);
+  }
+
+public:
+  // Find the first node that matches position exactly.
+  iterator find(const key_type &key) {
+    auto it = find_right<true>(key);
+    if (it->key() == key) {
+      return it;
+    }
+    return end();
+  }
+
+  // Find the first node that matches position exactly.
+  const_iterator find(const key_type &key) const {
+    return const_cast<RedBlackTree *>(this)->find(key);
+  }
+
+  // Find the last node that matches position exactly.
+  reverse_iterator rfind(const key_type &key) {
+    auto it = find_left<true>(key);
+    if (it->key() == key) {
+      return it;
+    }
+    return rend();
+  }
+
+  // Find the last node that matches position exactly.
+  const_reverse_iterator rfind(const key_type &key) const {
+    return const_cast<RedBlackTree *>(this)->rfind(key);
+  }
+
+  /// Find the first node less than position. Returns a reverse iterator. To
+  /// find inside ranges, compare <c>find_greater(pos)</c> or
+  /// <c>find_greater_equal(pos)</c> against <c>find_less(pos).base()</c>.
+  reverse_iterator find_less(const key_type &key) {
+    return find_left<false>(key);
+  }
+
+  /// Find the first node less than position. Returns a const reverse iterator.
+  /// To find inside ranges, compare <c>find_greater(pos)</c> or
+  /// <c>find_greater_equal(pos)</c> against <c>find_less(pos).base()</c>.
+  const_reverse_iterator find_less(const key_type &key) const {
+    return const_cast<RedBlackTree *>(this)->find_less(key);
+  }
+
+  /// Find the first node less than or equal to position. Returns a reverse
+  /// iterator. To find inside ranges, compare <c>find_greater(pos)</c> or
+  /// <c>find_greater_equal(pos)</c> against
+  /// <c>find_less_equal(pos).base()</c>.
+  reverse_iterator find_less_equal(const key_type &key) {
+    return find_left<true>(key);
+  }
+
+  /// Find the first node less than or equal to position. Returns a const
+  /// reverse iterator. To find inside ranges, compare <c>find_greater(pos)</c>
+  /// or <c>find_greater_equal(pos)</c> against
+  /// <c>find_less_equal(pos).base()</c>.
+  const_reverse_iterator find_less_equal(const key_type &key) const {
+    return const_cast<RedBlackTree *>(this)->find_less_equal(key);
+  }
+
+  /// Find the first node greater than position. Returns a forward iterator.
+  /// To find inside ranges, compare <c>find_greater(pos)</c> against
+  /// <c>find_less(pos).base()</c> or <c>find_less_equal(pos).base()</c>.
+  iterator find_greater(const key_type &key) {
+    return find_right<false>(key);
+  }
+
+  /// Find the first node greater than position. Returns a const forward
+  /// iterator.  / To find inside ranges, compare <c>find_greater(pos)</c>
+  /// against <c>find_less(pos).base()</c> or
+  /// <c>find_less_equal(pos).base()</c>.
+  const_iterator find_greater(const key_type &key) const {
+    return const_cast<RedBlackTree *>(this)->find_greater(key);
+  }
+
+  /// Find the first node greater than position. Returns a forward iterator.
+  /// To find inside ranges, compare <c>find_greater(pos)</c> against
+  /// <c>find_less(pos).base()</c> or <c>find_less_equal(pos).base()</c>.
+  iterator find_greater_equal(const key_type &key) {
+    return find_right<true>(key);
+  }
+
+  /// Find the first node greater than position. Returns a forward iterator.
+  /// To find inside ranges, compare <c>find_greater(pos)</c> against
+  /// <c>find_left(pos).base()</c> or <c>find_less_equal(pos).base()</c>.
+  const_iterator find_greater_equal(const key_type &key) const {
+    return const_cast<RedBlackTree *>(this)->find_greater_equal(key);
+  }
+
+  /// Finds the appropriate position to insert a new node for \c key.
+  pointer insert_position(const key_type &key);
+
+  // Requires where != end. Removes the node from the tree and returns it.
+  // Its parent, left, and right pointers are set to null.
+  pointer extract(const_iterator where);
+
+  // When inserting a new node, fixes the tree to maintain red-black
+  // properties.
+  void fix_for_insert(pointer node);
+
+  // Do the final rotation to get rid of two red nodes in a row on the same
+  // side (left->left or right->right).
+  void fix_for_insert_rotate(pointer node);
+
+  // Fix the tree to maintain red-black properties after erasing a node.
+  // Assumes node is black.
+  void fix_for_erase(pointer node);
+
+  void rotate_left(pointer pivot);
+
+  void rotate_right(pointer pivot);
+
+private:
+  node_type *_root;
 };
 
-template<typename T, typename Traits = RedBlackTraits>
+template<typename Self>
+typename RedBlackTreeBase<Self>::pointer
+RedBlackTreeBase<Self>::insert_position(const key_type &key) {
+  if (!_root) {
+    return nullptr;
+  }
+
+  // Find the appropriate parent for the new node.
+  pointer parent(_root);
+  while (true) {
+    if (key < parent->key()) {
+      if (parent->left()) {
+        parent = parent->left();
+        continue;
+      }
+      break;
+    } else {
+      if (parent->right()) {
+        parent = parent->right();
+        continue;
+      }
+      break;
+    }
+  }
+
+  return parent;
+}
+
+template<typename Self>
+typename RedBlackTreeBase<Self>::pointer
+RedBlackTreeBase<Self>::extract(const_iterator where) {
+  // We have a mutable reference to the tree, which has a mutable reference
+  // to this node somewhere, we just don't want to go digging around trying
+  // to find it.
+  pointer node(std::addressof(const_node_cast<reference>(*where)));
+  pointer parent = node->parent();
+  auto color = node->color();
+  pointer child;
+
+  // To delete a node, we need to "move" it into a position where it has
+  // no children. For a node with two children, we first move its successor
+  // into its place, where the target node now has zero or one child.
+  // For a node with one child, we then just move the child into its place.
+  // Now the target node does not have any children and can be deleted.
+
+  using std::swap;
+
+  if (node->right() && node->left()) {
+    // 2 children. Any node with a right child has a next node that is all
+    // the way down the left subtree of that child - its left is empty.
+    // Move the successor into the original node's place, and then move
+    // the successor's child into the successor's place.
+    ++where;
+    swap(const_node_cast<reference>(*where),
+         const_node_cast<reference>(*where->parent()));
+    swap(*node, const_node_cast<reference>(*where));
+  } else {
+    // Zero or one child. Just move the child up to node's position.
+    if (!(child = node->right())) {
+      child = node->left();
+    }
+    swap(*node, *child);
+  }
+
+  // Now node has zero or one child (child may be null). Replace it with
+  // its child and fix the tree to maintain red-black properties.
+  if (node && color == Black) {
+    if (node->color() == Red) {
+      node->set_color(Black);
+    } else if (node->parent()) {
+      fix_for_erase(node);
+    }
+  }
+  node->unlink();
+  return node;
+}
+
+template<typename Self>
+void RedBlackTreeBase<Self>::fix_for_insert(pointer node) {
+  auto parent = node->parent();
+
+  if (!parent) {
+    // Root must be black.
+    node->set_color(Black);
+    return;
+  }
+
+  // Assume we're inserting a red node to start with, so not to add a black
+  // node to only one path.
+  node->set_color(Red);
+
+  if (parent->color() == Black) {
+    // Red child of black parent: ok.
+    return;
+  }
+
+  // We know there's a grandparent because parent is red, which the root
+  // cannot be.
+  auto grandparent = parent->parent();
+  bool parent_is_left = parent == grandparent->left();
+  auto uncle = parent_is_left ? grandparent->right() : grandparent->left();
+  if (uncle && uncle->color() == Red) {
+    // Parent, uncle, and node are red, therefore grandparent is black.
+    // When a node becomes black, a higher up node must become red to
+    // maintain the black node count property. But since grandparent was
+    // black, its parent could have been red, which case we will have to
+    // recursively fix that.
+    parent->set_color(Black);
+    uncle->set_color(Black);
+    grandparent->set_color(Red);
+    fix_for_insert(grandparent);
+    return;
+  }
+
+  // Parent and node are red, but uncle and grandparent are black.
+  // If node is on the inside (from grandparent, left then right or right
+  // then left), we have to first rotate it to the outside of its parent so
+  // that grandparent to child is a "straight line".
+  // Then we can rotate around the grandparent and swap the new parent and
+  // grandparent's colors to get rid of the double red.
+  if (node == parent->right() && parent_is_left) {
+    rotate_left(parent);
+    fix_for_insert_rotate(parent);
+  } else if (node == parent->left() && !parent_is_left) {
+    rotate_right(parent);
+    fix_for_insert_rotate(parent);
+  } else {
+    fix_for_insert_rotate(node);
+  }
+}
+
+template<typename Self>
+void RedBlackTreeBase<Self>::fix_for_insert_rotate(pointer node) {
+  auto parent = node->parent();
+  auto grandparent = parent->parent();
+
+  if (node == parent->left()) {
+    rotate_right(grandparent);
+  } else {
+    rotate_left(grandparent);
+  }
+
+  // At this point, grandparent is at the same height as node, and they are
+  // both children of parent. Parent and node are red, grandparent is
+  // black.  Swap parent and grandparent's colors to satisfy the no double
+  // red property.
+  parent->set_color(Black);
+  grandparent->set_color(Red);
+}
+
+template<typename Self>
+void RedBlackTreeBase<Self>::fix_for_erase(pointer node) {
+  auto parent = node->parent();
+  if (!parent) {
+    return;
+  }
+  auto sibling = node->sibling();
+
+  if (sibling->color() == Red) {
+    parent->set_color(Red);
+    sibling->set_color(Black);
+    if (node == parent->left()) {
+      rotate_left(parent);
+    } else {
+      rotate_right(parent);
+    }
+    parent = node->parent();
+    sibling = node->sibling();
+  }
+
+  if (parent->color() == Black &&
+      sibling->color() == Black &&
+      (!sibling->left() || sibling->left()->color() == Black) &&
+      (!sibling->right() || sibling->right()->color() == Black)) {
+    sibling->set_color(Red);
+    fix_for_erase(parent);
+    return;
+  }
+
+  if (parent->color() == Red &&
+      sibling->color() == Black &&
+      (!sibling->left() || sibling->left()->color() == Black) &&
+      (!sibling->right() || sibling->right()->color() == Black)) {
+    sibling->set_color(Red);
+    parent->set_color(Black);
+    return;
+  }
+
+  if (sibling->color() == Black) {
+    if (node == parent->left() &&
+        (!sibling->right() || sibling->right()->color() == Black) &&
+        (sibling->left() && sibling->left()->color() == Red)) {
+      sibling->set_color(Red);
+      sibling->left()->set_color(Black);
+      rotate_right(sibling);
+    } else if (node == parent->right() &&
+               (!sibling->left() || sibling->left()->color() == Black) &&
+               (sibling->right() && sibling->right()->color() == Red)) {
+      sibling->set_color(Red);
+      sibling->right()->set_color(Black);
+      rotate_left(sibling);
+    }
+    parent = node->parent();
+    sibling = node->sibling();
+  }
+
+  sibling->set_color(parent->color());
+  parent->set_color(Black);
+  if (node == parent->left()) {
+    if (sibling->right()) {
+      sibling->right()->set_color(Black);
+    }
+    rotate_left(parent);
+  } else {
+    if (sibling->left()) {
+      sibling->left()->set_color(Black);
+    }
+    rotate_right(parent);
+  }
+}
+
+template<typename Self>
+void RedBlackTreeBase<Self>::rotate_left(pointer pivot) {
+  auto new_pivot = pivot->right();
+  auto parent = pivot->parent();
+  auto child = pivot->set_right(new_pivot->left());
+  new_pivot->set_left(pivot);
+}
+
+template<typename Self>
+void RedBlackTreeBase<Self>::rotate_right(pointer pivot) {
+  auto new_pivot = pivot->left();
+  auto parent = pivot->parent();
+  auto child = pivot->set_left(new_pivot->right());
+  new_pivot->set_right(pivot);
+}
+
+template<typename P = size_t, typename O = std::make_signed_t<P>>
+struct RedBlackTraits {
+  using position_type = P;
+  using offset_type = O;
+
+  template<typename T>
+  using node_type = OffsetNode<position_type, offset_type, T>;
+};
+
+template<typename T, typename Traits = RedBlackTraits<>>
 class RedBlackTree {
 public:
   using node_type = typename Traits::template node_type<T>;

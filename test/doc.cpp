@@ -1,14 +1,18 @@
 #include "ash/ash.h"
 #include "ash/terminal/terminal.h"
 #include "ash/terminal/lineeditor.h"
+#include "ash/collections/redblacktree.h"
 #include "ash/collections/intervaltree.h"
 
 #include "rope/rope.h"
 
+#include <string_view>
+#include <string>
 #include <iostream>
 #include <memory>
 #include <type_traits>
 #include <cassert>
+#include <deque>
 
 // Missing from C++17 and below.
 #ifdef _MSVC_LANG
@@ -64,7 +68,9 @@ public:
     auto self = reinterpret_cast<AttributeData *>(
       ::operator new(sizeof(AttributeData) + size, std::nothrow)
     );
-    self->_descriptor = descriptor;
+    if (self) {
+      self->_descriptor = descriptor;
+    }
     return self;
   }
 
@@ -72,7 +78,9 @@ public:
     noexcept
   {
     auto self = create(size, descriptor);
-    memcpy(self->data(), data, size);
+    if (self) {
+      memcpy(self->data(), data, size);
+    }
     return self;
   }
 
@@ -192,8 +200,119 @@ static inline size_t copy_utf8(char *dst, const char *src, size_t *chars,
   return src - start;
 }
 
+static size_t rope_read(rope *rope, char *buf, size_t *bufsize, size_t from,
+                        size_t to) {
+  auto len = rope_char_count(rope);
+  if (to > len) {
+    to = len;
+  }
+
+  rope_node *node = &rope->head;
+  size_t skipped = 0;
+
+  // Find the starting node.
+  while (skipped + node->nexts[0].skip_size < from) {
+    // Use the skip list.
+    auto height = node->height;
+    int i;
+    for (i = 1; i < height; ++i) {
+      if (skipped + node->nexts[i].skip_size >= from) {
+        // Too far. Look at the next node's skip list.
+        break;
+      }
+    }
+
+    // Record how many chars we skipped.
+    skipped += node->nexts[i - 1].skip_size;
+    node = node->nexts[i - 1].node;
+
+    if (!node) {
+      // Went too far, can't read anything.
+      return 0;
+    }
+  }
+
+  size_t total_bytes;
+  size_t total_chars;
+  char *str;
+  size_t bytes;
+  size_t chars;
+
+  // Copy from the first node. At this point, we're copying to the beginning
+  // of the buffer from some offset within this node.
+  str = reinterpret_cast<char *>(node->str);
+  char *start = skip_utf8(str, from - skipped, node->num_bytes);
+  chars = to - from;
+  bytes = std::min(*bufsize, size_t(node->num_bytes - (start - str)));
+  bytes = copy_utf8(buf, start, &chars, bytes);
+  from += chars;
+  total_bytes = bytes;
+  total_chars = chars;
+  node = node->nexts[0].node;
+
+  // Now copy from the rest of the nodes. Here we always start at the
+  // beginning of the node and copy into the buffer at an offset.
+  while (node && from < to && total_bytes < *bufsize) {
+    str = reinterpret_cast<char *>(node->str);
+    chars = to - from;
+    bytes = std::min(*bufsize - total_bytes, size_t(node->num_bytes));
+    bytes = copy_utf8(buf + total_bytes, str, &chars, bytes);
+    from += chars;
+    total_bytes += bytes;
+    total_chars += chars;
+    node = node->nexts[0].node;
+  }
+
+  *bufsize = total_bytes;
+  return total_chars;
+}
+
+static char32_t utf_codepoint(char *buf, size_t bufsize) {
+  const char32_t invalid_char = static_cast<char32_t>(-1);
+  char32_t ch = 0;
+  // 6: x011 1111 2222 2233 3333 4444 4455 5555
+  // 5: xxxx xx00 1111 1122 2222 3333 3344 4444
+  // 4: xxxx xxxx xxx0 0011 1111 2222 2233 3333
+  // 3: xxxx xxxx xxxx xxxx 0000 1111 1122 2222
+  // 2: xxxx xxxx xxxx xxxx xxxx x000 0011 1111
+  // 1: xxxx xxxx xxxx xxxx xxxx xxxx x000 0000
+  char32_t mask = 0x7f;
+  switch (bufsize) {
+    case 6:
+      ch = buf[0] << 24;
+    case 5:
+      ch |= (buf[bufsize - 5] & 0x3f) << 18;
+      mask <<= 5;
+      mask |= 0x1f;
+    case 4:
+      ch |= (buf[bufsize - 4] & 0x3f) << 12;
+      mask <<= 5;
+      mask |= 0x1f;
+    case 3:
+      ch |= (buf[bufsize - 3] & 0x3f) << 6;
+      mask <<= 5;
+      mask |= 0x1f;
+    case 2:
+      ch |= buf[bufsize - 2] & 0x3f;
+      ch <<= 6;
+      mask <<= 5;
+      mask |= 0x1f;
+    case 1:
+      ch |= buf[bufsize - 1] & 0x7f;
+      mask <<= 4;
+      mask |= 0xf;
+      return ch & mask;
+    default:
+      return invalid_char;
+  }
+}
+
+template<typename A>
 class Document {
 public:
+  using attribute_tree = ash::collections::IntervalTree<A>;
+  using line_nr_tree = ash::collections::RedBlackTree<size_t>;
+
   /// Construct an empty document.
   explicit Document() noexcept {
     _text = rope_new();
@@ -209,6 +328,11 @@ public:
     rope_free(_text);
   }
 
+private:
+  void insert_lines(size_t first, std::string_view text) {
+  }
+
+public:
   /// Insert text into the document.
   /// \param pos UTF-8 character position.
   /// \param text UTF-8 string to insert.
@@ -236,7 +360,7 @@ public:
   /// \param from The beginning of the range to delete, inclusive.
   /// \param to The end of the range to delete, exclusive.
   void erase(size_t from, size_t to) {
-    assert(to >= from);
+    assert(to > from);
     rope_del(_text, from, to - from);
   }
 
@@ -245,8 +369,9 @@ public:
   /// \param to The end of the range to delete, exclusive.
   /// \param text The new text to insert at \c from.
   void replace(size_t from, size_t to, const char *text) {
-    erase(from, to);
-    insert(from, text);
+    assert(to > from);
+    rope_del(_text, from, to - from);
+    rope_insert(_text, from, reinterpret_cast<const uint8_t *>(text));
   }
 
   /// Read a range of text from the rope into a buffer. Indexes in characters.
@@ -255,79 +380,24 @@ public:
   /// \param bufsize The size of the buffer in bytes. On return, this will be
   ///                set to the number of bytes written to the buffer.
   /// \param from The beginning of the range to read from, inclusive.
-  /// \param to The end of the range to read from, exclusive.
+  /// \param to The end of the range to read from, exclusive. Must be greater
+  ///           than \c from.
   /// \return The number of characters written to the buffer.
   size_t read(char *buf, size_t *bufsize, size_t from, size_t to) const {
-    auto len = char_length();
-    if (to > len) {
-      to = len;
+    return rope_read(_text, buf, bufsize, from, to);
+  }
+
+  /// Reads a substring from the document.
+  /// \param buf A string to append the document substring to.
+  /// \param from The starting point in the document.
+  /// \param to The ending point (exclusive) in the document.
+  void read(std::string &buf, size_t from, size_t to) const {
+    char chbuf[128];
+    while (from < to) {
+      size_t bytes = sizeof(buf);
+      from += read(chbuf, &bytes, from, to);
+      buf.append(chbuf, chbuf + bytes);
     }
-    if (from >= to) {
-      return 0;
-    }
-
-    rope_node *node = &_text->head;
-    size_t skipped = 0;
-
-    // Find the starting node.
-    while (skipped + node->nexts[0].skip_size < from) {
-      // Use the skip list.
-      auto height = node->height;
-      int i;
-      for (i = 1; i < height; ++i) {
-        // if (!node->nexts[i].node) {
-        //   break;
-        // }
-
-        if (skipped + node->nexts[i].skip_size >= from) {
-          // Too far. Look at the next node's skip list.
-          break;
-        }
-      }
-
-      // Record how many chars we skipped.
-      skipped += node->nexts[i - 1].skip_size;
-      node = node->nexts[i - 1].node;
-
-      if (!node) {
-        // Went too far, can't read anything.
-        return 0;
-      }
-    }
-
-    size_t total_bytes;
-    size_t total_chars;
-    char *str;
-    size_t bytes;
-    size_t chars;
-
-    // Copy from the first node. At this point, we're copying to the beginning
-    // of the buffer from some offset within this node.
-    str = reinterpret_cast<char *>(node->str);
-    char *start = skip_utf8(str, from - skipped, node->num_bytes);
-    chars = to - from;
-    bytes = std::min(*bufsize, size_t(node->num_bytes - (start - str)));
-    bytes = copy_utf8(buf, start, &chars, bytes);
-    from += chars;
-    total_bytes = bytes;
-    total_chars = chars;
-    node = node->nexts[0].node;
-
-    // Now copy from the rest of the nodes. Here we always start at the
-    // beginning of the node and copy into the buffer at an offset.
-    while (node && from < to && total_bytes < *bufsize) {
-      str = reinterpret_cast<char *>(node->str);
-      chars = to - from;
-      bytes = std::min(*bufsize - total_bytes, size_t(node->num_bytes));
-      bytes = copy_utf8(buf + total_bytes, str, &chars, bytes);
-      from += chars;
-      total_bytes += bytes;
-      total_chars += chars;
-      node = node->nexts[0].node;
-    }
-
-    *bufsize = total_bytes;
-    return total_chars;
   }
 
   /// Reads a substring from the rope into a buffer, including a NUL ('\0')
@@ -341,104 +411,125 @@ public:
     return bytes + 1;
   }
 
-  /// Get one Unicode character from the document.
+  /// Get one Unicode code point from the document.
   /// Note: Works in log(N) time! Try to read more in chunks for better perf.
   /// \param index UTF-8 character offset.
   /// \return The UTF-32 character at the specified offset.
   char32_t operator[](size_t index) const {
-    // TODO: Read any unicode sequence (6 chars max), convert to UTF-32.
-    char ch = 0;
-    size_t bufsize = 1;
-    read(&ch, &bufsize, index, index + 1);
-    return ch;
+    char bytes[6];
+    size_t bufsize = 6;
+    read(bytes, &bufsize, index, index + 1);
+    return utf_codepoint(bytes, bufsize);
   }
 
-  void set_attribute() {
+  unsigned line(size_t index) const {
+    return 0;
+  }
+
+  std::pair<size_t, size_t> span_for_line(unsigned line) const {
+    return std::make_pair<size_t, size_t>(0, 10);
+  }
+
+  template<typename... Args>
+  A &set_attribute(size_t start, size_t end, Args &&...args) {
+    return _attrs.insert(start, end, std::forward<Args>(args)...);
+  }
+
+  void remove_attribute(typename attribute_tree::const_iterator where) {
+    _attrs.erase(where);
+  }
+
+  typename attribute_tree::inner_search_iterator
+  find_inner_attributes(size_t start, size_t end) {
+    return _attrs.find_inner(start, end);
+  }
+
+  typename attribute_tree::const_inner_search_iterator
+  find_inner_attributes(size_t start, size_t end) const {
+    return _attrs.find_inner(start, end);
+  }
+
+  typename attribute_tree::overlap_search_iterator
+  find_attributes(size_t start, size_t end = 0) {
+    if (end == 0) {
+      end = start + 1;
+    }
+    return _attrs.find_overlap(start, end);
+  }
+
+  typename attribute_tree::const_overlap_search_iterator
+  find_attributes(size_t start, size_t end = 0) const {
+    if (end == 0) {
+      end = start + 1;
+    }
+    return _attrs.find_overlap(start, end);
+  }
+
+  typename attribute_tree::equal_search_iterator
+  find_exact_attributes(size_t start, size_t end) {
+    return _attrs.find_equal(start, end);
+  }
+
+  typename attribute_tree::const_equal_search_iterator
+  find_exact_attributes(size_t start, size_t end) const {
+    return _attrs.find_equal(start, end);
+  }
+
+  typename attribute_tree::iterator
+  attribute_begin() {
+    return _attrs.begin();
+  }
+
+  typename attribute_tree::const_iterator
+  attribute_begin() const {
+    return _attrs.begin();
+  }
+
+  typename attribute_tree::iterator
+  attribute_end() {
+    return _attrs.end();
+  }
+
+  typename attribute_tree::const_iterator
+  attribute_end() const {
+    return _attrs.end();
   }
 
 private:
   rope *_text;
-  ash::collections::IntervalTree<AttributeData> _tree;
+  attribute_tree _attrs;
+  line_nr_tree _line_nrs;
 };
 
-bool readpair(const std::string &s, size_t &first, size_t &second) {
-# define SKIPWS while (s[index] == ' ') { ++index; }
-  size_t index = 0;
-  first = 0;
-  second = 0;
-  SKIPWS
-  if (s[index] < '0' || s[index] > '9') {
-    return false;
-  }
-  while (s[index] >= '0' && s[index] <= '9') {
-    first = first * 10 + s[index] - '0';
-    ++index;
-  }
-  SKIPWS
-  if (s[index] == ',') {
-    ++index;
-    SKIPWS
-  }
-  if (s[index] < '0' || s[index] > '9') {
-    return false;
-  }
-  while (s[index] >= '0' && s[index] <= '9') {
-    second = second * 10 + s[index] - '0';
-    ++index;
-  }
-  return true;
-# undef SKIPWS
-}
+struct line_and_color {
+  unsigned line;
+  unsigned color;
+};
 
+#include <cstdlib>
 int main(int argc, char *argv[]) {
   ash::term::initialize();
   ASH_SCOPEEXIT { ash::term::restoreState(); };
 
   ash::LineEditor ed;
   std::string line;
-  Document doc;
+  Document<line_and_color> doc;
 
-  doc.append(
-    "abcdefghijklmnopqrstuvwxy"
-    "ABCDEFGHIJKLMNOPQRSTUVWXY"
-    "abcdefghijklmnopqrstuvwxy"
-    "ABCDEFGHIJKLMNOPQRSTUVWXY"
-    "hello world hello world 1"
-    "abcdefghijklmnopqrstuvwxy"
-    "ABCDEFGHIJKLMNOPQRSTUVWXY"
-    "abcdefghijklmnopqrstuvwxy"
-    "ABCDEFGHIJKLMNOPQRSTUVWXY"
-    "hello world hello world 2"
-    "abcdefghijklmnopqrstuvwxy"
-    "ABCDEFGHIJKLMNOPQRSTUVWXY"
-    "abcdefghijklmnopqrstuvwxy"
-    "ABCDEFGHIJKLMNOPQRSTUVWXY"
-    "hello world hello world 3"
-    "abcdefghijklmnopqrstuvwxy"
-    "ABCDEFGHIJKLMNOPQRSTUVWXY"
-    "abcdefghijklmnopqrstuvwxy"
-    "ABCDEFGHIJKLMNOPQRSTUVWXY"
-    "hello world hello world 4"
-    "abcdefghijklmnopqrstuvwxy"
-    "ABCDEFGHIJKLMNOPQRSTUVWXY"
-    "abcdefghijklmnopqrstuvwxy"
-    "ABCDEFGHIJKLMNOPQRSTUVWXY"
-    "hello world hello world 5"
-  );
-
-  std::cout << "Chars = " << doc.char_length()
-            << "; bytes = " << doc.byte_length() << ".\n";
   while (ed.readLine(line)) {
-    size_t first, second;
-    if (!readpair(line, first, second)) {
-      std::cout << "lol no\n";
+    if (line.length() == 0) {
       continue;
     }
-    std::cout << "Reading (" << first << ", " << second << ").\n";
-    size_t bufsize = second - first + 1;
-    line.reserve(bufsize);
-    auto read = doc.read_cstr(line.data(), &bufsize, first, second) - 1;
-    std::cout << "Read " << read << " chars.\n" << line.data() << "\n\n";
+    if (line[0] == '#' && line.length() > 1) {
+      auto nr = atoi(&line[1]);
+      if (nr > 0 || line[1] == '0') {
+        auto [start, end] = doc.span_for_line(nr);
+        line.clear();
+        doc.read(line, start, end);
+        std::cout << line << "\n";
+      }
+    }
+    line.push_back('\n');
+    doc.append(line.c_str());
   }
 
   return 0;
