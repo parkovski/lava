@@ -1,7 +1,6 @@
 #include "ash/ash.h"
 #include "ash/terminal/terminal.h"
 #include "ash/terminal/lineeditor.h"
-#include "ash/symbol/symboltable.h"
 
 #include <fstream>
 
@@ -87,7 +86,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  sym::SymbolTable symtab;
+  //sym::SymbolTable symtab;
   // Document document;
   // BaseLexer lexer;
   // BaseParser parser;

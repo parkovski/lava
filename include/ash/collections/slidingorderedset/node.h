@@ -1,10 +1,10 @@
-#ifndef ASH_COLLECTIONS_REDBLACKTREE_NODE_H_
-#define ASH_COLLECTIONS_REDBLACKTREE_NODE_H_
+#ifndef ASH_COLLECTIONS_SLIDINGORDEREDSET_NODE_H_
+#define ASH_COLLECTIONS_SLIDINGORDEREDSET_NODE_H_
 
 #include <type_traits>
 #include <algorithm>
 
-namespace ash::collections::rbtree {
+namespace ash::collections::soset {
 
 // Type of the node colors, either red or black.
 typedef bool color_t;
@@ -16,12 +16,9 @@ static constexpr color_t Black = false;
 // Red nodes may not have red children.
 static constexpr color_t Red = true;
 
-template<typename T, typename P, typename O>
-struct Node;
-
-// Base red-black tree node with no data. Note: the destructor is not virtual!
+// Red-black tree node that stores subtree size and position offset from parent.
 template<typename P, typename O>
-struct Node<void, P, O> {
+struct Node {
   using position_type = P;
   using offset_type = O;
 
@@ -158,6 +155,33 @@ struct Node<void, P, O> {
     _offset = static_cast<offset_type>(new_pos) - parent_pos;
   }
 
+  size_t size() const {
+    return _size;
+  }
+
+  void set_size(size_t size) {
+    _size = size;
+  }
+
+  // Should be called at the lowest modified level of the tree.
+  // Recursively updates parent's size until reaching a point where the size
+  // didn't change.
+  void update_size() {
+    size_t new_size = 1;
+    if (_left) {
+      new_size += _left->size();
+    }
+    if (_right) {
+      new_size += _right->size();
+    }
+    if (new_size != _size) {
+      _size = new_size;
+      if (auto p = parent(); p) {
+        p->update_size();
+      }
+    }
+  }
+
 private:
   /// Parent node or null if root. LSB contains the node color.
   Node *_parent = nullptr;
@@ -165,97 +189,12 @@ private:
   Node *_left = nullptr;
   /// Right child.
   Node *_right = nullptr;
+  /// Subtree size, including this node.
+  size_t _size = 1;
   /// Interval start position offset from parent's start.
   offset_type _offset = 0;
 };
 
-template<typename T, typename P, typename O>
-struct Node : Node<void, P, O> {
-  using position_type = P;
-  using offset_type = O;
+} // namespace ash::collections::soset
 
-  /// Construct a new node with only the data field filled in.
-  /// \param args The arguments to pass to the data constructor.
-  template<typename... Args>
-  explicit Node(Args &&...args)
-    noexcept(std::is_nothrow_constructible_v<T, Args...>)
-    : _data(std::forward<Args>(args)...)
-  {}
-
-  Node *parent() {
-    return static_cast<Node *>(Node<void, P, O>::parent());
-  }
-
-  const Node *parent() const {
-    return static_cast<const Node *>(Node<void, P, O>::parent());
-  }
-
-  Node *set_parent(Node *new_parent) {
-    return static_cast<Node *>(Node<void, P, O>::set_parent(new_parent));
-  }
-
-  Node *sibling() {
-    return static_cast<Node *>(Node<void, P, O>::sibling());
-  }
-
-  const Node *sibling() const {
-    return static_cast<const Node *>(Node<void, P, O>::sibling());
-  }
-
-  Node *left() {
-    return static_cast<Node *>(Node<void, P, O>::left());
-  }
-
-  const Node *left() const {
-    return static_cast<const Node *>(Node<void, P, O>::left());
-  }
-
-  Node *set_left(Node *new_left) {
-    return static_cast<Node *>(Node<void, P, O>::set_left(new_left));
-  }
-
-  Node *right() {
-    return static_cast<Node *>(Node<void, P, O>::right());
-  }
-
-  const Node *right() const {
-    return static_cast<const Node *>(Node<void, P, O>::right());
-  }
-
-  Node *set_right(Node *new_right) {
-    return static_cast<Node *>(Node<void, P, O>::set_right(new_right));
-  }
-
-  const T &data() const & {
-    return _data;
-  }
-
-  T &data() & {
-    return _data;
-  }
-
-  T &&data() && {
-    return std::move(_data);
-  }
-
-  template<typename = std::enable_if_t<std::is_move_assignable_v<T>>>
-  void set_data(T &&new_data)
-    noexcept(std::is_nothrow_move_assignable_v<T>)
-  {
-    _data = std::move(new_data);
-  }
-
-  template<typename = std::enable_if_t<std::is_copy_assignable_v<T>>>
-  void set_data(const T &new_data)
-    noexcept(std::is_nothrow_copy_assignable_v<T>)
-  {
-    _data = new_data;
-  }
-
-private:
-  T _data;
-};
-
-}
-
-#endif // ASH_COLLECTIONS_REDBLACKTREE_NODE_H_
+#endif // ASH_COLLECTIONS_SLIDINGORDEREDSET_NODE_H_

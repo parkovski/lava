@@ -192,6 +192,23 @@ static inline size_t copy_utf8(char *dst, const char *src, size_t *chars,
   return src - start;
 }
 
+// Document requirements (all operations must be relatively quick):
+// - Insert/remove text at arbitrary positions.
+//   + librope
+// - 1:1 mapping line number <-> character position.
+//   + Quickly shift all positions greater than some offset.
+//   + Quickly inc/dec all line numbers greater than some offset.
+//   + Red-black tree deriving line number from subtree size and absolute
+//     position from an offset of parent.
+// - 1:N mapping text span -> arbitrary data.
+//   + Spans may overlap in general.
+//   + Different data types can specify span rules, ex:
+//     * Lexer tokens cannot overlap.
+//     * Parse trees cannot overlap but can fully contain each other.
+//     * Diagnostic data has no overlap requirements but should align with
+//       token boundaries.
+// - Notify on change.
+
 class Document {
 public:
   /// Construct an empty document.
