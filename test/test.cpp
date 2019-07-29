@@ -2,9 +2,11 @@
 #include <catch.hpp>
 
 #include <iostream>
+#include <string>
 #include "ash/collections/slidingorderedset.h"
+#include "ash/collections/intervaltree.h"
 
-TEST_CASE("Foo", "[foo]") {
+TEST_CASE("Sliding ordered set", "[soset]") {
   using namespace ash::collections::soset;
   SlidingOrderedSet<> set;
   set.insert(50);
@@ -33,4 +35,54 @@ TEST_CASE("Foo", "[foo]") {
   set.insert(60);
   REQUIRE(set.index_for(set.find(60)) == 6);
   REQUIRE(set.index_for(set.find(70)) == 7);
+}
+
+TEST_CASE("Interval tree", "[itree]") {
+  using namespace ash::collections::itree;
+
+  IntervalTree<std::string_view> tree;
+#define MAKE_PAIR(a, b) #a ", " #b
+#define INSERT(a, b) tree.insert(a, b, MAKE_PAIR(a, b))
+  INSERT(1, 5);
+  INSERT(2, 4);
+  INSERT(4, 7);
+  INSERT(3, 9);
+  INSERT(1, 9);
+  INSERT(4, 5);
+  INSERT(8, 9);
+  INSERT(5, 8);
+  INSERT(5, 9);
+#undef INSERT
+#undef MAKE_PAIR
+
+  int count = 0;
+  for (auto i = tree.find(5); i != tree.end(); ++i) {
+    ++count;
+    REQUIRE(i->start_pos() <= 5);
+    REQUIRE(i->end_pos() >= 5);
+  }
+  REQUIRE(count == 5);
+
+  tree.shift(5, 5);
+  auto inner = tree.find_inner(12, 15);
+  REQUIRE(inner->start_pos() == 13);
+  REQUIRE(inner->end_pos() == 14);
+  REQUIRE(++inner == tree.end());
+
+  count = 0;
+  for (auto i = tree.find_overlap(12, 15); i != tree.end(); ++i) {
+    ++count;
+    REQUIRE(i->start_pos() < 15);
+    REQUIRE(i->end_pos() > 12);
+  }
+  REQUIRE(count == 5);
+
+  tree.shift(12, -3);
+  count = 0;
+  for (auto i = tree.find_equal(5, 12); i != tree.end(); ++i) {
+    ++count;
+  }
+  REQUIRE(count == 2);
+  tree.shift(0, 2);
+  REQUIRE(tree.find(1) == tree.end());
 }

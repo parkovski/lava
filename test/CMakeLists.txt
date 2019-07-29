@@ -1,9 +1,6 @@
 add_executable(doc doc.cpp)
 target_link_libraries(doc ashcollections ashterminal rope)
 
-add_executable(intervaltree intervaltree.cpp)
-target_link_libraries(intervaltree ashcollections)
-
 add_executable(test test.cpp)
 target_link_libraries(test Catch2::Catch2 ashcollections)
 
