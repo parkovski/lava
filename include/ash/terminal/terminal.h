@@ -1,5 +1,5 @@
-#ifndef ASH_TERMINAL_H_
-#define ASH_TERMINAL_H_
+#ifndef ASH_TERMINAL_TERMINAL_H_
+#define ASH_TERMINAL_TERMINAL_H_
 
 namespace ash::term {
 
@@ -29,4 +29,4 @@ int getChar();
 
 } // namespace ash::term
 
-#endif /* ASH_TERMINAL_H_ */
+#endif /* ASH_TERMINAL_TERMINAL_H_ */

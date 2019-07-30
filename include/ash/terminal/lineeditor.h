@@ -1,5 +1,5 @@
-#ifndef ASH_LINEEDITOR_H_
-#define ASH_LINEEDITOR_H_
+#ifndef ASH_TERMINAL_LINEEDITOR_H_
+#define ASH_TERMINAL_LINEEDITOR_H_
 
 #include <string>
 
@@ -36,5 +36,5 @@ private:
 
 } // namespace ash
 
-#endif /* ASH_LINEEDITOR_H_ */
+#endif /* ASH_TERMINAL_LINEEDITOR_H_ */
 
