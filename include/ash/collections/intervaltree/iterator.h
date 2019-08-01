@@ -32,7 +32,9 @@ struct Key {
   friend struct Key<detail::opposite_const_t<T>>;
 
   // Construct an invalid key.
-  Key() = default;
+  Key() noexcept
+    : _node(nullptr)
+  {}
 
   // Allow initialization from nullptr.
   Key(std::nullptr_t) noexcept
