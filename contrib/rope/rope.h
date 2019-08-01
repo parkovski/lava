@@ -80,7 +80,9 @@ typedef struct rope_node_t {
 #ifdef _MSC_VER
 // Nonstandard extension warning... but it is standard C.
 #pragma warning(disable: 4200)
+#endif
   rope_skip_node nexts[];
+#ifdef _MSC_VER
 #pragma warning(default: 4200)
 #endif
 } rope_node;
