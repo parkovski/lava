@@ -12,11 +12,11 @@ class SearchIteratorBase : public Iterator<T> {
   friend class SearchIteratorBase<opposite_const_t<T>>;
 
 protected:
-  using typename Iterator::difference_type;
-  using typename Iterator::value_type;
-  using typename Iterator::pointer;
-  using typename Iterator::reference;
-  using typename Iterator::iterator_category;
+  using typename Iterator<T>::difference_type;
+  using typename Iterator<T>::value_type;
+  using typename Iterator<T>::pointer;
+  using typename Iterator<T>::reference;
+  using typename Iterator<T>::iterator_category;
 
   /// \param node The node to start searching from.
   /// \param position The position of \c node.
@@ -24,7 +24,7 @@ protected:
   /// \param end The end of the search range.
   explicit SearchIteratorBase(node_t<T> *node, size_t position,
                               size_t start, size_t end) noexcept
-    : Iterator(node, position),
+    : Iterator<T>(node, position),
       _start(start),
       _end(end)
   {}
@@ -33,10 +33,12 @@ public:
   SearchIteratorBase(const SearchIteratorBase &) = default;
 
   // Construct a SearchIteratorBase<const T> from a SearchIteratorBase<T>.
-  template<typename = if_const_t<T>>
-  SearchIteratorBase(const SearchIteratorBase<std::remove_const_t<T>> &other)
+  template<typename U = T>
+  SearchIteratorBase(
+    const SearchIteratorBase<std::remove_const_t<if_const_t<U>>> &other
+  )
     noexcept
-    : Iterator(other._node, other._position),
+    : Iterator<T>(other._node, other._position),
       _start(other._start),
       _end(other._end)
   {}
@@ -44,10 +46,12 @@ public:
   SearchIteratorBase &operator=(const SearchIteratorBase &) = default;
 
   // Assign to a SearchIteratorBase<const T> from a SearchIteratorBase<T>.
-  template<typename = if_const_t<T>>
+  template<typename U = T>
   SearchIteratorBase &
-  operator=(const SearchIteratorBase<std::remove_const_t<T>> &other) noexcept {
-    Iterator::operator=(other);
+  operator=(
+    const SearchIteratorBase<std::remove_const_t<if_const_t<U>>> &other
+  ) noexcept {
+    Iterator<T>::operator=(other);
     _start = other._start;
     _end = other._end;
     return *this;
@@ -62,15 +66,15 @@ protected:
   public:                                                                      \
     friend class Class<opposite_const_t<T>>;                                   \
                                                                                \
-    using SearchIteratorBase::difference_type;                                 \
-    using SearchIteratorBase::value_type;                                      \
-    using SearchIteratorBase::pointer;                                         \
-    using SearchIteratorBase::reference;                                       \
-    using SearchIteratorBase::iterator_category;                               \
+    using typename SearchIteratorBase<T>::difference_type;                     \
+    using typename SearchIteratorBase<T>::value_type;                          \
+    using typename SearchIteratorBase<T>::pointer;                             \
+    using typename SearchIteratorBase<T>::reference;                           \
+    using typename SearchIteratorBase<T>::iterator_category;                   \
                                                                                \
     explicit Class(node_t<T> *node, size_t position, size_t start,             \
                    size_t end) noexcept                                        \
-      : SearchIteratorBase(node, position, start, end)                         \
+      : SearchIteratorBase<T>(node, position, start, end)                      \
     {                                                                          \
       if (node) {                                                              \
         find_first();                                                          \
@@ -79,64 +83,27 @@ protected:
                                                                                \
     /* Copy constructor */                                                     \
     Class(const Class &other) noexcept                                         \
-      : SearchIteratorBase(other)                                              \
+      : SearchIteratorBase<T>(other)                                           \
     {}                                                                         \
                                                                                \
     /* Convert from iterator to const_iterator. */                             \
-    template<typename = if_const_t<T>>                                         \
-    Class(const Class<std::remove_const_t<T>> &other) noexcept                 \
-      : SearchIteratorBase(other)                                              \
+    template<typename U = T>                                                   \
+    Class(const Class<std::remove_const_t<if_const_t<U>>> &other) noexcept     \
+      : SearchIteratorBase<T>(other)                                           \
     {}                                                                         \
                                                                                \
     /* Copy assignment */                                                      \
     Class &operator=(const Class &other) noexcept {                            \
-      SearchIteratorBase::operator=(other);                                    \
+      SearchIteratorBase<T>::operator=(other);                                 \
       return *this;                                                            \
     }                                                                          \
                                                                                \
     /* Convert from iterator to const_iterator. */                             \
-    template<typename = if_const_t<T>>                                         \
-    Class &operator=(const Class<std::remove_const_t<T>> &other) noexcept {    \
-      SearchIteratorBase::operator=(other);                                    \
-      return *this;                                                            \
-    }                                                                          \
-                                                                               \
-    /* All search iterators may be constructed or assigned from another. */    \
-    Class(const SearchIteratorBase &other) noexcept                            \
-      : SearchIteratorBase(other)                                              \
+    template<typename U = T>                                                   \
+    Class &operator=(const Class<std::remove_const_t<if_const_t<U>>> &other)   \
+      noexcept                                                                 \
     {                                                                          \
-      if (!is_match()) {                                                       \
-        find_first();                                                          \
-      }                                                                        \
-    }                                                                          \
-                                                                               \
-    /* Convert from iterator to const_iterator. */                             \
-    template<typename = if_const_t<T>>                                         \
-    Class(const SearchIteratorBase<std::remove_const_t<T>> &other) noexcept    \
-      : SearchIteratorBase(other)                                              \
-    {                                                                          \
-      if (!is_match()) {                                                       \
-        find_first();                                                          \
-      }                                                                        \
-    }                                                                          \
-                                                                               \
-    /* All search iterators may be constructed or assigned from another. */    \
-    Class &operator=(const SearchIteratorBase &other) noexcept {               \
-      SearchIteratorBase::operator=(other);                                    \
-      if (!is_match()) {                                                       \
-        find_first();                                                          \
-      }                                                                        \
-      return *this;                                                            \
-    }                                                                          \
-                                                                               \
-    /* Convert from iterator to const_iterator. */                             \
-    template<typename = if_const_t<T>>                                         \
-    Class &operator=(const SearchIteratorBase<std::remove_const_t<T>> &other)  \
-      noexcept {                                                               \
-      SearchIteratorBase::operator=(other);                                    \
-      if (!is_match()) {                                                       \
-        find_first();                                                          \
-      }                                                                        \
+      SearchIteratorBase<T>::operator=(other);                                 \
       return *this;                                                            \
     }                                                                          \
                                                                                \
@@ -146,14 +113,14 @@ protected:
           return this->is_possible_search_node(key);                           \
         };                                                                     \
                                                                                \
-      while (move_next_if(is_possible_search_node)) {                          \
+      while (this->move_next_if(is_possible_search_node)) {                    \
         if (is_match()) {                                                      \
           return *this;                                                        \
         }                                                                      \
       }                                                                        \
                                                                                \
       /* Nothing found. */                                                     \
-      _key = nullptr;                                                          \
+      this->_key = nullptr;                                                    \
       return *this;                                                            \
     }                                                                          \
                                                                                \
@@ -169,13 +136,13 @@ protected:
           return this->is_possible_search_node(key);                           \
         };                                                                     \
                                                                                \
-      while (move_prev_if(is_possible_search_node)) {                          \
+      while (this->move_prev_if(is_possible_search_node)) {                    \
         if (is_match()) {                                                      \
           return *this;                                                        \
         }                                                                      \
       }                                                                        \
                                                                                \
-      _key = nullptr;                                                          \
+      this->_key = nullptr;                                                    \
       return *this;                                                            \
     }                                                                          \
                                                                                \

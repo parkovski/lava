@@ -49,7 +49,7 @@ struct Key {
   Key &operator=(const Key &other) = default;
 
   // Assign from nullptr.
-  Key &operator=(nullptr_t) noexcept {
+  Key &operator=(std::nullptr_t) noexcept {
     _node = nullptr;
     return *this;
   }
@@ -111,14 +111,14 @@ struct Key {
 
   // Conversion operator to allow using a const Key<T> & where a const
   // Key<const T> & is expected.
-  template<typename = if_mutable_t<T>>
-  operator const Key<const T> &() const {
+  template<typename U = T>
+  operator const Key<const detail::if_mutable_t<U>> &() const {
     return *reinterpret_cast<const Key<const T> *>(this);
   }
 
   // Conversion from Key<T> & to Key<const T> &.
-  template<typename = if_mutable_t<T>>
-  operator Key<const T> &() {
+  template<typename U = T>
+  operator Key<const detail::if_mutable_t<U>> &() {
     return *reinterpret_cast<Key<const T> *>(this);
   }
 
@@ -180,8 +180,9 @@ public:
   Iterator(const Iterator &other) = default;
 
   // Conversion from iterator to const_iterator.
-  template<typename = detail::if_const_t<T>>
-  Iterator(const Iterator<std::remove_const_t<T>> &other) noexcept
+  template<typename U = T>
+  Iterator(const Iterator<std::remove_const_t<detail::if_const_t<U>>> &other)
+    noexcept
     : _key(other._key)
   {}
 
@@ -189,8 +190,12 @@ public:
   Iterator &operator=(const Iterator &other) = default;
 
   // Conversion from iterator to const_iterator.
-  template<typename = detail::if_const_t<T>>
-  Iterator &operator=(const Iterator<std::remove_const_t<T>> &other) noexcept {
+  template<typename U = T>
+  Iterator &operator=(
+    const Iterator<std::remove_const_t<detail::if_const_t<U>>> &other
+  )
+    noexcept
+  {
     _key = other._key;
     return *this;
   }

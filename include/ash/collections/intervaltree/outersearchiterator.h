@@ -26,8 +26,8 @@ class OuterSearchIterator final : public SearchIteratorBase<T> {
     auto const search_length = _end - _start;
 
     // First find the lowest node with a max greater or equal to end.
-    while (move_left_if([=](const Key<T> &key) {
-                          return key.node()->max_pos(key.start_pos()) >= _end;
+    while (this->move_left_if([=](const Key<T> &key) {
+                          return key.node()->max_pos(key.start_pos()) >= this->_end;
                         })) {
     }
 
@@ -43,7 +43,7 @@ class OuterSearchIterator final : public SearchIteratorBase<T> {
     }
 
     // Not found yet. Is it to the right?
-    while (move_next_if(is_possible_search_node)) {
+    while (this->move_next_if(is_possible_search_node)) {
       if (is_match()) {
         return;
       }

@@ -97,11 +97,11 @@ struct Node {
     // shrink.
     if constexpr (Inserting) {
       if (_max_offset - _offset > parent->_max_offset) {
-        parent->update_max_recursive<true>();
+        parent->template update_max_recursive<true>();
       }
     } else {
       if (_max_offset - _offset < parent->_max_offset) {
-        parent->update_max_recursive<false>();
+        parent->template update_max_recursive<false>();
       }
     }
   }

@@ -21,7 +21,7 @@ public:
   typedef const value_type &reference;
   typedef std::bidirectional_iterator_tag iterator_category;
 
-  template<typename P, typename O, typename Compare>
+  template<typename, typename, typename>
   friend class SlidingOrderedSet;
 
   // Empty iterator constructor.

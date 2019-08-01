@@ -36,7 +36,7 @@ void ash::term::saveState() {
 
 void ash::term::setShellState() {
   SetConsoleMode(stdinHandle,
-                 ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS
+                 ENABLE_WINDOW_INPUT | ENABLE_EXTENDED_FLAGS
                  | ENABLE_VIRTUAL_TERMINAL_INPUT);
   SetConsoleMode(stdoutHandle,
                  ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT

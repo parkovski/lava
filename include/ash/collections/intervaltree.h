@@ -238,7 +238,7 @@ void IntervalTree<T>::shift(size_t position, ptrdiff_t space) {
     for (auto it = find(position); it != end; ++it) {
       auto node = const_cast<node_t<T> *>(it->node());
       node->set_length(it->length() + space);
-      node->update_max_recursive<true>();
+      node->template update_max_recursive<true>();
     }
   } else {
     // Removing. Note space is negative in this case.
@@ -280,7 +280,7 @@ void IntervalTree<T>::shift(size_t position, ptrdiff_t space) {
           right->set_offset(right->offset() + start_ofs);
         }
 
-        node->update_max_recursive<false>();
+        node->template update_max_recursive<false>();
         continue;
       }
 
@@ -292,7 +292,7 @@ void IntervalTree<T>::shift(size_t position, ptrdiff_t space) {
         length += space;
       }
       node->set_length(length);
-      node->update_max_recursive<false>();
+      node->template update_max_recursive<false>();
     }
 
     // Now the only thing left is to move nodes to the right of the interval
@@ -372,7 +372,7 @@ T &IntervalTree<T>::insert_node(size_t start, size_t end, node_t<T> *node) {
 
   node->set_offset(static_cast<ptrdiff_t>(start) - position);
   // Fix interval tracking.
-  parent->update_max_recursive<true>();
+  parent->template update_max_recursive<true>();
   // Fix red-black properties.
   fix_for_insert(node);
 
@@ -457,8 +457,8 @@ node_t<T> *IntervalTree<T>::extract(IntervalTree<T>::const_iterator where) {
     // have gotten any smaller, but may have gotten larger. Nodes above
     // next_node may have smaller subtrees, however, but these recursive
     // calls will not overlap.
-    parent->update_max_recursive<true>();
-    next_node->update_max_recursive<false>();
+    parent->template update_max_recursive<true>();
+    next_node->template update_max_recursive<false>();
   } else {
     // Zero or one child. Just move the child up to node's position.
     if (!(child = node->right())) {
@@ -475,7 +475,7 @@ node_t<T> *IntervalTree<T>::extract(IntervalTree<T>::const_iterator where) {
         child->set_offset(child->offset() + node->offset());
       }
       // Because a node was removed, the subtree length may now be smaller.
-      parent->update_max_recursive<false>();
+      parent->template update_max_recursive<false>();
     } else {
       _root = child;
       if (child) {

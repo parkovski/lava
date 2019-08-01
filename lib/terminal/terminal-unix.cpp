@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <termios.h>
+#include <cstdio>
 
 static struct termios termAttrs;
 

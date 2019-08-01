@@ -1,8 +1,8 @@
 add_executable(doc doc.cpp)
-target_link_libraries(doc ashcollections ashterminal rope)
+target_link_libraries(doc PRIVATE ashdocument ashterminal)
 
 add_executable(test test.cpp)
-target_link_libraries(test Catch2::Catch2 ashcollections)
+target_link_libraries(test PRIVATE Catch2::Catch2 ashcollections)
 
 include(CTest)
 include(Catch)
