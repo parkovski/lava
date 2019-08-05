@@ -181,7 +181,14 @@ struct Editor {
 
   void run() {
     printf("\033[2J\033[H\033[1 q");
-    while (handle_char(term::getChar())) {
+    char buf[64];
+    size_t count;
+    while ((count = term::getChars(buf, 1, 64)) > 0) {
+      for (size_t i = 0; i < count; ++i) {
+        if (!handle_char(buf[i])) {
+          return;
+        }
+      }
     }
   }
 };
@@ -197,6 +204,7 @@ int main(int argc, char *argv[]) {
   }*/
 
   term::initialize();
+  term::setShellState();
   // Set alt buffer.
   printf("\033[?1049h\033[2J");
 

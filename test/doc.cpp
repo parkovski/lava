@@ -1,6 +1,4 @@
 #include "ash/ash.h"
-#include "ash/terminal/terminal.h"
-#include "ash/terminal/lineeditor.h"
 #include "ash/document/document.h"
 
 #include <iostream>
@@ -35,11 +33,6 @@ bool readpair(const std::string &s, size_t &first, size_t &second) {
 }
 
 int main(int argc, char *argv[]) {
-  ash::term::initialize();
-  ASH_SCOPEEXIT { ash::term::restoreState(); };
-
-  ash::LineEditor ed;
-  std::string line;
   ash::doc::Document<int> doc;
 
   doc.append("Hello world\nHello world\nHello world\n");

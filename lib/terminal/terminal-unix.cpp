@@ -2,14 +2,36 @@
 
 #include <unistd.h>
 #include <termios.h>
+#include <sys/ioctl.h>
+#include <csignal>
+#include <cassert>
 #include <cstdio>
+#include <thread>
 
 static struct termios termAttrs;
+static void (*resizeHandler)(short x, short y) = nullptr;
+
+using namespace ash::term;
+
+static void dispatchSigwinch(int) {
+  if (auto h = resizeHandler) {
+    auto [width, height] = getSize();
+    if (width != 0 && height != 0) {
+      h(width, height);
+    }
+  }
+}
 
 void ash::term::initialize() {
   tcgetattr(STDIN_FILENO, &termAttrs);
 
   ash::term::saveState();
+
+  struct sigaction act;
+  sigemptyset(&act.sa_mask);
+  act.sa_flags = 0;
+  act.sa_handler = &dispatchSigwinch;
+  sigaction(SIGWINCH, &act, nullptr);
 }
 
 bool ash::term::isTTYInput() {
@@ -37,12 +59,40 @@ void ash::term::setShellState() {
   newAttrs.c_cc[VMIN] = 1;
   newAttrs.c_cc[VTIME] = 0;
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &newAttrs);
+  setvbuf(stdout, nullptr, _IONBF, 0);
 }
 
 void ash::term::restoreState() {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &termAttrs);
+  setvbuf(stdout, nullptr, _IOFBF, BUFSIZ);
 }
 
 int ash::term::getChar() {
   return getchar();
+}
+
+size_t ash::term::getChars(char *buf, size_t min, size_t max) {
+  ssize_t amt;
+  size_t total = 0;
+  while ((amt = read(STDIN_FILENO, buf, max)) > 0) {
+    total += amt;
+    buf += amt;
+    max -= amt;
+    if (total >= min) {
+      break;
+    }
+  }
+  return total;
+}
+
+std::pair<short, short> ash::term::getSize() {
+  struct winsize size;
+  if (ioctl(STDIN_FILENO, TIOCGWINSZ, &size)) {
+    return {0, 0};
+  }
+  return {size.ws_row, size.ws_col};
+}
+
+void ash::term::onResize(void (*handler)(short x, short y)) {
+  resizeHandler = handler;
 }

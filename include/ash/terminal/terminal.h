@@ -1,6 +1,15 @@
 #ifndef ASH_TERMINAL_TERMINAL_H_
 #define ASH_TERMINAL_TERMINAL_H_
 
+#include <functional>
+#include <type_traits>
+#include <mutex>
+#include <utility>
+#include <atomic>
+#include <memory>
+#include <mutex>
+#include <condition_variable>
+
 namespace ash::term {
 
 /// Initializes the terminal library and saves the previous state.
@@ -26,6 +35,16 @@ void restoreState();
 
 /// Read the next character from the input.
 int getChar();
+
+/// Read at least min and at most max chars into buf. Returns the number of
+/// characters read.
+size_t getChars(char *buf, size_t min, size_t max);
+
+/// Get the terminal buffer size.
+std::pair<short, short> getSize();
+
+/// Register a callback when the window is resized.
+void onResize(void (*handler)(short x, short y));
 
 } // namespace ash::term
 
