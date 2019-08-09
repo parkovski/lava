@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14.4 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 project(ash VERSION 0.1.0)
 
@@ -30,6 +30,13 @@ set(ASH_CONTRIB_INCLUDE_DIR
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/contrib>
   $<INSTALL_INTERFACE:contrib/ash>
 )
+
+if(MSVC)
+  # C4706 - assignment within conditional.
+  add_compile_options(/W4 /wd4706)
+else()
+  add_compile_options(-Wall -pedantic)
+endif()
 
 add_subdirectory(contrib)
 add_subdirectory(lib)

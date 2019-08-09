@@ -22,7 +22,7 @@ struct Editor {
   int seqidx = -1;
   doc::Document<unsigned> doc;
   size_t charidx = 0;
-  constexpr static int buflen = 32;
+  constexpr static int buflen = 256;
   char buf[buflen];
   size_t charcnt = 0;
   char lastch = 0;
@@ -41,6 +41,16 @@ struct Editor {
     printf("\033[%d;%dH", cursor.y, cursor.x);
   }
 
+  void draw_partial_line(size_t line, size_t xoff) {
+    auto [c0, c1] = doc.span_for_line(line);
+    c0 += xoff;
+    // Cursor to line and clear right.
+    printf("\033[%d;%zdH\033[K", cursor.y, 1 + xoff);
+    size_t bytes = buflen;
+    doc.read_cstr(buf, &bytes, c0, c1);
+    printf("%s\033[%d;%dH", buf, cursor.y, cursor.x);
+  }
+
   void draw_lines(size_t start, size_t count, bool clear) {
     if (start == 0) {
       start = 1;
@@ -57,11 +67,8 @@ struct Editor {
         printf("\033[2K\033[G");
       }
       auto [c0, c1] = doc.span_for_line(i);
-      if (c1 - c0 >= buflen) {
-        c1 = c0 + buflen - 1;
-      }
       size_t bytes = buflen;
-      doc.read_cstr(buf, &bytes, c0, c1 - c0);
+      doc.read_cstr(buf, &bytes, c0, c1);
       puts(buf);
     }
   }
@@ -145,9 +152,12 @@ struct Editor {
 
       case '\r':
       case '\n':
+        // Clear the debug line and the rest of this line.
+        printf("\033[%zdd\033[2K\033[%d;%dH\033[K", doc.lines() + 2, cursor.y, cursor.x);
         cursor.x = 1;
         ++cursor.y;
         type('\n');
+        draw_partial_line(cursor.y, 0);
         break;
 
       case ctrl('H'):
@@ -157,11 +167,16 @@ struct Editor {
           if (doc[charidx] == '\n') {
             --cursor.y;
             cursor.x = doc.span_for_line(cursor.y).second;
+            // TODO: Remove this line.
             printf("\033[A\033[%dG", cursor.x);
+          } else if (cursor.x > 0) {
+            --cursor.x;
+            draw_partial_line(cursor.y, cursor.x - 1);
           } else {
-            printf("\033[D\033[X");
+            break;
           }
           doc.erase(charidx - 1, charidx);
+          --charidx;
         }
         break;
 

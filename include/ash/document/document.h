@@ -61,7 +61,7 @@ static inline size_t copy_utf8(char *dst, const char *src, size_t *chars,
   const char *const end = src + max_size;
   const char *const safe_end = end - 6;
 
-  while (src < safe_end) {
+  while (src < safe_end && chars_seen < *chars) {
     switch (codepoint_size(*src)) {
       case 6: *dst++ = *src++;
       case 5: *dst++ = *src++;
@@ -73,7 +73,7 @@ static inline size_t copy_utf8(char *dst, const char *src, size_t *chars,
     ++chars_seen;
   }
 
-  while (src < end) {
+  while (src < end && chars_seen < *chars) {
     auto cp_size = codepoint_size(*src);
     if (src + cp_size > end) {
       // Not enough room to write this character.
@@ -215,6 +215,7 @@ public:
       to = len;
     }
     if (from >= to) {
+      *bufsize = 0;
       return 0;
     }
 
@@ -243,6 +244,7 @@ public:
 
       if (!node) {
         // Went too far, can't read anything.
+        *bufsize = 0;
         return 0;
       }
     }
@@ -287,10 +289,10 @@ public:
   /// \see read.
   size_t read_cstr(char *buf, size_t *bufsize, size_t from, size_t to) const {
     --*bufsize;
-    auto bytes = read(buf, bufsize, from, to);
+    auto chars = read(buf, bufsize, from, to);
     buf[*bufsize] = 0;
     ++*bufsize;
-    return bytes + 1;
+    return chars + 1;
   }
 
   /// Get one Unicode character from the document.
