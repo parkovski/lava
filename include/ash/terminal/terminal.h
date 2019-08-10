@@ -1,14 +1,8 @@
 #ifndef ASH_TERMINAL_TERMINAL_H_
 #define ASH_TERMINAL_TERMINAL_H_
 
-#include <functional>
-#include <type_traits>
-#include <mutex>
+#include <cstddef>
 #include <utility>
-#include <atomic>
-#include <memory>
-#include <mutex>
-#include <condition_variable>
 
 namespace ash::term {
 

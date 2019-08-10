@@ -1,4 +1,4 @@
-set(SOURCES lineeditor.cpp)
+set(SOURCES lineeditor.cpp ansi.cpp)
 
 if(WIN32)
   list(APPEND SOURCES terminal-windows.cpp)
