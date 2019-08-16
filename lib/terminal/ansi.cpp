@@ -374,6 +374,11 @@ DecodeResult ash::term::ansi::decode(std::string_view str) {
     result.kind = DecodeControlChar;
     result.key = static_cast<TermKey>(*s);
     ++result.length;
+  } else if (*s == '\x7f') {
+    result.control = 1;
+    result.kind = DecodeControlChar;
+    result.key = TermKey::Backspace2;
+    ++result.length;
   } else {
     result.kind = DecodePrintChar;
     result.length = utf8_codepoint_size(*s);

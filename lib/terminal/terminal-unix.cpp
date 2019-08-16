@@ -16,7 +16,7 @@ static void *resizeParam = nullptr;
 
 static void dispatchSigwinch(int) {
   if (auto h = resizeHandler) {
-    auto [width, height] = getSize();
+    auto [width, height] = getScreenSize();
     if (width != 0 && height != 0) {
       h(width, height);
     }

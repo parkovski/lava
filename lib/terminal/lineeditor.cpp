@@ -40,17 +40,11 @@ LineEditor::Status LineEditor::readLine() {
   std::tie(_screenX, _screenY) = getScreenSize();
 
   if (_doc.length()) {
+    drawLine();
     size_t bytes = _doc.size();
     _textbuf.reserve(bytes);
     _doc.read(&_textbuf[0], &bytes, 0, _doc.length());
     fmt::print(std::string_view(&_textbuf[0], bytes));
-    if (_x) {
-      if (_y == 0) {
-        fmt::print("{}", ansi::cursor::move_to(_xInit + _x, _yInit));
-      } else {
-        fmt::print("{}", ansi::cursor::move_to(_x + 1, _y + _yInit));
-      }
-    }
   }
 
   if (_mode == Mode::VimInsert) {
@@ -166,6 +160,12 @@ LineEditor::Status LineEditor::processControlChar(ansi::TermKey key,
         moveBy(-1, 0);
         break;
 
+      case TermKey::CtrlL:
+        _yInit = 1;
+        fmt::print("{}{}", ansi::screen::clear,
+                   ansi::cursor::move_to(_xInit, 1));
+        return Status::RedrawPrompt;
+
       default:
         break;
     }
@@ -178,8 +178,9 @@ LineEditor::Status LineEditor::processControlChar(ansi::TermKey key,
         break;
 
       case TermKey::CtrlL:
-        fmt::print(ansi::screen::clear);
-        moveTo(0);
+        _yInit = 1;
+        fmt::print("{}{}", ansi::screen::clear,
+                   ansi::cursor::move_to(_xInit + _x, _y + 1));
         return Status::RedrawPrompt;
 
       case TermKey::Backspace1:
@@ -320,6 +321,21 @@ bool LineEditor::fillBuffer() {
   return bool(count);
 }
 
+void LineEditor::drawLine() const {
+  fmt::print("{}", ansi::cursor::move_to(_yInit, _xInit));
+  auto size = _doc.size();
+  _textbuf.reserve(size + 1);
+  _doc.read(_textbuf.data(), &size, 0, _doc.length());
+  fmt::print(_textbuf);
+  if (_x) {
+    if (_y == 0) {
+      fmt::print("{}", ansi::cursor::move_to(_xInit + _x, _yInit));
+    } else {
+      fmt::print("{}", ansi::cursor::move_to(_x + 1, _y + _yInit));
+    }
+  }
+}
+
 void LineEditor::moveBy(short x, short y) {
   moveTo(short(_x) + x + 1, short(_y) + y + 1);
 }
@@ -344,9 +360,11 @@ void LineEditor::moveTo(size_t pos) {
   }
   _pos = pos;
   std::tie(_y, _x) = _doc.pos_to_pt(pos);
+  --_x;
+  --_y;
   auto y = _y + _yInit;
   auto x = _x;
-  if (_y == 1) {
+  if (_y == 0) {
     x += _xInit;
   } else {
     ++x;
@@ -359,6 +377,7 @@ bool LineEditor::insert(std::string_view text) {
   _textbuf = text;
   _doc.insert(_pos, _textbuf.c_str());
   for (auto i = 0; i < text.length(); i += utf8_codepoint_size(text[i])) {
+    ++_pos;
     if (text[i] == '\n') {
       ++_y;
       _x = 0;
@@ -392,21 +411,17 @@ bool LineEditor::erase(ptrdiff_t count) {
     if (_pos + fwdcount > _doc.length()) {
       fwdcount = _doc.length() - _pos;
     }
-    _doc.erase(_pos, fwdcount);
+    _doc.erase(_pos, _pos + fwdcount);
     fmt::print("{}", ansi::line::erase((unsigned short)(fwdcount)));
   } else if (size_t(-count) <= _pos) {
     auto bkwdcount = static_cast<size_t>(-count);
     if (bkwdcount > _pos) {
       bkwdcount = _pos;
     }
-    fmt::print("{}{}", ansi::cursor::left((unsigned short)(bkwdcount)),
-               ansi::line::erase((unsigned short)(bkwdcount)));
-    _doc.erase(_pos - bkwdcount, bkwdcount);
-    if (size_t(_x) < bkwdcount) {
-      moveTo(_pos - bkwdcount);
-    } else {
-      _x -= (unsigned short)(bkwdcount);
-    }
+    unsigned short bkcount_s = static_cast<unsigned short>(bkwdcount);
+    fmt::print("{}{}", ansi::cursor::left(bkcount_s),
+               ansi::line::erase(bkcount_s));
+    _doc.erase(_pos - bkwdcount, _pos);
   } else {
     return false;
   }

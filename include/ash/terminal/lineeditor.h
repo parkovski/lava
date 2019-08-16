@@ -45,6 +45,8 @@ private:
 
   bool fillBuffer();
 
+  void drawLine() const;
+
 public:
   // Move by (x, y) on screen and update the cursor accordingly.
   void moveBy(short x, short y);
@@ -98,7 +100,7 @@ private:
   char _readbuf[BufferLength];
   unsigned _rbpos = 0;
   unsigned _rbcnt = 0;
-  std::string _textbuf;
+  mutable std::string _textbuf;
   size_t _pos = 0;
   unsigned short _xInit;
   unsigned short _yInit;
