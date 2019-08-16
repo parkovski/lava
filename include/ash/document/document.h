@@ -1,6 +1,8 @@
 #ifndef ASH_DOCUMENT_DOCUMENT_H_
 #define ASH_DOCUMENT_DOCUMENT_H_
 
+#include "ash/ash.h"
+
 #include "../collections/intervaltree.h"
 #include "../collections/slidingorderedset.h"
 
@@ -13,19 +15,6 @@
 namespace ash::doc {
 
 namespace detail {
-// Find out how many bytes the unicode character which starts with the specified byte
-// will occupy in memory.
-// Returns the number of bytes, or SIZE_MAX if the byte is invalid.
-static inline size_t codepoint_size(uint8_t byte) {
-  if (byte <= 0x7f) { return 1; } // 0x74 = 0111 1111
-  else if (byte <= 0xbf) { return 1; } // 1011 1111. Invalid for a starting byte.
-  else if (byte <= 0xdf) { return 2; } // 1101 1111
-  else if (byte <= 0xef) { return 3; } // 1110 1111
-  else if (byte <= 0xf7) { return 4; } // 1111 0111
-  else if (byte <= 0xfb) { return 5; } // 1111 1011
-  else if (byte <= 0xfd) { return 6; } // 1111 1101
-  else { return 1; }
-}
 
 /// Skip to the given UTF-8 offset in the string.
 /// \param str The string to search.
@@ -36,7 +25,7 @@ static inline char *skip_utf8(char *str, size_t chars, size_t bytelen) {
   size_t chars_seen = 0;
   const char *const end = str + bytelen;
   while (chars_seen < chars) {
-    auto cp_size = codepoint_size(*str);
+    auto cp_size = utf8_codepoint_size(*str);
     if (str + cp_size > end) {
       break;
     }
@@ -62,7 +51,7 @@ static inline size_t copy_utf8(char *dst, const char *src, size_t *chars,
   const char *const safe_end = end - 6;
 
   while (src < safe_end && chars_seen < *chars) {
-    switch (codepoint_size(*src)) {
+    switch (utf8_codepoint_size(*src)) {
       case 6: *dst++ = *src++;
       case 5: *dst++ = *src++;
       case 4: *dst++ = *src++;
@@ -74,7 +63,7 @@ static inline size_t copy_utf8(char *dst, const char *src, size_t *chars,
   }
 
   while (src < end && chars_seen < *chars) {
-    auto cp_size = codepoint_size(*src);
+    auto cp_size = utf8_codepoint_size(*src);
     if (src + cp_size > end) {
       // Not enough room to write this character.
       break;
@@ -144,7 +133,7 @@ private:
         _newlines.insert(pos + i);
       }
       ++len;
-      i += detail::codepoint_size(ch);
+      i += utf8_codepoint_size(ch);
       ch = text[i];
     }
   }
@@ -170,8 +159,18 @@ public:
     return rope_char_count(_text);
   }
 
+  // Length in UTF-8 characters.
+  size_t length() const {
+    return rope_char_count(_text);
+  }
+
   /// Get the length of the text in bytes.
   size_t byte_length() const {
+    return rope_byte_count(_text);
+  }
+
+  // Size in bytes.
+  size_t size() const {
     return rope_byte_count(_text);
   }
 
@@ -199,6 +198,13 @@ public:
   void replace(size_t from, size_t to, const char *text) {
     erase(from, to);
     insert(from, text);
+  }
+
+  // Clears all text and attributes.
+  void clear() {
+    rope_del(_text, 0, char_length());
+    _attrs.clear();
+    _newlines.clear();
   }
 
   /// Read a range of text from the rope into a buffer. Indexes in characters.
@@ -301,10 +307,10 @@ public:
   /// \return The UTF-32 character at the specified offset.
   char32_t operator[](size_t index) const {
     // TODO: Read any unicode sequence (6 chars max), convert to UTF-32.
-    char ch = 0;
-    size_t bufsize = 1;
-    read(&ch, &bufsize, index, index + 1);
-    return ch;
+    char ch[6];
+    size_t bufsize = 6;
+    read(ch, &bufsize, index, index + 1);
+    return utf8_to_utf32(ch);
   }
 
   template<typename... Args>
@@ -331,6 +337,119 @@ public:
       return _newlines.size() + 1;
     }
     return _newlines.index_for(ln) + 1;
+  }
+
+  // Make line and column a valid pair if either is out of range.
+  void constrain(size_t &line, size_t &column) const {
+    if (line == 0) {
+      line = 1;
+    }
+    if (line > _newlines.size()) {
+      line = _newlines.size() + 1;
+    }
+    if (column == 0) {
+      column = 1;
+    }
+    if (_newlines.size() == 0) {
+      line = 1;
+      if (column > length()) {
+        column = length() + 1;
+      }
+      return;
+    }
+
+    auto next_nl = _newlines.get(line - 1);
+    if (next_nl == _newlines.end()) {
+      auto first_col = *_newlines.rbegin() + 1;
+      auto max_col = length() - first_col + 1;
+      if (column > max_col) {
+        column = max_col;
+      }
+      return;
+    }
+
+    auto prev_nl = next_nl - 1;
+    auto max_col = *next_nl - *prev_nl + 1;
+    if (column > max_col) {
+      column = max_col;
+    }
+  }
+
+  // Returns the (line, column) pair for a character position.
+  // If pos is out of range, the last character position is returned.
+  std::pair<size_t, size_t> pos_to_pt(size_t pos) const {
+    if (pos > length()) {
+      pos = length();
+    }
+    if (_newlines.empty()) {
+      return {1, pos + 1};
+    }
+
+    // Newline after the current line.
+    auto nl = _newlines.upper_bound(pos);
+    size_t line, column;
+    if (nl == _newlines.end()) {
+      // Last line.
+      line = _newlines.size() + 1;
+      column = pos - *_newlines.rbegin() + 1;
+    } else {
+      line = _newlines.index_for(nl) + 1;
+      if (line == 1) {
+        // First line.
+        column = pos + 1;
+      } else {
+        column = pos - *(nl - 1) + 1;
+      }
+    }
+    
+    return {line, column};
+  }
+
+  // Returns a character position for a (line, column) pair.
+  // Out of range values are wrapped to [1, max].
+  size_t pt_to_pos(size_t line, size_t column) const {
+    // Make indices 0-based.
+    if (line > 0) {
+      --line;
+    }
+    if (column > 0) {
+      --column;
+    }
+
+    if (_newlines.empty()) {
+      // Only one line in the document.
+      if (column > length()) {
+        return length();
+      }
+      return column;
+    }
+
+    // This is the newline at the _end_ of this line.
+    auto nl = _newlines.get(line);
+    if (nl == _newlines.end()) {
+      // Last line.
+      auto pos = *_newlines.rbegin() + column;
+      if (pos > length()) {
+        return length();
+      }
+      return pos;
+    } else {
+      if (_newlines.index_for(nl) == 0) {
+        // First line.
+        if (column > *nl) {
+          return *nl;
+        }
+        return column;
+      }
+
+      // Any middle line: the position is the column offset from the last
+      // newline.
+      auto pos = *(nl - 1) + column;
+      if (pos > *nl) {
+        return *nl;
+      }
+      return pos;
+    }
   }
 
   // Line numbers start at 1. The end of the span is the index of the newline

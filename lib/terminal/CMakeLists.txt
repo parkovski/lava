@@ -9,4 +9,5 @@ else()
 endif()
 
 add_library(ashterminal STATIC ${SOURCES})
+target_link_libraries(ashterminal ashdocument fmt::fmt-header-only)
 target_include_directories(ashterminal PUBLIC ${ASH_INCLUDE_DIR})

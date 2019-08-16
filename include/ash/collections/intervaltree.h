@@ -168,6 +168,11 @@ public:
     delete extract(where);
   }
 
+  void clear() {
+    delete _root;
+    _root = nullptr;
+  }
+
   /// Shifts intervals by inserting or removing space. Overlapping intervals
   /// are expanded or shortened. Intervals entirely inside removed space are
   /// removed from the tree.

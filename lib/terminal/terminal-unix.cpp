@@ -8,10 +8,11 @@
 #include <cstdio>
 #include <thread>
 
-static struct termios termAttrs;
-static void (*resizeHandler)(short x, short y) = nullptr;
-
 using namespace ash::term;
+
+static struct termios termAttrs;
+static ResizeHandler resizeHandler = nullptr;
+static void *resizeParam = nullptr;
 
 static void dispatchSigwinch(int) {
   if (auto h = resizeHandler) {
@@ -85,7 +86,7 @@ size_t ash::term::getChars(char *buf, size_t min, size_t max) {
   return total;
 }
 
-std::pair<short, short> ash::term::getSize() {
+std::pair<unsigned short, unsigned short> ash::term::getScreenSize() {
   struct winsize size;
   if (ioctl(STDIN_FILENO, TIOCGWINSZ, &size)) {
     return {0, 0};
@@ -93,6 +94,8 @@ std::pair<short, short> ash::term::getSize() {
   return {size.ws_row, size.ws_col};
 }
 
-void ash::term::onResize(void (*handler)(short x, short y)) {
-  resizeHandler = handler;
+ResizeHandler ash::term::onResize(ResizeHandler newHandler) {
+  auto oldHandler = resizeHandler;
+  resizeHandler = newHandler;
+  return oldHandler;
 }

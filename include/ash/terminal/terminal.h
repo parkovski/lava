@@ -35,10 +35,12 @@ int getChar();
 size_t getChars(char *buf, size_t min, size_t max);
 
 /// Get the terminal buffer size.
-std::pair<short, short> getSize();
+std::pair<unsigned short, unsigned short> getScreenSize();
 
-/// Register a callback when the window is resized.
-void onResize(void (*handler)(short x, short y));
+typedef void (*ResizeHandler)(unsigned short x, unsigned short y);
+
+/// Register a callback when the window is resized. Returns the old handler.
+ResizeHandler onResize(ResizeHandler newHandler);
 
 } // namespace ash::term
 

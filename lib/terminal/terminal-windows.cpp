@@ -4,10 +4,12 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
+using namespace ash::term;
+
 static DWORD stdinMode;
 static DWORD stdoutMode;
-static void (*resizeHandler)(short x, short y) = nullptr;
-static short bufWidth, bufHeight;
+static ResizeHandler resizeHandler = nullptr;
+static unsigned short bufWidth, bufHeight;
 
 static void postResize() {
   CONSOLE_SCREEN_BUFFER_INFO sbi;
@@ -149,12 +151,14 @@ size_t ash::term::getChars(char *buf, size_t min, size_t max) {
   return total;
 }
 
-std::pair<short, short> ash::term::getSize() {
+std::pair<unsigned short, unsigned short> ash::term::getScreenSize() {
   postResize();
   return {bufWidth, bufHeight};
 }
 
-void ash::term::onResize(void (*handler)(short x, short y)) {
-  resizeHandler = handler;
+ResizeHandler ash::term::onResize(ResizeHandler newHandler) {
+  auto oldHandler = resizeHandler;
+  resizeHandler = newHandler;
   postResize();
+  return newHandler;
 }

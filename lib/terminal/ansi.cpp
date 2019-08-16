@@ -1,6 +1,7 @@
+#include "ash/ash.h"
 #include "ash/terminal/ansi.h"
 
-using namespace ash::term;
+using namespace ash::term::ansi;
 
 // TODO: These are generated on Windows. May need to add more later.
 // - ^[Ox - x in [A, B, C, D, H, F, P, Q, R, S]
@@ -19,7 +20,7 @@ using namespace ash::term;
 
 namespace {
 
-bool setModifiers(AnsiDecodeResult &r, int m) {
+bool setModifiers(DecodeResult &r, int m) {
   switch (m) {
     case 8:
       r.control = 1;
@@ -49,7 +50,7 @@ bool setModifiers(AnsiDecodeResult &r, int m) {
 }
 
 // Form ^[Ox. Sets key only, not length or kind.
-bool convertEscO(AnsiDecodeResult &r, char c) {
+bool convertEscO(DecodeResult &r, char c) {
   switch (c) {
     case 'A':
       r.key = TermKey::Up;
@@ -99,26 +100,26 @@ bool convertEscO(AnsiDecodeResult &r, char c) {
 }
 
 // Form ^[[x where x is a letter. Sets result fields on success only.
-bool convertEscBLetter(AnsiDecodeResult &r, char c) {
+bool convertEscBLetter(DecodeResult &r, char c) {
   if (c >= 'P' && c <= 'S') {
     return false;
   }
   if (c == 'Z') {
-    r.kind = AnsiControlChar;
+    r.kind = DecodeControlChar;
     r.key = TermKey::ShiftTab;
     r.shift = true;
     r.length = 3;
     return true;
   }
   if (convertEscO(r, c)) {
-    r.kind = AnsiControlChar;
+    r.kind = DecodeControlChar;
     r.length = 3;
     return true;
   }
   return false;
 }
 
-bool setEscBNumKey(AnsiDecodeResult &r, int key) {
+bool setEscBNumKey(DecodeResult &r, int key) {
   switch (key) {
     case 1:
       r.key = TermKey::Home;
@@ -254,7 +255,7 @@ bool setEscBNumKey(AnsiDecodeResult &r, int key) {
 // - ^[[n~
 // - ^[[y;xR
 // - ^[[n;m~
-bool convertEscBNum(AnsiDecodeResult &r, const char *s, const char *end) {
+bool convertEscBNum(DecodeResult &r, const char *s, const char *end) {
   int a = 0, b = 0;
   r.length = 2;
 
@@ -265,7 +266,7 @@ bool convertEscBNum(AnsiDecodeResult &r, const char *s, const char *end) {
     ++r.length;
   }
   if (s == end) {
-    r.kind = AnsiPartial;
+    r.kind = DecodePartial;
     return true;
   }
 
@@ -281,7 +282,7 @@ bool convertEscBNum(AnsiDecodeResult &r, const char *s, const char *end) {
   }
 
   if (s == end) {
-    r.kind = AnsiPartial;
+    r.kind = DecodePartial;
     return true;
   }
 
@@ -292,7 +293,7 @@ bool convertEscBNum(AnsiDecodeResult &r, const char *s, const char *end) {
     ++r.length;
   }
   if (s == end) {
-    r.kind = AnsiPartial;
+    r.kind = DecodePartial;
     return true;
   }
 
@@ -302,7 +303,7 @@ bool convertEscBNum(AnsiDecodeResult &r, const char *s, const char *end) {
       return false;
     }
   } else if (*s == 'R') {
-    r.kind = AnsiCursorPos;
+    r.kind = DecodeCursorPos;
     r.pt.y = static_cast<short>(a);
     r.pt.x = static_cast<short>(b);
   } else if (a == 1 && convertEscO(r, *s)) {
@@ -319,12 +320,12 @@ bool convertEscBNum(AnsiDecodeResult &r, const char *s, const char *end) {
 
 } // anonymous namespace
 
-AnsiDecodeResult ash::term::decodeAnsi(std::string_view str) {
-  AnsiDecodeResult result{};
+DecodeResult ash::term::ansi::decode(std::string_view str) {
+  DecodeResult result{};
   result.key = TermKey::None;
   auto const length = str.length();
   if (length == 0) {
-    result.kind = AnsiInvalid;
+    result.kind = DecodeInvalid;
     return result;
   }
 
@@ -337,10 +338,10 @@ AnsiDecodeResult ash::term::decodeAnsi(std::string_view str) {
       if (*s == 'O') {
         ++s;
         if (convertEscO(result, *s)) {
-          result.kind = AnsiControlChar;
+          result.kind = DecodeControlChar;
           result.length = 3;
         } else {
-          result.kind = AnsiPrintChar;
+          result.kind = DecodePrintChar;
           result.alt = 1;
           result.ch = 'O';
           result.length = 2;
@@ -351,10 +352,10 @@ AnsiDecodeResult ash::term::decodeAnsi(std::string_view str) {
         if (convertEscBLetter(result, *s)) {
         } else if (*s >= '0' && *s <= '9') {
           if (!convertEscBNum(result, s, end)) {
-            result.kind = AnsiInvalid;
+            result.kind = DecodeInvalid;
           }
         } else {
-          result.kind = AnsiPrintChar;
+          result.kind = DecodePrintChar;
           result.alt = 1;
           result.ch = '[';
           result.length = 2;
@@ -369,18 +370,18 @@ AnsiDecodeResult ash::term::decodeAnsi(std::string_view str) {
 
   // Control keys ^@ to ^_
   if (*s >= '\0' && *s <= '\x1F') {
-    if (*s == '\n' || *s == '\t') {
-      result.kind = AnsiPrintChar;
-      result.ch = *s;
-    } else {
-      result.control = 1;
-      result.kind = AnsiControlChar;
-      result.key = static_cast<TermKey>(*s);
-    }
+    result.control = 1;
+    result.kind = DecodeControlChar;
+    result.key = static_cast<TermKey>(*s);
+    ++result.length;
   } else {
-    result.kind = AnsiPrintChar;
-    result.ch = *s;
+    result.kind = DecodePrintChar;
+    result.length = utf8_codepoint_size(*s);
+    if (result.length < size_t(end - s)) {
+      result.length = size_t(end - s);
+      result.kind = DecodePartial;
+    }
+    result.ch = utf8_to_utf32(s);
   }
-  ++result.length;
   return result;
 }
