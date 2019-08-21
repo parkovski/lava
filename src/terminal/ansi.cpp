@@ -381,9 +381,9 @@ DecodeResult ash::term::ansi::decode(std::string_view str) {
     ++result.length;
   } else {
     result.kind = DecodePrintChar;
-    result.length = utf8_codepoint_size(*s);
-    if (result.length < size_t(end - s)) {
-      result.length = size_t(end - s);
+    result.length = static_cast<uint8_t>(utf8_codepoint_size(*s));
+    if (static_cast<ptrdiff_t>(result.length) < end - s) {
+      result.length = static_cast<uint8_t>(end - s);
       result.kind = DecodePartial;
     }
     result.ch = utf8_to_utf32(s);

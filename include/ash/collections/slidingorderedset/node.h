@@ -55,7 +55,6 @@ struct Node {
   Node *parent() {
     return reinterpret_cast<Node *>(reinterpret_cast<size_t>(_parent)
                                     & static_cast<size_t>(-2));
-    return _parent;
   }
 
   const Node *parent() const {

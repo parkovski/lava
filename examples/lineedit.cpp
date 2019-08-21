@@ -1,5 +1,5 @@
 #include "ash/ash.h"
-#include "ash/terminal/terminal.h"
+#include "ash/terminal.h"
 #include "ash/terminal/ansi.h"
 #include "ash/terminal/lineeditor.h"
 
@@ -11,7 +11,7 @@
 using namespace ash;
 using term::LineEditor;
 
-int main(int argc, char *argv[]) {
+int main() {
   term::initialize();
   term::setShellState();
 

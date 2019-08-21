@@ -1,5 +1,5 @@
 #include "ash/ash.h"
-#include "ash/terminal/terminal.h"
+#include "ash/terminal.h"
 #include "ash/terminal/lineeditor.h"
 
 #include <fstream>

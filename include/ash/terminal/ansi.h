@@ -301,7 +301,7 @@ DecodeResult decode(std::string_view str);
       constexpr explicit Style() noexcept
       {}
 
-      friend std::ostream &operator<<(std::ostream &os, const Style<0> &self) {
+      friend std::ostream &operator<<(std::ostream &os, const Style<0> &) {
         return os << "\033[m";
       }
     };

@@ -2,7 +2,8 @@
 #define ASH_TERMINAL_LINEEDITOR_H_
 
 #include "ansi.h"
-#include "../document/document.h"
+#include "../document.h"
+#include "../document/cursor.h"
 
 #include <string>
 #include <string_view>
@@ -14,8 +15,11 @@ struct SymbolInfo {
   short bgcolor;
 };
 
-class LineEditor {
+// Mirrors cursor commands onto an ANSI terminal.
+class LineEditor /*: public doc::Cursor*/ {
 public:
+  //explicit LineEditor(doc::Cursor &cursor) noexcept;
+
   enum class Status {
     // End of input was signaled (^D).
     Finished,
@@ -34,9 +38,16 @@ public:
   // Read a line interactively. Does not show a prompt.
   Status readLine();
 
-  enum class Mode {
-    VimInsert,
-    VimCommand,
+  enum Keybinding {
+    // Simple mode supports a small essential set of terminal actions, such as
+    // arrow keys to navigate, home/end, ^L to clear the screen.
+    KB_Simple,
+    KB_VimInsert,
+    KB_VimCommand,
+    KB_Emacs, // Hopefully somebody that knows emacs implements this someday.
+    // Completion menu
+    KB_Menu,
+    KB_HistorySearch,
   };
 
 private:
@@ -71,32 +82,28 @@ public:
 
   // Length in characters.
   size_t length() const {
-    return _doc.char_length();
+    return _doc.length();
   }
 
   // Size in bytes.
   size_t size() const {
-    return _doc.byte_length();
+    return _doc.size();
   }
 
   size_t position() const {
     return _pos;
   }
 
-  Mode mode() const {
-    return _mode;
-  }
-
-  void setMode(Mode mode) {
-    _mode = mode;
+  void setKeybinding(Keybinding kb) {
+    _keybinding = kb;
   }
 
 private:
   static constexpr size_t BufferLength = 64;
   static constexpr size_t MinReadLength = 8;
 
-  doc::Document<SymbolInfo> _doc;
-  Mode _mode = Mode::VimInsert;
+  doc::CoolDocument<SymbolInfo> _doc;
+  Keybinding _keybinding = KB_VimInsert;
   char _readbuf[BufferLength];
   unsigned _rbpos = 0;
   unsigned _rbcnt = 0;

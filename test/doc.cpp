@@ -1,5 +1,5 @@
 #include "ash/ash.h"
-#include "ash/document/document.h"
+#include "ash/document.h"
 
 #include <iostream>
 
@@ -32,41 +32,41 @@ bool readpair(const std::string &s, size_t &first, size_t &second) {
 # undef SKIPWS
 }
 
-int main(int argc, char *argv[]) {
-  ash::doc::Document<int> doc;
+int main() {
+  ash::doc::CoolDocument<int> doc;
 
   doc.append("Hello world\nHello world\nHello world\n");
 
   for (auto l = 1; l <= doc.lines(); ++l) {
-    auto span = doc.span_for_line(l);
+    auto span = doc.spanForLine(l);
     std::cout << l << ": " << span.first << ", " << span.second << "\n";
   }
 
   char text[256];
   size_t bufsize = 256;
-  doc.read_cstr(text, &bufsize, 0, 255);
+  doc.subcstr(text, &bufsize, 0, 255);
   std::cout << ">>>\n" << text << "<<<\n";
 
   doc.insert(17, "\nyou are a dawg\n");
 
   for (auto l = 1; l <= doc.lines(); ++l) {
-    auto span = doc.span_for_line(l);
+    auto span = doc.spanForLine(l);
     std::cout << l << ": " << span.first << ", " << span.second << "\n";
   }
 
   bufsize = 256;
-  doc.read_cstr(text, &bufsize, 0, 255);
+  doc.subcstr(text, &bufsize, 0, 255);
   std::cout << ">>>\n" << text << "<<<\n";
 
   doc.erase(0, 12);
 
   for (auto l = 1; l <= doc.lines(); ++l) {
-    auto span = doc.span_for_line(l);
+    auto span = doc.spanForLine(l);
     std::cout << l << ": " << span.first << ", " << span.second << "\n";
   }
 
   bufsize = 256;
-  doc.read_cstr(text, &bufsize, 0, 255);
+  doc.subcstr(text, &bufsize, 0, 255);
   std::cout << ">>>\n" << text << "<<<\n";
 
   return 0;

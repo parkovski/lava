@@ -1,6 +1,6 @@
 #include "ash/ash.h"
+#include "ash/terminal.h"
 #include "ash/terminal/lineeditor.h"
-#include "ash/terminal/terminal.h"
 #include "ash/terminal/ansi.h"
 
 #include <fmt/format.h>
@@ -43,11 +43,11 @@ LineEditor::Status LineEditor::readLine() {
     drawLine();
     size_t bytes = _doc.size();
     _textbuf.reserve(bytes);
-    _doc.read(&_textbuf[0], &bytes, 0, _doc.length());
+    _doc.substr(&_textbuf[0], &bytes, 0, _doc.length());
     fmt::print(std::string_view(&_textbuf[0], bytes));
   }
 
-  if (_mode == Mode::VimInsert) {
+  if (_keybinding == KB_VimInsert) {
     fmt::print("{}", ansi::cursor::style::line(true));
   } else {
     fmt::print("{}", ansi::cursor::style::block(true));
@@ -57,7 +57,7 @@ LineEditor::Status LineEditor::readLine() {
     if (_rbcnt == 0) {
       // Nothing left in the read buffer.
       _rbpos = 0;
-      _rbcnt = getChars(_readbuf, 1, sizeof(_readbuf));
+      _rbcnt = static_cast<unsigned>(getChars(_readbuf, 1, sizeof(_readbuf)));
       if (!_rbcnt) {
         return Status::ReadError;
       }
@@ -108,6 +108,7 @@ LineEditor::Status LineEditor::processControlChar(ansi::TermKey key,
                                                   bool shift) {
   using ansi::TermKey;
 
+  (void)ctrl;
   if (alt || shift) {
     // None of these implemented yet.
     return Status::Continue;
@@ -125,10 +126,10 @@ LineEditor::Status LineEditor::processControlChar(ansi::TermKey key,
     return Status::Canceled;
   }
 
-  if (_mode == Mode::VimInsert) {
+  if (_keybinding == KB_VimInsert) {
     switch (key) {
       case TermKey::Escape:
-        _mode = Mode::VimCommand;
+        _keybinding = KB_VimCommand;
         fmt::print("{}", ansi::cursor::style::block(true));
         break;
 
@@ -169,7 +170,7 @@ LineEditor::Status LineEditor::processControlChar(ansi::TermKey key,
       default:
         break;
     }
-  } else if (_mode == Mode::VimCommand) {
+  } else if (_keybinding == KB_VimCommand) {
     switch (key) {
       case TermKey::CtrlK:
         clear();
@@ -202,7 +203,7 @@ LineEditor::Status LineEditor::processPrintChar(char32_t c, bool alt) {
     return Status::Continue;
   }
 
-  if (_mode == Mode::VimCommand) {
+  if (_keybinding == KB_VimCommand) {
     switch (c) {
       case U'h':
         moveBy(-1, 0);
@@ -221,25 +222,25 @@ LineEditor::Status LineEditor::processPrintChar(char32_t c, bool alt) {
         break;
 
       case 'i':
-        _mode = Mode::VimInsert;
+        _keybinding = KB_VimInsert;
         fmt::print("{}", ansi::cursor::style::line(true));
         break;
 
       case 'I':
         moveTo(0);
-        _mode = Mode::VimInsert;
+        _keybinding = KB_VimInsert;
         fmt::print("{}", ansi::cursor::style::line(true));
         break;
 
       case 'a':
         moveBy(1, 0);
-        _mode = Mode::VimInsert;
+        _keybinding = KB_VimInsert;
         fmt::print("{}", ansi::cursor::style::line(true));
         break;
 
       case 'A':
-        moveTo(_doc.char_length());
-        _mode = Mode::VimInsert;
+        moveTo(_doc.length());
+        _keybinding = KB_VimInsert;
         fmt::print("{}", ansi::cursor::style::line(true));
         break;
 
@@ -264,7 +265,7 @@ LineEditor::Status LineEditor::processPrintChar(char32_t c, bool alt) {
         break;
 
       case '$':
-        moveTo(_doc.char_length());
+        moveTo(_doc.length());
         break;
 
       case 't':
@@ -295,7 +296,7 @@ LineEditor::Status LineEditor::processPrintChar(char32_t c, bool alt) {
         break;
     }
     return Status::Continue;
-  } else if (_mode == Mode::VimInsert) {
+  } else if (_keybinding == KB_VimInsert) {
   } else {
     return Status::Continue;
   }
@@ -317,7 +318,7 @@ bool LineEditor::fillBuffer() {
   }
   auto count = getChars(_readbuf + _rbpos + _rbcnt, 1,
                         BufferLength - _rbpos - _rbcnt);
-  _rbcnt += count;
+  _rbcnt += static_cast<unsigned>(count);
   return bool(count);
 }
 
@@ -325,7 +326,7 @@ void LineEditor::drawLine() const {
   fmt::print("{}", ansi::cursor::move_to(_yInit, _xInit));
   auto size = _doc.size();
   _textbuf.reserve(size + 1);
-  _doc.read(_textbuf.data(), &size, 0, _doc.length());
+  _doc.substr(_textbuf.data(), &size, 0, _doc.length());
   fmt::print(_textbuf);
   if (_x) {
     if (_y == 0) {
@@ -347,7 +348,7 @@ void LineEditor::moveBy(ptrdiff_t offset) {
 void LineEditor::moveTo(unsigned short x, unsigned short y) {
   size_t col = x, line = y;
   _doc.constrain(line, col);
-  _pos = _doc.pt_to_pos(line, col);
+  _pos = _doc.pointToIndex(line, col);
   _x = (unsigned short)col - 1;
   _y = (unsigned short)line - 1;
   fmt::print("{}", ansi::cursor::move_to(_y == 1 ? _x + _xInit : _x + 1,
@@ -359,7 +360,7 @@ void LineEditor::moveTo(size_t pos) {
     pos = length();
   }
   _pos = pos;
-  std::tie(_y, _x) = _doc.pos_to_pt(pos);
+  std::tie(_y, _x) = _doc.indexToPoint(pos);
   --_x;
   --_y;
   auto y = _y + _yInit;
@@ -376,7 +377,7 @@ bool LineEditor::insert(std::string_view text) {
   fmt::print("{}", text);
   _textbuf = text;
   _doc.insert(_pos, _textbuf.c_str());
-  for (auto i = 0; i < text.length(); i += utf8_codepoint_size(text[i])) {
+  for (size_t i = 0; i < text.length(); i += utf8_codepoint_size(text[i])) {
     ++_pos;
     if (text[i] == '\n') {
       ++_y;
@@ -393,7 +394,7 @@ bool LineEditor::insert(std::string_view text) {
 }
 
 bool LineEditor::replace(ptrdiff_t count, std::string_view text) {
-  if (count > 0 && _pos + size_t(count) <= _doc.char_length()) {
+  if (count > 0 && _pos + size_t(count) <= _doc.length()) {
     _textbuf = text;
     _doc.replace(_pos, size_t(count), _textbuf.c_str());
   } else if (size_t(-count) <= _pos) {
@@ -431,7 +432,7 @@ bool LineEditor::erase(ptrdiff_t count) {
 void LineEditor::clear() {
   _x = 0;
   _y = 0;
-  _mode = Mode::VimInsert;
+  _keybinding = KB_VimInsert;
   _rbpos = 0;
   _rbcnt = 0;
   _pos = 0;
@@ -439,5 +440,5 @@ void LineEditor::clear() {
 }
 
 size_t LineEditor::substr(char *buf, size_t *bufsize, size_t count) const {
-  return _doc.read(buf, bufsize, _pos, _pos + count);
+  return _doc.substr(buf, bufsize, _pos, _pos + count);
 }

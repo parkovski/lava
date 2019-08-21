@@ -1,5 +1,5 @@
 #include "ash/ash.h"
-#include "ash/terminal/terminal.h"
+#include "ash/terminal.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -104,7 +104,7 @@ size_t ash::term::getChars(char *buf, size_t min, size_t max) {
       if (max > irLen) {
         events = irLen;
       } else {
-        events = max;
+        events = static_cast<DWORD>(max);
       }
     } else if (total + events < min) {
       events = DWORD(min - total);
@@ -160,5 +160,5 @@ ResizeHandler ash::term::onResize(ResizeHandler newHandler) {
   auto oldHandler = resizeHandler;
   resizeHandler = newHandler;
   postResize();
-  return newHandler;
+  return oldHandler;
 }

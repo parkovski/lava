@@ -1,5 +1,5 @@
-#ifndef ASH_TERMINAL_TERMINAL_H_
-#define ASH_TERMINAL_TERMINAL_H_
+#ifndef ASH_TERMINAL_H_
+#define ASH_TERMINAL_H_
 
 #include <cstddef>
 #include <utility>
@@ -42,6 +42,18 @@ typedef void (*ResizeHandler)(unsigned short x, unsigned short y);
 /// Register a callback when the window is resized. Returns the old handler.
 ResizeHandler onResize(ResizeHandler newHandler);
 
+// Puts the terminal in raw mode for the lifetime of the object.
+class ScopedRawMode {
+  ScopedRawMode() {
+    saveState();
+    setShellState();
+  }
+
+  ~ScopedRawMode() {
+    restoreState();
+  }
+};
+
 } // namespace ash::term
 
-#endif /* ASH_TERMINAL_TERMINAL_H_ */
+#endif /* ASH_TERMINAL_H_ */

@@ -109,7 +109,6 @@ struct Node {
   Node *parent() const {
     return reinterpret_cast<Node *>(reinterpret_cast<size_t>(_parent)
                                     & static_cast<size_t>(-2));
-    return _parent;
   }
 
   Node *set_parent(Node *new_parent) {

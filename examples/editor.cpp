@@ -1,6 +1,6 @@
 #include "ash/ash.h"
-#include "ash/terminal/terminal.h"
-#include "ash/document/document.h"
+#include "ash/terminal.h"
+#include "ash/document.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -20,7 +20,7 @@ struct Editor {
   constexpr static int seqlen = 32;
   char seq[seqlen] = {0};
   int seqidx = -1;
-  doc::Document<unsigned> doc;
+  doc::CoolDocument<unsigned> doc;
   size_t charidx = 0;
   constexpr static int buflen = 256;
   char buf[buflen];
@@ -33,21 +33,21 @@ struct Editor {
 
   void draw_debug() {
     printf("\033[%zd;%dH", doc.lines() + 2, 1);
-    auto span = doc.span_for_line(cursor.y);
+    auto span = doc.spanForLine(cursor.y);
     printf("cur=%03zd/%03zd (x=%02d, y=%02d); lns=%02zd; l=%zd:%zd, "
            "ch=%2X, chs=%zd",
-           charidx, doc.char_length(), cursor.x, cursor.y, doc.lines(),
+           charidx, doc.length(), cursor.x, cursor.y, doc.lines(),
            span.first, span.second, lastch, charcnt);
     printf("\033[%d;%dH", cursor.y, cursor.x);
   }
 
   void draw_partial_line(size_t line, size_t xoff) {
-    auto [c0, c1] = doc.span_for_line(line);
+    auto [c0, c1] = doc.spanForLine(line);
     c0 += xoff;
     // Cursor to line and clear right.
     printf("\033[%d;%zdH\033[K", cursor.y, 1 + xoff);
     size_t bytes = buflen;
-    doc.read_cstr(buf, &bytes, c0, c1);
+    doc.subcstr(buf, &bytes, c0, c1);
     printf("%s\033[%d;%dH", buf, cursor.y, cursor.x);
   }
 
@@ -66,9 +66,9 @@ struct Editor {
       if (clear) {
         printf("\033[2K\033[G");
       }
-      auto [c0, c1] = doc.span_for_line(i);
+      auto [c0, c1] = doc.spanForLine(i);
       size_t bytes = buflen;
-      doc.read_cstr(buf, &bytes, c0, c1);
+      doc.subcstr(buf, &bytes, c0, c1);
       puts(buf);
     }
   }
@@ -90,7 +90,7 @@ struct Editor {
       case ctrl('W'):
         // Up
         if (cursor.y > 1) {
-          auto [c0, c1] = doc.span_for_line(--cursor.y);
+          auto [c0, c1] = doc.spanForLine(--cursor.y);
           auto len = c1 - c0;
           if (cursor.x > len) {
             cursor.x = len + 1;
@@ -113,7 +113,7 @@ struct Editor {
       case ctrl('S'):
         // Down
         if (cursor.y < doc.lines()) {
-          auto [c0, c1] = doc.span_for_line(++cursor.y);
+          auto [c0, c1] = doc.spanForLine(++cursor.y);
           auto len = c1 - c0;
           if (cursor.x > len) {
             cursor.x = len + 1;
@@ -125,7 +125,7 @@ struct Editor {
 
       case ctrl('D'):
         // Right
-        if (cursor.x < charidx - doc.span_for_line(cursor.y).second) {
+        if (cursor.x < charidx - doc.spanForLine(cursor.y).second) {
           ++cursor.x;
           ++charidx;
           printf("\033[C");
@@ -135,7 +135,7 @@ struct Editor {
       case ctrl('K'):
         // Clear line.
         {
-          auto span = doc.span_for_line(cursor.y);
+          auto span = doc.spanForLine(cursor.y);
           doc.erase(span.first, span.second);
           charidx = span.first;
           cursor.x = 1;
@@ -166,7 +166,7 @@ struct Editor {
         if (charidx > 0) {
           if (doc[charidx] == '\n') {
             --cursor.y;
-            cursor.x = doc.span_for_line(cursor.y).second;
+            cursor.x = doc.spanForLine(cursor.y).second;
             // TODO: Remove this line.
             printf("\033[A\033[%dG", cursor.x);
           } else if (cursor.x > 0) {

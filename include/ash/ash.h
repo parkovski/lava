@@ -56,6 +56,14 @@ namespace ash::detail {
 
 namespace ash {
 
+#ifdef _cpp_char8_t
+using u8char = char8_t;
+#else
+using u8char = char;
+#endif
+
+inline namespace utf_cp {
+
 inline size_t utf8_codepoint_size(uint8_t byte) {
   if (byte <= 0x7f) { return 1; } // 0x74 = 0111 1111
   else if (byte <= 0xbf) { return 1; } // 1011 1111. Invalid for a starting byte.
@@ -149,6 +157,7 @@ inline size_t utf32_to_utf8(char32_t c, char *buf) {
 	return 6;
 }
 
+} // inline namespace utf_cp
 } // namespace ash
 
 #endif /* ASH_ASH_H_ */
