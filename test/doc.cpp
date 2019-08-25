@@ -37,7 +37,7 @@ int main() {
 
   doc.append("Hello world\nHello world\nHello world\n");
 
-  for (auto l = 1; l <= doc.lines(); ++l) {
+  for (size_t l = 1; l <= doc.lines(); ++l) {
     auto span = doc.spanForLine(l);
     std::cout << l << ": " << span.first << ", " << span.second << "\n";
   }
@@ -49,7 +49,7 @@ int main() {
 
   doc.insert(17, "\nyou are a dawg\n");
 
-  for (auto l = 1; l <= doc.lines(); ++l) {
+  for (size_t l = 1; l <= doc.lines(); ++l) {
     auto span = doc.spanForLine(l);
     std::cout << l << ": " << span.first << ", " << span.second << "\n";
   }
@@ -60,7 +60,7 @@ int main() {
 
   doc.erase(0, 12);
 
-  for (auto l = 1; l <= doc.lines(); ++l) {
+  for (size_t l = 1; l <= doc.lines(); ++l) {
     auto span = doc.spanForLine(l);
     std::cout << l << ": " << span.first << ", " << span.second << "\n";
   }

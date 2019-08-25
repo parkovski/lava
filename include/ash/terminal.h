@@ -43,7 +43,7 @@ typedef void (*ResizeHandler)(unsigned short x, unsigned short y);
 ResizeHandler onResize(ResizeHandler newHandler);
 
 // Puts the terminal in raw mode for the lifetime of the object.
-class ScopedRawMode {
+struct ScopedRawMode {
   ScopedRawMode() {
     saveState();
     setShellState();

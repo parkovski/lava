@@ -92,8 +92,8 @@ struct Editor {
         if (cursor.y > 1) {
           auto [c0, c1] = doc.spanForLine(--cursor.y);
           auto len = c1 - c0;
-          if (cursor.x > len) {
-            cursor.x = len + 1;
+          if (size_t(cursor.x) > len) {
+            cursor.x = (unsigned short)(len + 1);
           }
           charidx = c0 + cursor.x - 1;
           // Move up, horizontal absolute.
@@ -112,10 +112,10 @@ struct Editor {
 
       case ctrl('S'):
         // Down
-        if (cursor.y < doc.lines()) {
+        if (size_t(cursor.y) < doc.lines()) {
           auto [c0, c1] = doc.spanForLine(++cursor.y);
           auto len = c1 - c0;
-          if (cursor.x > len) {
+          if (size_t(cursor.x) > len) {
             cursor.x = len + 1;
           }
           charidx = c0 + cursor.x - 1;
@@ -125,7 +125,7 @@ struct Editor {
 
       case ctrl('D'):
         // Right
-        if (cursor.x < charidx - doc.spanForLine(cursor.y).second) {
+        if (size_t(cursor.x) < charidx - doc.spanForLine(cursor.y).second) {
           ++cursor.x;
           ++charidx;
           printf("\033[C");
