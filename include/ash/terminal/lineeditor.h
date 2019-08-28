@@ -27,16 +27,17 @@ public:
     Canceled,
     // The input was accepted (Enter).
     Accepted,
-    // The prompt needs to be redrawn. The cursor has already been positioned.
-    RedrawPrompt,
     // Couldn't read from stdin.
     ReadError,
-    // No problems; keep reading.
+    // Internal: The prompt needs to be redrawn. The cursor has already been
+    // positioned.
+    RedrawPrompt,
+    // Internal: No problems; keep reading.
     Continue,
   };
 
-  // Read a line interactively. Does not show a prompt.
-  Status readLine();
+  // Read a line interactively.
+  Status readLine(std::string_view prompt);
 
   enum Keybinding {
     // Simple mode supports a small essential set of terminal actions, such as
@@ -56,7 +57,7 @@ private:
 
   bool fillBuffer();
 
-  void drawLine() const;
+  void drawLine();
 
 public:
   // Move by (x, y) on screen and update the cursor accordingly.
@@ -109,12 +110,11 @@ private:
   unsigned _rbcnt = 0;
   mutable std::string _textbuf;
   size_t _pos = 0;
-  unsigned short _xInit;
-  unsigned short _yInit;
+  ansi::Point _promptPos;
+  ansi::Point _inputPos;
+  ansi::Point _screen;
   unsigned short _x = 0;
   unsigned short _y = 0;
-  unsigned short _screenX;
-  unsigned short _screenY;
 };
 
 } // namespace ash::term

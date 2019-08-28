@@ -18,14 +18,14 @@ public:
   using offset_type = ptrdiff_t;
 
   // Size type for line and column.
-  using lc_size_type = unsigned;
+  using grid_size_type = unsigned;
   // Offset type for line and column.
-  using lc_offset_type = int;
+  using grid_offset_type = int;
   // 1-based (line, column) position.
-  using position_type = std::pair<lc_size_type, lc_size_type>;
+  using position_type = std::pair<grid_size_type, grid_size_type>;
   // 0-based (line, column) offset. Line and column are still 1-based; these
   // offsets are relative to 0 as an offset is.
-  using position_offset_type = std::pair<lc_offset_type, lc_offset_type>;
+  using position_offset_type = std::pair<grid_offset_type, grid_offset_type>;
 
 #ifdef __cpp_char8_t
   using char_type = char8_t;
@@ -83,10 +83,10 @@ public:
   virtual size_type size(size_type count) const = 0;
 
   // Number of lines in the document.
-  virtual size_type lines() const = 0;
+  virtual grid_size_type lines() const = 0;
 
   // Char index span for a line. Line index is 1-based.
-  virtual std::pair<size_type, size_type> line(lc_size_type index) const;
+  virtual std::pair<size_type, size_type> line(grid_size_type index) const;
 
   // Get the code point at the current index.
   virtual codepoint_type operator*() const = 0;

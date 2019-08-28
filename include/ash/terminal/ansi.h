@@ -276,9 +276,9 @@ DecodeResult decode(std::string_view str);
     inline auto delete_space(unsigned short n)
     { return format::Print("\033[", n, "P"); }
 
-    constexpr auto clear_left = "\033[K";
+    constexpr auto clear_right = "\033[0K";
 
-    constexpr auto clear_right = "\033[1K";
+    constexpr auto clear_left = "\033[1K";
 
     constexpr auto clear = "\033[2K";
 

@@ -21,11 +21,11 @@ int main() {
 
   LineEditor ln;
   while (true) {
-    fmt::print("{}{}{} ash!{} ",
-               term::ansi::fg::bright_blue, std::filesystem::current_path(),
-               term::ansi::fg::bright_black, term::ansi::fg::default_);
+    auto prompt = fmt::format("{}{}{} ash!{} ",
+                term::ansi::fg::bright_blue, std::filesystem::current_path(),
+                term::ansi::fg::bright_black, term::ansi::fg::default_);
 
-    switch (ln.readLine()) {
+    switch (ln.readLine(prompt)) {
       using Status = LineEditor::Status;
 
       case Status::Accepted:
