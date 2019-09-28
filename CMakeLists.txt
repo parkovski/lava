@@ -21,6 +21,9 @@ endif()
 
 # find_package(range-v3 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(Boost 1.69 REQUIRED
+  # COMPONENTS signals2
+)
 
 set(ASH_INCLUDE_DIR
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>

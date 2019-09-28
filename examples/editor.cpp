@@ -153,7 +153,7 @@ struct Editor {
       case '\r':
       case '\n':
         // Clear the debug line and the rest of this line.
-        printf("\033[%zdd\033[2K\033[%d;%dH\033[K", doc.lines() + 2, cursor.y, cursor.x);
+        printf("\033[%dd\033[2K\033[%d;%dH\033[K", doc.lines() + 2, cursor.y, cursor.x);
         cursor.x = 1;
         ++cursor.y;
         type('\n');

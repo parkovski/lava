@@ -183,21 +183,6 @@ Document::Document(const u8char *text)
 Document::~Document()
 {}
 
-void Document::onInsert(size_t, const char_type *, size_t, size_t)
-{}
-
-void Document::onAppend(const char_type *, size_t, size_t)
-{}
-
-void Document::onReplace(size_t, size_t, const char_type *, size_t, ptrdiff_t)
-{}
-
-void Document::onErase(size_t, size_t, size_t)
-{}
-
-void Document::onClear(size_t, size_t)
-{}
-
 void Document::markNewlines(size_t index, const char_type *text) {
   size_t len = 0;
   size_t i = 0;
@@ -222,7 +207,7 @@ bool Document::insert(size_t index, const char_type *text) {
   auto delta_size = size() - old_size;
   _newlines.shift(index, delta_len);
   markNewlines(index, text);
-  onInsert(index, text, delta_len, delta_size);
+  emit(Insert(index, text, delta_len, delta_size));
   return true;
 }
 
@@ -238,7 +223,7 @@ bool Document::append(const char_type *text) {
   auto old_length = length();
   auto old_size = size();
   auto r = _rope.append(text);
-  onAppend(text, length() - old_length, size() - old_size);
+  emit(Insert(old_length, text, length() - old_length, size() - old_size));
   return r;
 }
 
@@ -246,12 +231,12 @@ void Document::erase(size_t index, size_t count) {
   auto old_size = size();
   _rope.erase(index, count);
   _newlines.shift(index, -static_cast<ptrdiff_t>(count));
-  onErase(index, count, old_size - size());
+  emit(Erase(index, count, old_size - size()));
 }
 
 bool Document::replace(size_t index, size_t count, const char_type *text) {
   auto old_length = length();
-  auto old_size = static_cast<ptrdiff_t>(size());
+  //auto old_size = static_cast<ptrdiff_t>(size());
   if (index >= old_length) {
     return insert(index, text);
   }
@@ -267,8 +252,7 @@ bool Document::replace(size_t index, size_t count, const char_type *text) {
   auto inserted = length() + count - old_length;
   _newlines.shift(index, -static_cast<ptrdiff_t>(count));
   _newlines.shift(index, inserted);
-  onReplace(index, count, text, inserted,
-            static_cast<ptrdiff_t>(size()) - old_size);
+  emit(Replace(index, count, text, inserted));
   return true;
 }
 
@@ -277,7 +261,7 @@ void Document::clear() {
   auto old_size = size();
   _rope.clear();
   _newlines.clear();
-  onClear(old_length, old_size);
+  emit(Erase(0, old_length, old_size));
 }
 
 size_t Document::substr(char_type *buf, size_t *bufsize, size_t index,
@@ -295,12 +279,12 @@ char32_t Document::operator[](size_t index) const {
 }
 
 // The document always has at least one line.
-size_t Document::lines() const {
+Document::grid_size_type Document::lines() const {
   return _newlines.size() + 1;
 }
 
 // Returns a 1-based line index.
-size_t Document::lineAt(size_t index) const {
+Document::grid_size_type Document::lineAt(size_t index) const {
   if (_newlines.empty()) {
     return 1;
   }
@@ -312,7 +296,7 @@ size_t Document::lineAt(size_t index) const {
 }
 
 // Make line and column a valid pair if either is out of range.
-void Document::constrain(lc_size_type &line, lc_size_type &column) const {
+void Document::constrain(grid_size_type &line, grid_size_type &column) const {
   if (line == 0) {
     line = 1;
   }
@@ -349,7 +333,7 @@ void Document::constrain(lc_size_type &line, lc_size_type &column) const {
 
 // Returns the (line, column) pair for a character position.
 // If pos is out of range, the last character position is returned.
-std::pair<Document::lc_size_type, Document::lc_size_type>
+std::pair<Document::grid_size_type, Document::grid_size_type>
 Document::indexToPoint(size_t index) const {
   if (index > length()) {
     index = length();
@@ -360,7 +344,7 @@ Document::indexToPoint(size_t index) const {
 
   // Newline after the current line.
   auto nl = _newlines.upper_bound(index);
-  lc_size_type line, column;
+  grid_size_type line, column;
   if (nl == _newlines.end()) {
     // Last line.
     line = _newlines.size() + 1;
@@ -380,7 +364,7 @@ Document::indexToPoint(size_t index) const {
 
 // Returns a character position for a (line, column) pair.
 // Out of range values are wrapped to [1, max].
-size_t Document::pointToIndex(lc_size_type line, lc_size_type column) const {
+size_t Document::pointToIndex(grid_size_type line, grid_size_type column) const {
   // Make indices 0-based.
   if (line > 0) {
     --line;
@@ -427,7 +411,7 @@ size_t Document::pointToIndex(lc_size_type line, lc_size_type column) const {
 
 // Line numbers start at 1. The end of the span is the index of the newline
 // character, or for the last line it is the character length of the document.
-std::pair<size_t, size_t> Document::spanForLine(lc_size_type line) const {
+std::pair<size_t, size_t> Document::spanForLine(grid_size_type line) const {
   size_t start;
   size_t end;
 

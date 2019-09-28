@@ -355,7 +355,7 @@ void LineEditor::moveBy(ptrdiff_t offset) {
 }
 
 void LineEditor::moveTo(unsigned short x, unsigned short y) {
-  size_t col = x, line = y;
+  doc::Document::grid_size_type col = x, line = y;
   _doc.constrain(line, col);
   _pos = _doc.pointToIndex(line, col);
   _x = (unsigned short)col - 1;

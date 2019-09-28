@@ -9,6 +9,8 @@
 #include <cassert>
 #include <cstddef>
 #include <utility>
+#include <vector>
+#include <boost/signals2.hpp>
 
 namespace ash::doc {
 
@@ -186,8 +188,8 @@ class Document {
 public:
   using char_type = Rope::char_type;
   static constexpr size_t npos = Rope::npos;
-  using lc_size_type = size_t;
-  using lc_offset_type = ptrdiff_t;
+  using grid_size_type = uint32_t;
+  using grid_offset_type = int32_t;
 
   /// Construct an empty document.
   explicit Document();
@@ -198,14 +200,97 @@ public:
 
   virtual ~Document();
 
-protected:
-  virtual void onInsert(size_t index, const char_type *text, size_t chars, size_t bytes);
-  virtual void onAppend(const char_type *text, size_t chars, size_t bytes);
-  virtual void onReplace(size_t index, size_t charsRemoved, const char_type *text, size_t charsInserted, ptrdiff_t deltaBytes);
-  virtual void onErase(size_t index, size_t charsErased, size_t bytesErased);
-  virtual void onClear(size_t chars, size_t bytes);
+  struct Insert {
+    size_t index;
+    const char_type *text;
+    size_t chars;
+    size_t bytes;
+
+    // Output constructor.
+    Insert(size_t index, const char_type *text, size_t chars, size_t bytes)
+           noexcept
+      : index(index), text(text), chars(chars), bytes(bytes)
+    {}
+
+    // Input constructor.
+    Insert(size_t index, const char_type *text) noexcept
+      : index(index), text(text), chars(0), bytes(0)
+    {}
+
+    Insert(const Insert &) = default;
+    Insert &operator=(const Insert &) = default;
+  };
+
+  struct Erase {
+    size_t index;
+    size_t chars;
+    size_t bytes;
+
+    // Output constructor.
+    Erase(size_t index, size_t chars, size_t bytes) noexcept
+      : index(index), chars(chars)
+    {}
+
+    // Input constructor.
+    Erase(size_t index, size_t chars) noexcept
+      : index(index), chars(chars), bytes(0)
+    {}
+
+    Erase(const Erase &) = default;
+    Erase &operator=(const Erase &) = default;
+  };
+
+  struct Replace {
+    size_t index;
+    size_t erasecnt;
+    const char_type *text;
+    size_t insertcnt;
+
+    // Output constructor.
+    Replace(size_t index, size_t count, const char_type *text, size_t insertcnt)
+            noexcept
+      : index(index), erasecnt(count), text(text), insertcnt(insertcnt)
+    {}
+
+    // Input constructor.
+    Replace(size_t index, size_t count, const char_type *text) noexcept
+      : index(index), erasecnt(count), text(text), insertcnt(0)
+    {}
+
+    Replace(const Replace &) = default;
+    Replace &operator=(const Replace &) = default;
+  };
+
+  struct Message {
+    union {
+      Insert insert;
+      Erase erase;
+      Replace replace;
+    };
+
+    enum Kind {
+      kInsert,
+      kErase,
+      kReplace,
+    } kind;
+
+    Message(const Insert &i) : insert(i), kind(kInsert) {}
+    Message(const Erase &e) : erase(e), kind(kErase) {}
+    Message(const Replace &r) : replace(r), kind(kReplace) {}
+  };
+
+  typedef void (Observer)(Document *sender, const Message &msg);
+
+  template<typename O>
+  boost::signals2::connection observe(O &&observer) {
+    return _observers.connect(std::forward<O>(observer));
+  }
 
 private:
+  void emit(const Message &msg) {
+    _observers(this, msg);
+  }
+
   void markNewlines(size_t index, const char_type *text);
 
 public:
@@ -253,58 +338,60 @@ public:
   char32_t operator[](size_t index) const;
 
   // The document always has at least one line.
-  lc_size_type lines() const;
+  grid_size_type lines() const;
 
   // Returns a 1-based line index.
-  lc_size_type lineAt(size_t index) const;
+  grid_size_type lineAt(size_t index) const;
 
   // Make line and column a valid pair if either is out of range.
-  void constrain(lc_size_type &line, lc_size_type &column) const;
+  void constrain(grid_size_type &line, grid_size_type &column) const;
 
   // Returns the (line, column) pair for a character position.
   // If index is out of range, the last character position is returned.
-  std::pair<lc_size_type, lc_size_type> indexToPoint(size_t index) const;
+  std::pair<grid_size_type, grid_size_type> indexToPoint(size_t index) const;
 
   // Returns a character position for a (line, column) pair.
   // Out of range values are wrapped to [1, max].
-  size_t pointToIndex(lc_size_type line, lc_size_type column) const;
+  size_t pointToIndex(grid_size_type line, grid_size_type column) const;
 
   // Line numbers start at 1. The end of the span is the index of the newline
   // character, or for the last line it is the character length of the document.
-  std::pair<size_t, size_t> spanForLine(lc_size_type line) const;
+  std::pair<size_t, size_t> spanForLine(grid_size_type line) const;
 
 private:
   Rope _rope;
   collections::SlidingOrderedSet<> _newlines;
+  boost::signals2::signal<Observer> _observers;
 };
 
 // This document can store attributes.
 template<typename Attribute>
 class CoolDocument : public Document {
+  static void syncAttrs(Document *doc, const Message &msg) {
+    auto cdoc = static_cast<CoolDocument *>(doc);
+    if (msg.kind == Document::Message::kInsert) {
+      cdoc->_attrs.shift(msg.insert.index, msg.insert.chars);
+    } else if (msg.kind == Document::Message::kReplace) {
+      cdoc->_attrs.shift(msg.replace.index,
+                         -static_cast<ptrdiff_t>(msg.replace.erasecnt));
+      cdoc->_attrs.shift(msg.replace.index, msg.replace.insertcnt);
+    } else if (msg.kind == Document::Message::kErase) {
+      cdoc->_attrs.shift(msg.erase.index,
+                         -static_cast<ptrdiff_t>(msg.erase.chars));
+    }
+  }
+
 public:
-  using Document::Document;
-
-protected:
-  void onInsert(size_t index, const char_type *, size_t chars, size_t)
-                override {
-    _attrs.shift(index, chars);
+  explicit CoolDocument()
+    : Document()
+  {
+    observe(CoolDocument::syncAttrs);
   }
 
-  void onAppend(const char_type *, size_t, size_t) override
-  {}
-
-  void onReplace(size_t index, size_t charsErased, const char_type *,
-                 size_t charsInserted, ptrdiff_t) override {
-    _attrs.shift(index, -static_cast<ptrdiff_t>(charsErased));
-    _attrs.shift(index, charsInserted);
-  }
-
-  void onErase(size_t index, size_t charsErased, size_t) override {
-    _attrs.shift(index, -static_cast<ptrdiff_t>(charsErased));
-  }
-
-  void onClear(size_t, size_t) override {
-    _attrs.clear();
+  explicit CoolDocument(const char_type *text)
+    : Document(text)
+  {
+    observe(CoolDocument::syncAttrs);
   }
 
   collections::IntervalTree<Attribute> &attrs() {

@@ -7,9 +7,58 @@
 #include <fmt/ostream.h>
 
 #include <filesystem>
+#include <cstdlib>
 
 using namespace ash;
 using term::LineEditor;
+
+size_t nextPathSep(const std::string &s, size_t start) {
+  size_t slash = s.find('/', start);
+#if _WIN32
+  size_t backslash = s.find('\\', start);
+  // Ok even if slash or backslash is npos as it is the greatest size_t value.
+  if (backslash < slash) {
+    slash = backslash;
+  }
+#endif
+  return slash;
+}
+
+void abbreviatePath(std::string &path) {
+  size_t sep;
+#ifdef _WIN32
+  if (path.length() > 2 && path[1] == ':' &&
+           (path[2] == '\\' || path[2] == '/')) {
+    // Drive path: C:\...
+    sep = 2;
+  } else if (path.length() > 2 && path[0] == '\\' && path[1] == '\\') {
+    // UNC path: \\...
+    sep = 1;
+  }
+#else
+  if (path.length() && path[0] == '/') {
+    // Unix absolute path: /...
+    sep = 0;
+  }
+#endif
+  else {
+    // Regular path part.
+    sep = nextPathSep(path, 0);
+  }
+  size_t nextSep;
+  while ((nextSep = nextPathSep(path, sep + 1)) != std::string::npos) {
+    if (nextSep == sep + 1) {
+      // Duplicate separator, delete it.
+      path.erase(nextSep);
+    } else if (nextSep > sep + 2) {
+      // More than one character, shorten path part.
+      sep += 2;
+      path.erase(sep, nextSep - sep);
+    } else {
+      sep = nextSep;
+    }
+  }
+}
 
 int main() {
   term::initialize();
@@ -19,10 +68,23 @@ int main() {
     term::restoreState();
   };
 
+  std::string home{};
+  std::string cwd{};
+  if (auto homeEnv = getenv("HOME")) {
+    home = homeEnv;
+    fmt::print("Home is \"{}\"\n", home);
+  }
+
   LineEditor ln;
   while (true) {
+    cwd = std::filesystem::current_path();
+    if (home.length() && (std::string_view(cwd).substr(0, home.length()) == home)) {
+      cwd.erase(0, home.length() - 1);
+      cwd[0] = '~';
+    }
+    abbreviatePath(cwd);
     auto prompt = fmt::format("{}{}{} ash!{} ",
-                term::ansi::fg::bright_blue, std::filesystem::current_path(),
+                term::ansi::fg::bright_blue, cwd,
                 term::ansi::fg::bright_black, term::ansi::fg::default_);
 
     switch (ln.readLine(prompt)) {
@@ -37,10 +99,6 @@ int main() {
         fmt::print("{}^C{}\n", term::ansi::fg::red, term::ansi::style::clear);
         ln.clear();
         break;
-
-      case Status::Continue:
-      case Status::RedrawPrompt:
-        continue;
 
       case Status::Finished:
         fmt::print("{}%{}\n", term::ansi::style::negative,
