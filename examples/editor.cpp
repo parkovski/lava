@@ -2,7 +2,8 @@
 #include "ash/terminal.h"
 #include "ash/document.h"
 
-#include <cstdio>
+#include <fmt/format.h>
+
 #include <cstdlib>
 #include <functional>
 
@@ -32,23 +33,23 @@ struct Editor {
   }
 
   void draw_debug() {
-    printf("\033[%zd;%dH", doc.lines() + 2, 1);
+    fmt::print("\033[{};{}H", doc.lines() + 2, 1);
     auto span = doc.spanForLine(cursor.y);
-    printf("cur=%03zd/%03zd (x=%02d, y=%02d); lns=%02zd; l=%zd:%zd, "
-           "ch=%2X, chs=%zd",
-           charidx, doc.length(), cursor.x, cursor.y, doc.lines(),
-           span.first, span.second, lastch, charcnt);
-    printf("\033[%d;%dH", cursor.y, cursor.x);
+    fmt::print("cur={:03}/{:03} (x={:02}, y={:02}); lns={:02}; l={}:{}, "
+               "ch={:2X}, chs={}",
+               charidx, doc.length(), cursor.x, cursor.y, doc.lines(),
+               span.first, span.second, lastch, charcnt);
+    fmt::print("\033[{};{}H", cursor.y, cursor.x);
   }
 
   void draw_partial_line(size_t line, size_t xoff) {
     auto [c0, c1] = doc.spanForLine(line);
     c0 += xoff;
     // Cursor to line and clear right.
-    printf("\033[%d;%zdH\033[K", cursor.y, 1 + xoff);
+    fmt::print("\033[{};{}H\033[K", cursor.y, 1 + xoff);
     size_t bytes = buflen;
     doc.subcstr(buf, &bytes, c0, c1);
-    printf("%s\033[%d;%dH", buf, cursor.y, cursor.x);
+    fmt::print("{}\033[{};{}H", buf, cursor.y, cursor.x);
   }
 
   void draw_lines(size_t start, size_t count, bool clear) {
@@ -64,7 +65,7 @@ struct Editor {
     for (size_t i = start; i < start + count; ++i) {
       // Clear the line.
       if (clear) {
-        printf("\033[2K\033[G");
+        fmt::print("\033[2K\033[G");
       }
       auto [c0, c1] = doc.spanForLine(i);
       size_t bytes = buflen;
@@ -97,7 +98,7 @@ struct Editor {
           }
           charidx = c0 + cursor.x - 1;
           // Move up, horizontal absolute.
-          printf("\033[A\033[%dG", cursor.x);
+          fmt::print("\033[A\033[{}G", cursor.x);
         }
         break;
 
@@ -106,7 +107,7 @@ struct Editor {
         if (cursor.x > 1) {
           --cursor.x;
           --charidx;
-          printf("\033[D");
+          fmt::print("\033[D");
         }
         break;
 
@@ -119,7 +120,7 @@ struct Editor {
             cursor.x = len + 1;
           }
           charidx = c0 + cursor.x - 1;
-          printf("\033[B\033[%dG", cursor.x);
+          fmt::print("\033[B\033[{}G", cursor.x);
         }
         break;
 
@@ -128,7 +129,7 @@ struct Editor {
         if (size_t(cursor.x) < charidx - doc.spanForLine(cursor.y).second) {
           ++cursor.x;
           ++charidx;
-          printf("\033[C");
+          fmt::print("\033[C");
         }
         break;
 
@@ -139,21 +140,22 @@ struct Editor {
           doc.erase(span.first, span.second);
           charidx = span.first;
           cursor.x = 1;
-          printf("\033[2K\033[G");
+          fmt::print("\033[2K\033[G");
         }
         break;
 
       case ctrl('L'):
         // Clear screen.
-        printf("\033[2J\033[H");
+        fmt::print("\033[2J\033[H");
         draw_lines(1, doc.lines(), false);
-        printf("\033[%d;%dH", cursor.y, cursor.x);
+        fmt::print("\033[{};{}H", cursor.y, cursor.x);
         break;
 
       case '\r':
       case '\n':
         // Clear the debug line and the rest of this line.
-        printf("\033[%dd\033[2K\033[%d;%dH\033[K", doc.lines() + 2, cursor.y, cursor.x);
+        fmt::print("\033[{}d\033[2K\033[{};{}H\033[K",
+                   doc.lines() + 2, cursor.y, cursor.x);
         cursor.x = 1;
         ++cursor.y;
         type('\n');
@@ -168,7 +170,7 @@ struct Editor {
             --cursor.y;
             cursor.x = doc.spanForLine(cursor.y).second;
             // TODO: Remove this line.
-            printf("\033[A\033[%dG", cursor.x);
+            fmt::print("\033[A\033[{}G", cursor.x);
           } else if (cursor.x > 0) {
             --cursor.x;
             draw_partial_line(cursor.y, cursor.x - 1);
@@ -195,7 +197,7 @@ struct Editor {
   }
 
   void run() {
-    printf("\033[2J\033[H\033[1 q");
+    fmt::print("\033[2J\033[H\033[1 q");
     char buf[64];
     size_t count;
     while ((count = term::getChars(buf, 1, 64)) > 0) {
@@ -210,24 +212,24 @@ struct Editor {
 
 int main(int argc, char *argv[]) {
   /*if (!term::isTTYInput()) {
-    fprintf(stderr, "stdin is not a tty!");
+    fmt::print(stderr, "stdin is not a tty!");
     return 1;
   }
   if (!term::isTTYOutput()) {
-    fprintf(stderr, "stdout is not a tty!");
+    fmt::print(stderr, "stdout is not a tty!");
     return 1;
   }*/
 
   term::initialize();
   term::setShellState();
   // Set alt buffer.
-  printf("\033[?1049h\033[2J");
+  fmt::print("\033[?1049h\033[2J");
 
   Editor().run();
 
   ASH_SCOPEEXIT{
     // End alt buffer.
-    printf("\033[?1049l");
+    fmt::print("\033[?1049l");
     term::restoreState();
   };
 
