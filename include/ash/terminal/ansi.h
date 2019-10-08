@@ -1,6 +1,8 @@
 #ifndef ASH_TERMINAL_ANSI_H_
 #define ASH_TERMINAL_ANSI_H_
 
+#include "point.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
@@ -9,11 +11,6 @@
 #include <fmt/format.h>
 
 namespace ash::term::ansi {
-
-struct Point {
-  short x;
-  short y;
-};
 
 // What kind of information does this character or sequence provide?
 enum DecodeResultKind : uint8_t {

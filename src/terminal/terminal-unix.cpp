@@ -16,9 +16,9 @@ static void *resizeParam = nullptr;
 
 static void dispatchSigwinch(int) {
   if (auto h = resizeHandler) {
-    auto [width, height] = getScreenSize();
-    if (width != 0 && height != 0) {
-      h(width, height);
+    auto size = getScreenSize();
+    if (size.x && size.y) {
+      h(size);
     }
   }
 }
@@ -86,12 +86,12 @@ size_t ash::term::getChars(char *buf, size_t min, size_t max) {
   return total;
 }
 
-std::pair<unsigned short, unsigned short> ash::term::getScreenSize() {
+Point ash::term::getScreenSize() {
   struct winsize size;
   if (ioctl(STDIN_FILENO, TIOCGWINSZ, &size)) {
     return {0, 0};
   }
-  return {size.ws_row, size.ws_col};
+  return Point{size.ws_row, size.ws_col};
 }
 
 ResizeHandler ash::term::onResize(ResizeHandler newHandler) {

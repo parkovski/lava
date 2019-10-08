@@ -1,6 +1,8 @@
 #ifndef ASH_TERMINAL_H_
 #define ASH_TERMINAL_H_
 
+#include "terminal/point.h"
+
 #include <cstddef>
 #include <utility>
 
@@ -35,9 +37,9 @@ int getChar();
 size_t getChars(char *buf, size_t min, size_t max);
 
 /// Get the terminal buffer size.
-std::pair<unsigned short, unsigned short> getScreenSize();
+Point getScreenSize();
 
-typedef void (*ResizeHandler)(unsigned short x, unsigned short y);
+typedef void (*ResizeHandler)(Point pt);
 
 /// Register a callback when the window is resized. Returns the old handler.
 ResizeHandler onResize(ResizeHandler newHandler);

@@ -3,7 +3,7 @@
 
 #include "ansi.h"
 #include "../document.h"
-#include "../document/cursor.h"
+// #include "../document/cursor.h"
 
 #include <string>
 #include <string_view>
@@ -110,9 +110,9 @@ private:
   unsigned _rbcnt = 0;
   mutable std::string _textbuf;
   size_t _pos = 0;
-  ansi::Point _promptPos;
-  ansi::Point _inputPos;
-  ansi::Point _screen;
+  Point _promptPos;
+  Point _inputPos;
+  Point _screen;
   unsigned short _x = 0;
   unsigned short _y = 0;
 };

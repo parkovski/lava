@@ -27,7 +27,7 @@ auto getCursorPos() {
     count -= r.length;
     bufp += r.length;
   }
-  return ansi::Point{};
+  return Point{};
 }
 
 } // anonymous namespace
@@ -36,7 +36,7 @@ LineEditor::Status LineEditor::readLine(std::string_view prompt) {
   _promptPos = getCursorPos();
   fmt::print("{}", prompt);
 
-  std::tie(_screen.x, _screen.y) = getScreenSize();
+  _screen = getScreenSize();
 
   if (_doc.length()) {
     drawLine();
@@ -46,7 +46,7 @@ LineEditor::Status LineEditor::readLine(std::string_view prompt) {
 
   if (_keybinding == KB_VimInsert) {
     fmt::print("{}", ansi::cursor::style::line(true));
-  } else {
+  } else if (_keybinding == KB_VimCommand) {
     fmt::print("{}", ansi::cursor::style::block(true));
   }
 
@@ -336,6 +336,13 @@ void LineEditor::drawLine() {
   auto size = _doc.size();
   _textbuf.reserve(size + 1);
   _doc.substr(_textbuf.data(), &size, 0, _doc.length());
+  auto const &attrs = _doc.attrs();
+
+  // auto end = attrs.end();
+  // for (auto a = attrs.find_overlap(0, _doc.length()); a != end; ++a) {
+  //   auto sp = a->start_pos(), ep = a->end_pos();
+  // }
+
   fmt::print(std::string_view(_textbuf.data(), size));
   if (_x) {
     if (_y == 0) {

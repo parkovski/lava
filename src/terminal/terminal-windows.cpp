@@ -22,7 +22,7 @@ static void postResize() {
     bufWidth = sbi.dwSize.X;
     bufHeight = sbi.dwSize.Y;
     if (auto h = resizeHandler) {
-      h(bufWidth, bufHeight);
+      h(Point{bufWidth, bufHeight});
     }
   }
 }
@@ -151,9 +151,9 @@ size_t ash::term::getChars(char *buf, size_t min, size_t max) {
   return total;
 }
 
-std::pair<unsigned short, unsigned short> ash::term::getScreenSize() {
+Point ash::term::getScreenSize() {
   postResize();
-  return {bufWidth, bufHeight};
+  return Point{bufWidth, bufHeight};
 }
 
 ResizeHandler ash::term::onResize(ResizeHandler newHandler) {
