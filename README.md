@@ -227,3 +227,13 @@ one of the ABI-defined error handling methods will be invoked.
   - Build tools
     - CMake
     - Webpack
+- Interactive coding
+  - Swift playgrounds
+  - Jupyter Notebook
+  - Shell
+  - Sonic Pi
+  - Various live shader editors
+- Introspection and alternate code views
+  - Code lens
+  - Unreal Blueprints
+  - Live previews for Markdown, HTML, and other document/markup type languages
