@@ -48,7 +48,7 @@ struct Editor {
     // Cursor to line and clear right.
     fmt::print("\033[{};{}H\033[K", cursor.y, 1 + xoff);
     size_t bytes = buflen;
-    doc.subcstr(buf, &bytes, c0, c1);
+    doc.c_substr(buf, &bytes, c0, c1);
     fmt::print("{}\033[{};{}H", buf, cursor.y, cursor.x);
   }
 
@@ -69,7 +69,7 @@ struct Editor {
       }
       auto [c0, c1] = doc.spanForLine(i);
       size_t bytes = buflen;
-      doc.subcstr(buf, &bytes, c0, c1);
+      doc.c_substr(buf, &bytes, c0, c1);
       puts(buf);
     }
   }

@@ -44,7 +44,7 @@ int main() {
 
   char text[256];
   size_t bufsize = 256;
-  doc.subcstr(text, &bufsize, 0, 255);
+  doc.c_substr(text, &bufsize, 0, 255);
   std::cout << ">>>\n" << text << "<<<\n";
 
   doc.insert(17, "\nyou are a dawg\n");
@@ -55,7 +55,7 @@ int main() {
   }
 
   bufsize = 256;
-  doc.subcstr(text, &bufsize, 0, 255);
+  doc.c_substr(text, &bufsize, 0, 255);
   std::cout << ">>>\n" << text << "<<<\n";
 
   doc.erase(0, 12);
@@ -66,7 +66,7 @@ int main() {
   }
 
   bufsize = 256;
-  doc.subcstr(text, &bufsize, 0, 255);
+  doc.c_substr(text, &bufsize, 0, 255);
   std::cout << ">>>\n" << text << "<<<\n";
 
   return 0;

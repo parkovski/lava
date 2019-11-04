@@ -10,86 +10,17 @@
 #include <cstddef>
 #include <utility>
 #include <vector>
+#include <string>
+#include <string_view>
 #include <boost/signals2.hpp>
 
 namespace ash::doc {
-
-namespace detail {
-
-/// Skip to the given UTF-8 offset in the string.
-/// \param str The string to search.
-/// \param chars The number of characters to skip.
-/// \param bytelen The length of the string in bytes.
-/// \return A pointer to the new offset in the string.
-static inline u8char *skip_utf8(u8char *str, size_t chars, size_t bytelen) {
-  size_t chars_seen = 0;
-  const u8char *const end = str + bytelen;
-  while (chars_seen < chars) {
-    auto cp_size = utf8_codepoint_size(*str);
-    if (str + cp_size > end) {
-      break;
-    }
-    str += cp_size;
-    ++chars_seen;
-  }
-  return str;
-}
-
-/// Copy a number of UTF-8 characters into a new buffer. Does not write a null.
-/// \param dst The buffer to copy to.
-/// \param src The buffer to copy from.
-/// \param chars In: the number of characters to copy.
-///              Out: the number of characters written.
-/// \param max_size The maximum number of bytes to copy.
-/// \return The number of bytes written.
-static inline size_t copy_utf8(u8char *dst, const u8char *src, size_t *chars,
-                               size_t max_size)
-{
-  size_t chars_seen = 0;
-  const u8char *const start = src;
-  const u8char *const end = src + max_size;
-  const u8char *const safe_end = end - 6;
-
-  while (src < safe_end && chars_seen < *chars) {
-    switch (utf8_codepoint_size(*src)) {
-      case 6: *dst++ = *src++;
-      case 5: *dst++ = *src++;
-      case 4: *dst++ = *src++;
-      case 3: *dst++ = *src++;
-      case 2: *dst++ = *src++;
-      default: *dst++ = *src++;
-    }
-    ++chars_seen;
-  }
-
-  while (src < end && chars_seen < *chars) {
-    auto cp_size = utf8_codepoint_size(*src);
-    if (src + cp_size > end) {
-      // Not enough room to write this character.
-      break;
-    }
-    switch (cp_size) {
-      case 6: *dst++ = *src++;
-      case 5: *dst++ = *src++;
-      case 4: *dst++ = *src++;
-      case 3: *dst++ = *src++;
-      case 2: *dst++ = *src++;
-      default: *dst++ = *src++;
-    }
-    ++chars_seen;
-  }
-
-  *chars = chars_seen;
-  return src - start;
-}
-
-} // namespace detail
 
 // UTF-8 rope. Try to look like an std::string as much as possible.
 // TODO: Iterators
 class Rope final {
 public:
-  using char_type = u8char;
+  using char_type = char;
   constexpr static size_t npos = (size_t)-1;
 
   /// Construct an empty document.
@@ -97,6 +28,7 @@ public:
 
   /// Construct a document pre-populated with text.
   /// \param text The text to fill the document with.
+  explicit Rope(std::string_view text);
   explicit Rope(const char_type *text);
 
   Rope(const Rope &);
@@ -109,6 +41,7 @@ public:
   /// Insert text into the document.
   /// \param index UTF-8 character position.
   /// \param text UTF-8 string to insert.
+  bool insert(size_t index, std::string_view text);
   bool insert(size_t index, const char_type *text);
 
   // Length in UTF-8 characters.
@@ -117,8 +50,12 @@ public:
   // Size in bytes.
   size_t size() const;
 
+  // UTF-16 code unit count.
+  size_t u16_length() const;
+
   /// Append to the end of the document.
   /// \param text The text to append.
+  bool append(std::string_view text);
   bool append(const char_type *text);
 
   /// Delete a range of characters from the document. Indexes in characters.
@@ -130,9 +67,10 @@ public:
   /// \param index The first character to erase.
   /// \param count The number of characters to erase.
   /// \param text The new text to insert at \c index.
+  bool replace(size_t index, size_t count, std::string_view text);
   bool replace(size_t index, size_t count, const char_type *text);
 
-  // Clears all text and attributes.
+  // Clears all text from the rope.
   void clear();
 
   /// Read a range of text from the rope into a buffer. Indexes in characters.
@@ -150,8 +88,15 @@ public:
   /// character at the end. Returns the number of UTF-8 characters written,
   /// not including the terminating NUL.
   /// \see substr.
-  size_t subcstr(char_type *buf, size_t *bufsize, size_t index, size_t count)
-                 const;
+  size_t c_substr(char_type *buf, size_t *bufsize, size_t index,
+                  size_t count) const;
+
+  /// Returns a substring from the rope as an std::string.
+  /// \param index The first character to read.
+  /// \param count The total number of characters to read. If index + count is
+  ///              past the end, all the remaining text will be copied.
+  /// \return A string with at most \c count characters.
+  std::string substr(size_t index, size_t count = npos) const;
 
   /// Get one Unicode character from the document.
   /// Note: Works in log(N) time! Try to read more in chunks for better perf.
@@ -327,9 +272,12 @@ public:
   size_t substr(char_type *buf, size_t *bufsize, size_t index, size_t count)
                 const;
 
-  /// \see Rope::subcstr.
-  size_t subcstr(char_type *buf, size_t *bufsize, size_t index, size_t count)
-                 const;
+  /// \see Rope::c_substr.
+  size_t c_substr(char_type *buf, size_t *bufsize, size_t index, size_t count)
+                  const;
+
+  /// \see Rope::substr.
+  std::string substr(size_t index, size_t count = npos) const;
 
   /// Get one Unicode character from the document.
   /// Note: Works in log(N) time! Try to read more in chunks for better perf.

@@ -59,6 +59,18 @@ rope *rope_new_with_utf8(const uint8_t *str) {
   }
 }
 
+rope *rope_new_with_utf8_n(const uint8_t *str, size_t count) {
+  rope *r = rope_new();
+  ROPE_RESULT result = rope_insert_n(r, 0, str, count);
+
+  if (result != ROPE_OK) {
+    rope_free(r);
+    return NULL;
+  } else {
+    return r;
+  }
+}
+
 rope *rope_copy(const rope *other) {
   rope *r = (rope *)other->alloc(ROPE_SIZE);
 
@@ -144,6 +156,16 @@ uint8_t *rope_create_cstr(rope *r) {
   uint8_t *bytes = (uint8_t *)r->alloc(rope_byte_count(r) + 1); // Room for a zero.
   rope_write_cstr(r, bytes);
   return bytes;
+}
+
+size_t rope_write_substr(rope *r, uint8_t *dest, size_t *bytes, size_t index,
+                         size_t chars) {
+  return 0; // TODO
+}
+
+size_t rope_write_substr_at_iter(rope *r, uint8_t *dest, size_t *bytes,
+                                 rope_node *e, rope_iter *iter, size_t chars) {
+  return 0; // TODO
 }
 
 #if ROPE_WCHAR
@@ -278,12 +300,6 @@ static ptrdiff_t bytelen_and_check_utf8(const uint8_t *str) {
 
   return p - str;
 }
-
-typedef struct {
-  // This stores the previous node at each height, and the number of characters from the start of
-  // the previous node to the current iterator position.
-  rope_skip_node s[ROPE_MAX_HEIGHT];
-} rope_iter;
 
 // Internal function for navigating to a particular character offset in the rope.
 // The function returns the list of nodes which point past the position, as well as
@@ -586,6 +602,11 @@ static ROPE_RESULT rope_insert_at_iter(rope *r, rope_node *e, rope_iter *iter, c
   return ROPE_OK;
 }
 
+ROPE_RESULT rope_insert_at_iter_n(rope *r, rope_node *e, rope_iter *iter,
+                                  const uint8_t *str, size_t count) {
+  return ROPE_INVALID_UTF8;
+}
+
 ROPE_RESULT rope_insert(rope *r, size_t pos, const uint8_t *str) {
   assert(r);
   assert(str);
@@ -605,6 +626,11 @@ ROPE_RESULT rope_insert(rope *r, size_t pos, const uint8_t *str) {
 #endif
 
   return result;
+}
+
+ROPE_RESULT rope_insert_n(rope *r, size_t pos, const uint8_t *str, size_t count)
+{
+  return ROPE_INVALID_UTF8; // TODO
 }
 
 #if ROPE_WCHAR
@@ -633,7 +659,7 @@ size_t rope_insert_at_wchar(rope *r, size_t wchar_pos, const uint8_t *str) {
 
 // Delete num characters at position pos. Deleting past the end of the string
 // has no effect.
-static void rope_del_at_iter(rope *r, rope_node *e, rope_iter *iter, size_t length) {
+void rope_del_at_iter(rope *r, rope_node *e, rope_iter *iter, size_t length) {
   r->num_chars -= length;
   size_t offset = iter->s[0].skip_size;
   while (length) {
@@ -820,6 +846,7 @@ void _rope_check(rope *r) {
 }
 
 // For debugging.
+#ifdef DEBUG
 #include <stdio.h>
 void _rope_print(rope *r) {
   printf("chars: %zd\tbytes: %zd\theight: %d\n", r->num_chars, r->num_bytes, r->head.height);
@@ -841,3 +868,4 @@ void _rope_print(rope *r) {
     printf("\"\n");
   }
 }
+#endif // DEBUG

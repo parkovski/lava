@@ -12,7 +12,7 @@ using namespace ash::term;
 
 static struct termios termAttrs;
 static ResizeHandler resizeHandler = nullptr;
-static void *resizeParam = nullptr;
+//static void *resizeParam = nullptr;
 
 static void dispatchSigwinch(int) {
   if (auto h = resizeHandler) {

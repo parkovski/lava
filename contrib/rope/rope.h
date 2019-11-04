@@ -22,7 +22,7 @@
 //
 // Adding wchar conversion support decreases performance by about 30%.
 #ifndef ROPE_WCHAR
-#define ROPE_WCHAR 0
+#define ROPE_WCHAR 1
 #endif
 
 // These two magic values seem to be approximately optimal given the benchmark
@@ -88,6 +88,12 @@ typedef struct rope_node_t {
 } rope_node;
 
 typedef struct {
+  // This stores the previous node at each height, and the number of characters from the start of
+  // the previous node to the current iterator position.
+  rope_skip_node s[ROPE_MAX_HEIGHT];
+} rope_iter;
+
+typedef struct {
   // The total number of characters in the rope.
   size_t num_chars;
   
@@ -118,6 +124,9 @@ rope *rope_new2(void *(*alloc)(size_t bytes),
 // r = rope_new(); rope_insert(r, 0, str);
 rope *rope_new_with_utf8(const uint8_t *str);
 
+// Create a new rope and copy `count` characters from the string into the rope.
+rope *rope_new_with_utf8_n(const uint8_t *str, size_t count);
+
 // Make a copy of an existing rope
 rope *rope_copy(const rope *r);
 
@@ -141,17 +150,44 @@ size_t rope_write_cstr(rope *r, uint8_t *dest);
 // Use rope_byte_count(r) to get the length of the returned string.
 uint8_t *rope_create_cstr(rope *r);
 
+// Copies a substring from the rope into a buffer. Does not write a terminating
+// '\0' character. On input, bytes is a pointer to the maximum number of bytes
+// the buffer can hold. On output, it contains the actual number of bytes
+// written.
+size_t rope_write_substr(rope *r, uint8_t *dest, size_t *bytes, size_t index,
+                         size_t chars);
+
+// TODO: Writes a substring without needing to look up the character position.
+size_t rope_write_substr_at_iter(rope *r, uint8_t *dest, size_t *bytes,
+                                 rope_node *e, rope_iter *iter, size_t chars);
+
 // If you try to insert data into the rope with an invalid UTF8 encoding,
 // nothing will happen and we'll return ROPE_INVALID_UTF8.
 typedef enum { ROPE_OK, ROPE_INVALID_UTF8 } ROPE_RESULT;
-  
+
 // Insert the given utf8 string into the rope at the specified position.
 ROPE_RESULT rope_insert(rope *r, size_t pos, const uint8_t *str);
+
+ROPE_RESULT rope_insert_n(rope *r, size_t pos, const uint8_t *str, size_t count);
+
+// TODO: Inserts into the rope without needing to look up position, adjusts
+// iterator appropriately.
+ROPE_RESULT rope_insert_at_iter_n(rope *r, rope_node *e, rope_iter *iter,
+                                  const uint8_t *str, size_t count);
 
 // Delete num characters at position pos. Deleting past the end of the string
 // has no effect.
 void rope_del(rope *r, size_t pos, size_t num);
-  
+
+// TODO: Delete and update iterator.
+void rope_del_at_iter(rope *r, rope_node *e, rope_iter *iter, size_t length);
+
+// TODO
+rope_node *rope_iter_at_char_pos(rope *r, size_t pos, rope_iter *iter);
+#if ROPE_WCHAR
+rope_node *rope_iter_at_wchar_pos(rope *r, size_t pos, rope_iter *iter);
+#endif
+
 // This macro expands to a for() loop header which loops over the segments in a
 // rope.
 //
