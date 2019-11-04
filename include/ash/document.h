@@ -3,114 +3,17 @@
 
 #include "ash.h"
 
+#include "data/rope.h"
 #include "data/intervaltree.h"
 #include "data/slidingorderedset.h"
 
-#include <cassert>
 #include <cstddef>
 #include <utility>
-#include <vector>
 #include <string>
 #include <string_view>
 #include <boost/signals2.hpp>
 
 namespace ash::doc {
-
-// UTF-8 rope. Try to look like an std::string as much as possible.
-// TODO: Iterators
-class Rope final {
-public:
-  using char_type = char;
-  constexpr static size_t npos = (size_t)-1;
-
-  /// Construct an empty document.
-  explicit Rope();
-
-  /// Construct a document pre-populated with text.
-  /// \param text The text to fill the document with.
-  explicit Rope(std::string_view text);
-  explicit Rope(const char_type *text);
-
-  Rope(const Rope &);
-  Rope &operator=(const Rope &);
-  Rope(Rope &&) noexcept;
-  Rope &operator=(Rope &&) noexcept;
-
-  ~Rope();
-
-  /// Insert text into the document.
-  /// \param index UTF-8 character position.
-  /// \param text UTF-8 string to insert.
-  bool insert(size_t index, std::string_view text);
-  bool insert(size_t index, const char_type *text);
-
-  // Length in UTF-8 characters.
-  size_t length() const;
-
-  // Size in bytes.
-  size_t size() const;
-
-  // UTF-16 code unit count.
-  size_t u16_length() const;
-
-  /// Append to the end of the document.
-  /// \param text The text to append.
-  bool append(std::string_view text);
-  bool append(const char_type *text);
-
-  /// Delete a range of characters from the document. Indexes in characters.
-  /// \param index The first character to delete.
-  /// \param count The number of characters to delete.
-  void erase(size_t index, size_t count);
-
-  /// Replace a range with different text. Indexes in characters.
-  /// \param index The first character to erase.
-  /// \param count The number of characters to erase.
-  /// \param text The new text to insert at \c index.
-  bool replace(size_t index, size_t count, std::string_view text);
-  bool replace(size_t index, size_t count, const char_type *text);
-
-  // Clears all text from the rope.
-  void clear();
-
-  /// Read a range of text from the rope into a buffer. Indexes in characters.
-  /// Does _not_ append a null to the buffer.
-  /// \param buf The buffer to receive the text.
-  /// \param bufsize The size of the buffer in bytes. On return, this will be
-  ///                set to the number of bytes written to the buffer.
-  /// \param index The first character to read.
-  /// \param count The maximum number of characters to read.
-  /// \return The number of characters written to the buffer.
-  size_t substr(char_type *buf, size_t *bufsize, size_t index, size_t count)
-                const;
-
-  /// Reads a substring from the rope into a buffer, including a NUL ('\0')
-  /// character at the end. Returns the number of UTF-8 characters written,
-  /// not including the terminating NUL.
-  /// \see substr.
-  size_t c_substr(char_type *buf, size_t *bufsize, size_t index,
-                  size_t count) const;
-
-  /// Returns a substring from the rope as an std::string.
-  /// \param index The first character to read.
-  /// \param count The total number of characters to read. If index + count is
-  ///              past the end, all the remaining text will be copied.
-  /// \return A string with at most \c count characters.
-  std::string substr(size_t index, size_t count = npos) const;
-
-  /// Get one Unicode character from the document.
-  /// Note: Works in log(N) time! Try to read more in chunks for better perf.
-  /// \param index UTF-8 character offset.
-  /// \return The UTF-32 character at the specified offset.
-  char32_t operator[](size_t index) const;
-
-private:
-#ifdef ASH_DOCUMENT_IMPL
-  rope *_text;
-#else
-  void *_text;
-#endif
-};
 
 // Document requirements (all operations must be relatively quick):
 // - Insert/remove text at arbitrary positions.
@@ -131,8 +34,8 @@ private:
 
 class Document {
 public:
-  using char_type = Rope::char_type;
-  static constexpr size_t npos = Rope::npos;
+  using char_type = data::Rope::char_type;
+  static constexpr size_t npos = data::Rope::npos;
   using grid_size_type = uint32_t;
   using grid_offset_type = int32_t;
 
@@ -268,15 +171,15 @@ public:
   // Clears all text and attributes.
   void clear();
 
-  /// \see Rope::substr.
+  /// \see data::Rope::substr.
   size_t substr(char_type *buf, size_t *bufsize, size_t index, size_t count)
                 const;
 
-  /// \see Rope::c_substr.
+  /// \see data::Rope::c_substr.
   size_t c_substr(char_type *buf, size_t *bufsize, size_t index, size_t count)
                   const;
 
-  /// \see Rope::substr.
+  /// \see data::Rope::substr.
   std::string substr(size_t index, size_t count = npos) const;
 
   /// Get one Unicode character from the document.
@@ -307,7 +210,7 @@ public:
   std::pair<size_t, size_t> spanForLine(grid_size_type line) const;
 
 private:
-  Rope _rope;
+  data::Rope _rope;
   data::SlidingOrderedSet<> _newlines;
   boost::signals2::signal<Observer> _observers;
 };

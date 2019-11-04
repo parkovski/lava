@@ -52,7 +52,7 @@
 struct rope_node_t;
 
 // The number of characters in str can be read out of nexts[0].skip_size.
-typedef struct {
+typedef struct rope_skip_node {
   // The number of _characters_ between the start of the current node
   // and the start of next.
   size_t skip_size;
@@ -87,13 +87,13 @@ typedef struct rope_node_t {
 #endif
 } rope_node;
 
-typedef struct {
+typedef struct rope_iter {
   // This stores the previous node at each height, and the number of characters from the start of
   // the previous node to the current iterator position.
   rope_skip_node s[ROPE_MAX_HEIGHT];
 } rope_iter;
 
-typedef struct {
+typedef struct rope {
   // The total number of characters in the rope.
   size_t num_chars;
   
