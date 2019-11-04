@@ -1,10 +1,10 @@
-#ifndef ASH_COLLECTIONS_SLIDINGORDEREDSET_H_
-#define ASH_COLLECTIONS_SLIDINGORDEREDSET_H_
+#ifndef ASH_DATA_SLIDINGORDEREDSET_H_
+#define ASH_DATA_SLIDINGORDEREDSET_H_
 
 #include "slidingorderedset/node.h"
 #include "slidingorderedset/iterator.h"
 
-namespace ash::collections {
+namespace ash::data {
 namespace soset {
 
 // A sorted set of numbers where all the following operations take O(log n):
@@ -827,6 +827,6 @@ void SlidingOrderedSet<P, O, Compare>::rotate_right(node_type pivot) {
 
 using soset::SlidingOrderedSet;
 
-} // namespace ash::collections
+} // namespace ash::data
 
-#endif // ASH_COLLECTIONS_SLIDINGORDEREDSET_H_
+#endif // ASH_DATA_SLIDINGORDEREDSET_H_

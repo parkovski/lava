@@ -1,5 +1,5 @@
-#ifndef ASH_COLLECTIONS_INTERVALTREE_ITERATORS_H_
-#define ASH_COLLECTIONS_INTERVALTREE_ITERATORS_H_
+#ifndef ASH_DATA_INTERVALTREE_ITERATORS_H_
+#define ASH_DATA_INTERVALTREE_ITERATORS_H_
 
 #include "../detail.h"
 #include "node.h"
@@ -7,7 +7,7 @@
 #include <iterator>
 #include <type_traits>
 
-namespace ash::collections::itree {
+namespace ash::data::itree {
 
 template<typename T>
 class IntervalTree;
@@ -411,6 +411,6 @@ protected:
   Key<T> _key;
 };
 
-} // namespace ash::collections::itree
+} // namespace ash::data::itree
 
-#endif // ASH_COLLECTIONS_INTERVALTREE_ITERATORS_H_
+#endif // ASH_DATA_INTERVALTREE_ITERATORS_H_

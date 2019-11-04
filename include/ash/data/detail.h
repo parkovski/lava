@@ -1,7 +1,7 @@
-#ifndef ASH_COLLECTIONS_DETAIL_H_
-#define ASH_COLLECTIONS_DETAIL_H_
+#ifndef ASH_DATA_DETAIL_H_
+#define ASH_DATA_DETAIL_H_
 
-namespace ash::collections::detail {
+namespace ash::data::detail {
 
 // Yields T if T and U are the same ignoring const.
 template<typename T, typename U>
@@ -82,6 +82,6 @@ struct hoist_const {
   using type = T<U>;
 };
 
-} // namespace ash::collections::detail
+} // namespace ash::data::detail
 
-#endif // ASH_COLLECTIONS_DETAIL_H_
+#endif // ASH_DATA_DETAIL_H_

@@ -1,10 +1,10 @@
-#ifndef ASH_COLLECTIONS_SLIDINGORDEREDSET_NODE_H_
-#define ASH_COLLECTIONS_SLIDINGORDEREDSET_NODE_H_
+#ifndef ASH_DATA_SLIDINGORDEREDSET_NODE_H_
+#define ASH_DATA_SLIDINGORDEREDSET_NODE_H_
 
 #include <type_traits>
 #include <algorithm>
 
-namespace ash::collections::soset {
+namespace ash::data::soset {
 
 // Type of the node colors, either red or black.
 typedef bool color_t;
@@ -194,6 +194,6 @@ private:
   offset_type _offset = 0;
 };
 
-} // namespace ash::collections::soset
+} // namespace ash::data::soset
 
-#endif // ASH_COLLECTIONS_SLIDINGORDEREDSET_NODE_H_
+#endif // ASH_DATA_SLIDINGORDEREDSET_NODE_H_

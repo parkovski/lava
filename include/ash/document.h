@@ -3,8 +3,8 @@
 
 #include "ash.h"
 
-#include "collections/intervaltree.h"
-#include "collections/slidingorderedset.h"
+#include "data/intervaltree.h"
+#include "data/slidingorderedset.h"
 
 #include <cassert>
 #include <cstddef>
@@ -308,7 +308,7 @@ public:
 
 private:
   Rope _rope;
-  collections::SlidingOrderedSet<> _newlines;
+  data::SlidingOrderedSet<> _newlines;
   boost::signals2::signal<Observer> _observers;
 };
 
@@ -342,16 +342,16 @@ public:
     observe(CoolDocument::syncAttrs);
   }
 
-  collections::IntervalTree<Attribute> &attrs() {
+  data::IntervalTree<Attribute> &attrs() {
     return _attrs;
   }
 
-  const collections::IntervalTree<Attribute> &attrs() const {
+  const data::IntervalTree<Attribute> &attrs() const {
     return _attrs;
   }
 
 private:
-  collections::IntervalTree<Attribute> _attrs;
+  data::IntervalTree<Attribute> _attrs;
 };
 
 } // namespace ash::doc

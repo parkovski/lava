@@ -8,7 +8,7 @@ add_executable(test
 )
 target_link_libraries(test PRIVATE
   Catch2::Catch2
-  ashcollections
+  ashdata
   ashdocument
   rope
   ashterminal

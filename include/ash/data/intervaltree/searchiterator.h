@@ -1,11 +1,11 @@
-#ifndef ASH_COLLECTIONS_INTERVALTREE_SEARCHITERATOR_H_
-#define ASH_COLLECTIONS_INTERVALTREE_SEARCHITERATOR_H_
+#ifndef ASH_DATA_INTERVALTREE_SEARCHITERATOR_H_
+#define ASH_DATA_INTERVALTREE_SEARCHITERATOR_H_
 
 #include "iterator.h"
 
-namespace ash::collections::itree {
+namespace ash::data::itree {
 
-using namespace ash::collections::detail;
+using namespace detail;
 
 template<typename T>
 class SearchIteratorBase : public Iterator<T> {
@@ -161,6 +161,6 @@ protected:
 
 #undef ASH_IMPLEMENT_SEARCH_ITERATOR
 
-} // namespace ash::collections::itree
+} // namespace ash::data::itree
 
-#endif // ASH_COLLECTIONS_INTERVALTREE_SEARCHITERATOR_H_
+#endif // ASH_DATA_INTERVALTREE_SEARCHITERATOR_H_

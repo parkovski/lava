@@ -1,5 +1,5 @@
-#ifndef ASH_COLLECTIONS_SLIDINGORDEREDSET_ITERATOR_H_
-#define ASH_COLLECTIONS_SLIDINGORDEREDSET_ITERATOR_H_
+#ifndef ASH_DATA_SLIDINGORDEREDSET_ITERATOR_H_
+#define ASH_DATA_SLIDINGORDEREDSET_ITERATOR_H_
 
 #include "node.h"
 
@@ -8,7 +8,7 @@
 #include <utility>
 #include <cassert>
 
-namespace ash::collections::soset {
+namespace ash::data::soset {
 
 // This iterator meets all the requirements of a random access iterator
 // _except_ arbitrary movement is not constant time.
@@ -200,6 +200,6 @@ protected:
 };
 
 
-} // namespace ash::collections::soset
+} // namespace ash::data::soset
 
-#endif // ASH_COLLECTIONS_SLIDINGORDEREDSET_ITERATOR_H_
+#endif // ASH_DATA_SLIDINGORDEREDSET_ITERATOR_H_

@@ -2,11 +2,11 @@
 #include <catch2/catch.hpp>
 
 #include <string>
-#include "ash/collections/slidingorderedset.h"
-#include "ash/collections/intervaltree.h"
+#include "ash/data/slidingorderedset.h"
+#include "ash/data/intervaltree.h"
 
 TEST_CASE("Sliding ordered set", "[soset]") {
-  using namespace ash::collections::soset;
+  using namespace ash::data::soset;
   SlidingOrderedSet<> set;
   set.insert(50);
   set.insert(30);
@@ -37,7 +37,7 @@ TEST_CASE("Sliding ordered set", "[soset]") {
 }
 
 TEST_CASE("Interval tree", "[itree]") {
-  using namespace ash::collections::itree;
+  using namespace ash::data::itree;
 
   IntervalTree<std::string_view> tree;
 #define MAKE_PAIR(a, b) #a ", " #b

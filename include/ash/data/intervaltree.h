@@ -1,5 +1,5 @@
-#ifndef ASH_COLLECTIONS_INTERVALTREE_H_
-#define ASH_COLLECTIONS_INTERVALTREE_H_
+#ifndef ASH_DATA_INTERVALTREE_H_
+#define ASH_DATA_INTERVALTREE_H_
 
 #include "intervaltree/node.h"
 #include "intervaltree/iterator.h"
@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <functional>
 
-namespace ash::collections {
+namespace ash::data {
 namespace itree {
 
 template<typename T>
@@ -699,6 +699,6 @@ void IntervalTree<T>::rotate_right(node_t<T> *pivot) {
 
 using itree::IntervalTree;
 
-} // namespace ash::collections
+} // namespace ash::data
 
-#endif // ASH_COLLECTIONS_INTERVALTREE_H_
+#endif // ASH_DATA_INTERVALTREE_H_

@@ -1,11 +1,11 @@
-#ifndef ASH_COLLECTIONS_INTERVALTREE_NODE_H_
-#define ASH_COLLECTIONS_INTERVALTREE_NODE_H_
+#ifndef ASH_DATA_INTERVALTREE_NODE_H_
+#define ASH_DATA_INTERVALTREE_NODE_H_
 
 #include <type_traits>
 #include <algorithm>
 #include <cstddef>
 
-namespace ash::collections::itree {
+namespace ash::data::itree {
 
 // Type of the node colors, either red or black.
 typedef bool color_t;
@@ -275,6 +275,6 @@ struct node_type<const T> {
 template<typename T>
 using node_t = typename node_type<T>::type;
 
-} // namespace ash::collections::itree
+} // namespace ash::data::itree
 
-#endif // ASH_COLLECTIONS_INTERVALTREE_NODE_H_
+#endif // ASH_DATA_INTERVALTREE_NODE_H_
