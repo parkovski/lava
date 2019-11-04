@@ -1,11 +1,11 @@
-#ifndef ASH_DATA_SLIDINGORDEREDSET_H_
-#define ASH_DATA_SLIDINGORDEREDSET_H_
+#ifndef ASH_DATA_SLIDINGINDEX_H_
+#define ASH_DATA_SLIDINGINDEX_H_
 
-#include "slidingorderedset/node.h"
-#include "slidingorderedset/iterator.h"
+#include "slidingindex/node.h"
+#include "slidingindex/iterator.h"
 
 namespace ash::data {
-namespace soset {
+namespace slidx {
 
 // A sorted set of numbers where all the following operations take O(log n):
 // - Insert, erase at arbitrary index.
@@ -18,7 +18,7 @@ namespace soset {
 // TODO: Join, erase multiple.
 template<typename P = size_t, typename O = std::make_signed_t<P>,
          typename Compare = std::less<P>>
-class SlidingOrderedSet {
+class SlidingIndex {
 public:
   using node_type = Node<P, O> *;
   using size_type = size_t;
@@ -37,13 +37,13 @@ public:
 
   constexpr const static size_t npos = (size_t)-1;
 
-  explicit SlidingOrderedSet() noexcept
+  explicit SlidingIndex() noexcept
     : _root(nullptr)
   {}
 
-  SlidingOrderedSet(SlidingOrderedSet &&other) = default;
+  SlidingIndex(SlidingIndex &&other) = default;
 
-  SlidingOrderedSet &operator=(SlidingOrderedSet &&other) noexcept {
+  SlidingIndex &operator=(SlidingIndex &&other) noexcept {
     if (_root) {
       delete _root;
     }
@@ -52,7 +52,7 @@ public:
     return *this;
   }
 
-  ~SlidingOrderedSet() {
+  ~SlidingIndex() {
     if (_root) {
       delete _root;
     }
@@ -425,7 +425,7 @@ private:
 };
 
 template<typename P, typename O, typename Compare>
-void SlidingOrderedSet<P, O, Compare>::shift(value_type position,
+void SlidingIndex<P, O, Compare>::shift(value_type position,
                                              offset_type space) {
   if (!_root || space == 0) {
     return;
@@ -451,7 +451,7 @@ void SlidingOrderedSet<P, O, Compare>::shift(value_type position,
 }
 
 template<typename P, typename O, typename Compare>
-void SlidingOrderedSet<P, O, Compare>::shift_upper(value_type position,
+void SlidingIndex<P, O, Compare>::shift_upper(value_type position,
                                                    offset_type shift) {
   value_type current_pos = 0;
   auto node = _root;
@@ -482,8 +482,8 @@ void SlidingOrderedSet<P, O, Compare>::shift_upper(value_type position,
 }
 
 template<typename P, typename O, typename Compare>
-typename SlidingOrderedSet<P, O, Compare>::iterator
-SlidingOrderedSet<P, O, Compare>::insert_position(value_type pos) {
+typename SlidingIndex<P, O, Compare>::iterator
+SlidingIndex<P, O, Compare>::insert_position(value_type pos) {
   if (!_root) {
     return end();
   }
@@ -526,8 +526,8 @@ SlidingOrderedSet<P, O, Compare>::insert_position(value_type pos) {
 }
 
 template<typename P, typename O, typename Compare>
-typename SlidingOrderedSet<P, O, Compare>::node_type
-SlidingOrderedSet<P, O, Compare>::extract(const_iterator where) {
+typename SlidingIndex<P, O, Compare>::node_type
+SlidingIndex<P, O, Compare>::extract(const_iterator where) {
   auto node = where._node;
   auto value = where._value;
   auto parent = node->parent();
@@ -632,7 +632,7 @@ SlidingOrderedSet<P, O, Compare>::extract(const_iterator where) {
 }
 
 template<typename P, typename O, typename Compare>
-void SlidingOrderedSet<P, O, Compare>::fix_for_insert(node_type node) {
+void SlidingIndex<P, O, Compare>::fix_for_insert(node_type node) {
   auto parent = node->parent();
 
   if (!parent) {
@@ -686,7 +686,7 @@ void SlidingOrderedSet<P, O, Compare>::fix_for_insert(node_type node) {
 }
 
 template<typename P, typename O, typename Compare>
-void SlidingOrderedSet<P, O, Compare>::fix_for_insert_rotate(node_type node) {
+void SlidingIndex<P, O, Compare>::fix_for_insert_rotate(node_type node) {
   auto parent = node->parent();
   auto grandparent = parent->parent();
 
@@ -705,7 +705,7 @@ void SlidingOrderedSet<P, O, Compare>::fix_for_insert_rotate(node_type node) {
 }
 
 template<typename P, typename O, typename Compare>
-void SlidingOrderedSet<P, O, Compare>::fix_for_erase(node_type node) {
+void SlidingIndex<P, O, Compare>::fix_for_erase(node_type node) {
   auto parent = node->parent();
   if (!parent) {
     return;
@@ -776,7 +776,7 @@ void SlidingOrderedSet<P, O, Compare>::fix_for_erase(node_type node) {
 }
 
 template<typename P, typename O, typename Compare>
-void SlidingOrderedSet<P, O, Compare>::fix_for_rotate(node_type old_pivot,
+void SlidingIndex<P, O, Compare>::fix_for_rotate(node_type old_pivot,
                                                       node_type new_pivot,
                                                       node_type parent,
                                                       node_type child) {
@@ -804,7 +804,7 @@ void SlidingOrderedSet<P, O, Compare>::fix_for_rotate(node_type old_pivot,
 }
 
 template<typename P, typename O, typename Compare>
-void SlidingOrderedSet<P, O, Compare>::rotate_left(node_type pivot) {
+void SlidingIndex<P, O, Compare>::rotate_left(node_type pivot) {
   auto new_pivot = pivot->right();
   auto parent = pivot->parent();
   auto child = pivot->set_right(new_pivot->left());
@@ -814,7 +814,7 @@ void SlidingOrderedSet<P, O, Compare>::rotate_left(node_type pivot) {
 }
 
 template<typename P, typename O, typename Compare>
-void SlidingOrderedSet<P, O, Compare>::rotate_right(node_type pivot) {
+void SlidingIndex<P, O, Compare>::rotate_right(node_type pivot) {
   auto new_pivot = pivot->left();
   auto parent = pivot->parent();
   auto child = pivot->set_left(new_pivot->right());
@@ -823,10 +823,10 @@ void SlidingOrderedSet<P, O, Compare>::rotate_right(node_type pivot) {
   fix_for_rotate(pivot, new_pivot, parent, child);
 }
 
-} // namespace soset
+} // namespace slidx
 
-using soset::SlidingOrderedSet;
+using slidx::SlidingIndex;
 
 } // namespace ash::data
 
-#endif // ASH_DATA_SLIDINGORDEREDSET_H_
+#endif // ASH_DATA_SLIDINGINDEX_H_

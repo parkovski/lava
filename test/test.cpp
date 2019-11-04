@@ -2,12 +2,12 @@
 #include <catch2/catch.hpp>
 
 #include <string>
-#include "ash/data/slidingorderedset.h"
+#include "ash/data/slidingindex.h"
 #include "ash/data/intervaltree.h"
 
-TEST_CASE("Sliding ordered set", "[soset]") {
-  using namespace ash::data::soset;
-  SlidingOrderedSet<> set;
+TEST_CASE("Sliding index", "[slidx]") {
+  using namespace ash::data::slidx;
+  SlidingIndex<> set;
   set.insert(50);
   set.insert(30);
   set.insert(90);

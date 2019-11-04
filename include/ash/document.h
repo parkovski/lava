@@ -5,7 +5,7 @@
 
 #include "data/rope.h"
 #include "data/intervaltree.h"
-#include "data/slidingorderedset.h"
+#include "data/slidingindex.h"
 
 #include <cstddef>
 #include <utility>
@@ -211,7 +211,7 @@ public:
 
 private:
   data::Rope _rope;
-  data::SlidingOrderedSet<> _newlines;
+  data::SlidingIndex<> _newlines;
   boost::signals2::signal<Observer> _observers;
 };
 
