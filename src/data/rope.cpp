@@ -166,6 +166,10 @@ size_t Rope::u16_length() const {
   return rope_wchar_count(_c_rope);
 }
 
+bool Rope::append(std::string_view text) {
+  return insert(this->length(), text);
+}
+
 bool Rope::append(const char_type *text) {
   return insert(this->length(), text);
 }
@@ -190,80 +194,8 @@ void Rope::clear() {
 
 size_t Rope::substr(char_type *buf, size_t *bufsize, size_t index, size_t count)
                     const {
-  auto len = length();
-  if (index > len) {
-    *bufsize = 0;
-    return 0;
-  }
-  if (index + count > len) {
-    count = len - index;
-  }
-
-  rope_node *node = &_c_rope->head;
-  size_t skipped = 0;
-
-  // Find the starting node.
-  while (skipped + node->nexts[0].skip_size < index) {
-    // Use the skip list.
-    auto height = node->height;
-    int i;
-    for (i = 1; i < height; ++i) {
-      // if (!node->nexts[i].node) {
-      //   break;
-      // }
-
-      if (skipped + node->nexts[i].skip_size >= index) {
-        // Too far. Look at the next node's skip list.
-        break;
-      }
-    }
-
-    // Record how many chars we skipped.
-    skipped += node->nexts[i - 1].skip_size;
-    node = node->nexts[i - 1].node;
-
-    if (!node) {
-      // Went too far, can't read anything.
-      *bufsize = 0;
-      return 0;
-    }
-  }
-
-  size_t total_bytes;
-  size_t total_chars;
-  char_type *str;
-  size_t bytes;
-  size_t chars;
-
-  // Copy from the first node. At this point, we're copying to the beginning
-  // of the buffer from some offset within this node.
-  str = reinterpret_cast<char_type *>(node->str);
-  char_type *start = skip_utf8(str, index - skipped, node->num_bytes);
-  chars = count;
-  bytes = std::min(*bufsize, size_t(node->num_bytes - (start - str)));
-  bytes = copy_utf8(buf, start, &chars, bytes);
-  index += chars;
-  count -= chars;
-  total_bytes = bytes;
-  total_chars = chars;
-  node = node->nexts[0].node;
-
-  // Now copy from the rest of the nodes. Here we always start at the
-  // beginning of the node and copy into the buffer at an offset.
-  while (node && count > 0 && total_bytes < *bufsize) {
-    str = reinterpret_cast<char_type *>(node->str);
-    chars = count;
-    bytes = std::min(*bufsize - total_bytes, size_t(node->num_bytes));
-    bytes = copy_utf8(buf + total_bytes, str, &chars, bytes);
-    index += chars;
-    count -= chars;
-    total_bytes += bytes;
-    total_chars += chars;
-    node = node->nexts[0].node;
-  }
-
-  *bufsize = total_bytes;
-  return total_chars;
+  return rope_write_substr(_c_rope, reinterpret_cast<uint8_t *>(buf), bufsize,
+                           index, count);
 }
 
 size_t Rope::c_substr(char_type *buf, size_t *bufsize, size_t index,
