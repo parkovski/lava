@@ -32,7 +32,7 @@ namespace ash::doc {
 //       token boundaries.
 // - Notify on change.
 
-class Document {
+class DocumentBase {
 public:
   using char_type = data::Rope::char_type;
   static constexpr size_t npos = data::Rope::npos;
@@ -40,13 +40,13 @@ public:
   using grid_offset_type = int32_t;
 
   /// Construct an empty document.
-  explicit Document();
+  explicit DocumentBase();
 
   /// Construct a document pre-populated with text.
   /// \param text The text to fill the document with.
-  explicit Document(const char_type *text);
+  explicit DocumentBase(const char_type *text);
 
-  virtual ~Document();
+  virtual ~DocumentBase();
 
   struct Insert {
     size_t index;
@@ -127,7 +127,7 @@ public:
     Message(const Replace &r) : replace(r), kind(kReplace) {}
   };
 
-  typedef void (Observer)(Document *sender, const Message &msg);
+  typedef void (Observer)(DocumentBase *sender, const Message &msg);
 
   template<typename O>
   boost::signals2::connection observe(O &&observer) {
@@ -217,32 +217,32 @@ private:
 
 // This document can store attributes.
 template<typename Attribute>
-class CoolDocument : public Document {
-  static void syncAttrs(Document *doc, const Message &msg) {
-    auto cdoc = static_cast<CoolDocument *>(doc);
-    if (msg.kind == Document::Message::kInsert) {
+class Document : public DocumentBase {
+  static void syncAttrs(DocumentBase *doc, const Message &msg) {
+    auto cdoc = static_cast<Document *>(doc);
+    if (msg.kind == DocumentBase::Message::kInsert) {
       cdoc->_attrs.shift(msg.insert.index, msg.insert.chars);
-    } else if (msg.kind == Document::Message::kReplace) {
+    } else if (msg.kind == DocumentBase::Message::kReplace) {
       cdoc->_attrs.shift(msg.replace.index,
                          -static_cast<ptrdiff_t>(msg.replace.erasecnt));
       cdoc->_attrs.shift(msg.replace.index, msg.replace.insertcnt);
-    } else if (msg.kind == Document::Message::kErase) {
+    } else if (msg.kind == DocumentBase::Message::kErase) {
       cdoc->_attrs.shift(msg.erase.index,
                          -static_cast<ptrdiff_t>(msg.erase.chars));
     }
   }
 
 public:
-  explicit CoolDocument()
-    : Document()
+  explicit Document()
+    : DocumentBase()
   {
-    observe(CoolDocument::syncAttrs);
+    observe(Document::syncAttrs);
   }
 
-  explicit CoolDocument(const char_type *text)
-    : Document(text)
+  explicit Document(const char_type *text)
+    : DocumentBase(text)
   {
-    observe(CoolDocument::syncAttrs);
+    observe(Document::syncAttrs);
   }
 
   data::IntervalTree<Attribute> &attrs() {

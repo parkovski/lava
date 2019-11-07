@@ -103,7 +103,7 @@ private:
   static constexpr size_t BufferLength = 64;
   static constexpr size_t MinReadLength = 8;
 
-  doc::CoolDocument<SymbolInfo> _doc;
+  doc::Document<SymbolInfo> _doc;
   Keybinding _keybinding = KB_VimInsert;
   char _readbuf[BufferLength];
   unsigned _rbpos = 0;

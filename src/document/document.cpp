@@ -6,20 +6,20 @@ using namespace ash;
 using namespace ash::doc;
 using data::Rope;
 
-Document::Document()
+DocumentBase::DocumentBase()
   : _rope()
 {}
 
-Document::Document(const char_type *text)
+DocumentBase::DocumentBase(const char_type *text)
   : _rope(text)
 {
   markNewlines(0, text);
 }
 
-Document::~Document()
+DocumentBase::~DocumentBase()
 {}
 
-void Document::markNewlines(size_t index, const char_type *text) {
+void DocumentBase::markNewlines(size_t index, const char_type *text) {
   size_t len = 0;
   size_t i = 0;
   char_type ch = text[0];
@@ -33,7 +33,7 @@ void Document::markNewlines(size_t index, const char_type *text) {
   }
 }
 
-bool Document::insert(size_t index, const char_type *text) {
+bool DocumentBase::insert(size_t index, const char_type *text) {
   auto old_len = length();
   auto old_size = size();
   if (!_rope.insert(index, text)) {
@@ -47,15 +47,15 @@ bool Document::insert(size_t index, const char_type *text) {
   return true;
 }
 
-size_t Document::length() const {
+size_t DocumentBase::length() const {
   return _rope.length();
 }
 
-size_t Document::size() const {
+size_t DocumentBase::size() const {
   return _rope.size();
 }
 
-bool Document::append(const char_type *text) {
+bool DocumentBase::append(const char_type *text) {
   auto old_length = length();
   auto old_size = size();
   auto r = _rope.append(text);
@@ -63,14 +63,14 @@ bool Document::append(const char_type *text) {
   return r;
 }
 
-void Document::erase(size_t index, size_t count) {
+void DocumentBase::erase(size_t index, size_t count) {
   auto old_size = size();
   _rope.erase(index, count);
   _newlines.shift(index, -static_cast<ptrdiff_t>(count));
   emit(Erase(index, count, old_size - size()));
 }
 
-bool Document::replace(size_t index, size_t count, const char_type *text) {
+bool DocumentBase::replace(size_t index, size_t count, const char_type *text) {
   auto old_length = length();
   //auto old_size = static_cast<ptrdiff_t>(size());
   if (index >= old_length) {
@@ -92,7 +92,7 @@ bool Document::replace(size_t index, size_t count, const char_type *text) {
   return true;
 }
 
-void Document::clear() {
+void DocumentBase::clear() {
   auto old_length = length();
   auto old_size = size();
   _rope.clear();
@@ -100,31 +100,31 @@ void Document::clear() {
   emit(Erase(0, old_length, old_size));
 }
 
-size_t Document::substr(char_type *buf, size_t *bufsize, size_t index,
+size_t DocumentBase::substr(char_type *buf, size_t *bufsize, size_t index,
                         size_t count) const {
   return _rope.substr(buf, bufsize, index, count);
 }
 
-size_t Document::c_substr(char_type *buf, size_t *bufsize, size_t index,
+size_t DocumentBase::c_substr(char_type *buf, size_t *bufsize, size_t index,
                          size_t count) const {
   return _rope.c_substr(buf, bufsize, index, count);
 }
 
-std::string Document::substr(size_t index, size_t count) const {
+std::string DocumentBase::substr(size_t index, size_t count) const {
   return _rope.substr(index, count);
 }
 
-char32_t Document::operator[](size_t index) const {
+char32_t DocumentBase::operator[](size_t index) const {
   return _rope[index];
 }
 
 // The document always has at least one line.
-Document::grid_size_type Document::lines() const {
+DocumentBase::grid_size_type DocumentBase::lines() const {
   return _newlines.size() + 1;
 }
 
 // Returns a 1-based line index.
-Document::grid_size_type Document::lineAt(size_t index) const {
+DocumentBase::grid_size_type DocumentBase::lineAt(size_t index) const {
   if (_newlines.empty()) {
     return 1;
   }
@@ -136,7 +136,7 @@ Document::grid_size_type Document::lineAt(size_t index) const {
 }
 
 // Make line and column a valid pair if either is out of range.
-void Document::constrain(grid_size_type &line, grid_size_type &column) const {
+void DocumentBase::constrain(grid_size_type &line, grid_size_type &column) const {
   if (line == 0) {
     line = 1;
   }
@@ -173,8 +173,8 @@ void Document::constrain(grid_size_type &line, grid_size_type &column) const {
 
 // Returns the (line, column) pair for a character position.
 // If pos is out of range, the last character position is returned.
-std::pair<Document::grid_size_type, Document::grid_size_type>
-Document::indexToPoint(size_t index) const {
+std::pair<DocumentBase::grid_size_type, DocumentBase::grid_size_type>
+DocumentBase::indexToPoint(size_t index) const {
   if (index > length()) {
     index = length();
   }
@@ -204,7 +204,7 @@ Document::indexToPoint(size_t index) const {
 
 // Returns a character position for a (line, column) pair.
 // Out of range values are wrapped to [1, max].
-size_t Document::pointToIndex(grid_size_type line, grid_size_type column) const {
+size_t DocumentBase::pointToIndex(grid_size_type line, grid_size_type column) const {
   // Make indices 0-based.
   if (line > 0) {
     --line;
@@ -251,7 +251,7 @@ size_t Document::pointToIndex(grid_size_type line, grid_size_type column) const 
 
 // Line numbers start at 1. The end of the span is the index of the newline
 // character, or for the last line it is the character length of the document.
-std::pair<size_t, size_t> Document::spanForLine(grid_size_type line) const {
+std::pair<size_t, size_t> DocumentBase::spanForLine(grid_size_type line) const {
   size_t start;
   size_t end;
 

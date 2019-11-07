@@ -21,7 +21,7 @@ struct Editor {
   constexpr static int seqlen = 32;
   char seq[seqlen] = {0};
   int seqidx = -1;
-  doc::CoolDocument<unsigned> doc;
+  doc::Document<unsigned> doc;
   size_t charidx = 0;
   constexpr static int buflen = 256;
   char buf[buflen];

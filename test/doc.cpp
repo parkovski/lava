@@ -33,7 +33,7 @@ bool readpair(const std::string &s, size_t &first, size_t &second) {
 }
 
 int main() {
-  ash::doc::CoolDocument<int> doc;
+  ash::doc::Document<int> doc;
 
   doc.append("Hello world\nHello world\nHello world\n");
 
