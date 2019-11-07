@@ -157,7 +157,7 @@ uint8_t *rope_create_cstr(rope *r);
 size_t rope_write_substr(rope *r, uint8_t *dest, size_t *bytes, size_t index,
                          size_t chars);
 
-// TODO: Writes a substring without needing to look up the character position.
+// Writes a substring without needing to look up the character position.
 size_t rope_write_substr_at_iter(rope *r, uint8_t *dest, size_t *bytes,
                                  rope_node *e, rope_iter *iter, size_t chars);
 
@@ -168,12 +168,12 @@ typedef enum { ROPE_OK, ROPE_INVALID_UTF8 } ROPE_RESULT;
 // Insert the given utf8 string into the rope at the specified position.
 ROPE_RESULT rope_insert(rope *r, size_t pos, const uint8_t *str);
 
-ROPE_RESULT rope_insert_n(rope *r, size_t pos, const uint8_t *str, size_t count);
+ROPE_RESULT rope_insert_n(rope *r, size_t pos, const uint8_t *str, size_t bytelen);
 
 // TODO: Inserts into the rope without needing to look up position, adjusts
 // iterator appropriately.
 ROPE_RESULT rope_insert_at_iter_n(rope *r, rope_node *e, rope_iter *iter,
-                                  const uint8_t *str, size_t count);
+                                  const uint8_t *str, size_t bytelen);
 
 // Delete num characters at position pos. Deleting past the end of the string
 // has no effect.

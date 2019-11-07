@@ -1,6 +1,9 @@
+#include "ash/ash.h"
 #include "rope/rope.h" 
 #include <catch2/catch.hpp>
 #include <type_traits>
+#include <random>
+#include <memory>
 
 template<typename Ch>
 static constexpr uint8_t *u8(Ch *str) {
@@ -27,25 +30,60 @@ static const char g_bigTextBlock[] =
   "dudes and such forth and so and so, this is the song, you can go home "
   "now. Seriously. Go. Nothing more here.";
 
+// Some cyrillic letters that don't resemble the Latin alphabet.
+static const char g_cyrillic[] =
+  "БбГгДдЖжЗзИиЙйЛлПпФфЦцШшЩщЪъЫыЬьЭэЮюЯя";
+
 TEST_CASE("Librope additions", "[rope]") {
   rope *r = rope_new_with_utf8_n(u8(g_bigTextBlock), sizeof(g_bigTextBlock) - 1);
+  // rope *r = rope_new_with_utf8(u8(g_bigTextBlock));
   REQUIRE(r);
-  //size_t len = rope_char_count(r);
-  char buf[5];
-  for (size_t i = 0; i < sizeof(buf); ++i) {
-    if (buf[i] != g_bigTextBlock[i]) {
-      FAIL("rope_new_with_utf8_n miscopied beginning of string");
+  ASH_SCOPEEXIT { rope_free(r); };
+
+  char smallbuf[6];
+  size_t _bytes = sizeof(smallbuf) - 1;
+  rope_write_substr(r, u8(smallbuf), &_bytes, 0, _bytes);
+  smallbuf[sizeof(smallbuf) - 1] = 0;
+  for (size_t i = 0; i < sizeof(smallbuf) - 1; ++i) {
+    if (smallbuf[i] != g_bigTextBlock[i]) {
+      FAIL("rope_new_with_utf8_n miscopied beginning of string: expected 'Uh, y'; got '"
+            << smallbuf << "'.");
     }
   }
-  for (size_t i = 0; i < sizeof(buf); ++i) {
-    if (buf[i] != g_bigTextBlock[sizeof(g_bigTextBlock) - sizeof(buf) + i]) {
-      FAIL("rope_new_with_utf8_n miscopied end of string");
+  _bytes = sizeof(smallbuf) - 1;
+  rope_write_substr(r, u8(smallbuf), &_bytes,
+                    sizeof(g_bigTextBlock) - sizeof(smallbuf),
+                    sizeof(smallbuf) - 1);
+  smallbuf[sizeof(smallbuf) - 1] = 0;
+  for (size_t i = 0; i < sizeof(smallbuf) - 1; ++i) {
+    if (smallbuf[i] != g_bigTextBlock[sizeof(g_bigTextBlock) - sizeof(smallbuf) + i]) {
+      FAIL("rope_new_with_utf8_n miscopied end of string: expected 'here.'; got '"
+           << smallbuf << "'.");
     }
   }
-  // rope_write_substr
-  // rope_write_substr_at_iter
-  // rope_insert_n
-  // rope_insert_at_iter_n
-  rope_free(r);
+
+  std::random_device rnd;
+  for (int i = 0; i < 20; i++) {
+    // Note: All cyrillic chars are 2 bytes in utf-8.
+    size_t start = (rnd() % sizeof(g_cyrillic)) & (size_t)(-2);
+    size_t bytes = (rnd() % (sizeof(g_cyrillic) - start)) & (size_t)(-2);
+    size_t index = (rnd() % rope_char_count(r)) & (size_t)(-2);
+    rope_insert_n(r, index, u8(g_cyrillic) + start, bytes);
+  }
+
+  const size_t charcnt = rope_char_count(r);
+  const size_t bytecnt = rope_byte_count(r);
+  auto buf = std::make_unique<char[]>(bytecnt + 1);
+  buf[bytecnt] = 0;
+  for (int i = 0; i < 100; i++) {
+    size_t bytes = bytecnt;
+    size_t start = rnd() % (charcnt - 1);
+    size_t chars = rnd() % (charcnt - start);
+    size_t result= rope_write_substr(r, u8(buf.get()), &bytes, start, chars);
+    if (result != chars) {
+      FAIL("#" << i << ": rope_write_substr(" << start << ", " << chars
+           << ") returned " << result);
+    }
+  }
 }
 
