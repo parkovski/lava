@@ -2,9 +2,8 @@
 
 #include <new>
 
-using namespace ash;
 using namespace ash::doc;
-using data::Rope;
+using ash::data::Rope;
 
 DocumentBase::DocumentBase()
   : _rope()

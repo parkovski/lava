@@ -3,6 +3,8 @@
 
 #include "../ash.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <utility>
 
 namespace ash::doc {
@@ -18,14 +20,9 @@ public:
   using offset_type = ptrdiff_t;
 
   // Size type for line and column.
-  using grid_size_type = unsigned;
-  // Offset type for line and column.
-  using grid_offset_type = int;
+  using grid_size_type = uint32_t;
   // 1-based (line, column) position.
   using position_type = std::pair<grid_size_type, grid_size_type>;
-  // 0-based (line, column) offset. Line and column are still 1-based; these
-  // offsets are relative to 0 as an offset is.
-  using position_offset_type = std::pair<grid_offset_type, grid_offset_type>;
 
 #ifdef __cpp_char8_t
   using char_type = char8_t;
@@ -33,14 +30,11 @@ public:
   using char_type = char;
 #endif
 
-  // UTF-32 codepoint type, useful when dealing with a single character.
-  using codepoint_type = char32_t;
-
   // Invalid position.
   constexpr static size_type npos = size_type(-1);
 
   // Invalid character/codepoint.
-  constexpr static codepoint_type nchar = char32_t(-1);
+  constexpr static char32_t nchar = char32_t(-1);
 
   // }}} Types
 
@@ -48,58 +42,39 @@ public:
 
   // Set the absolute position.
   virtual void moveTo(size_type index) = 0;
+  // Set the relative position.
+  virtual void moveBy(offset_type offset) = 0;
 
   // Move the cursor by an offset.
-  virtual Cursor &operator+=(offset_type offset) = 0;
-
-  virtual Cursor &operator+=(position_offset_type offset) = 0;
-
+  Cursor &operator+=(offset_type offset) {
+    moveBy(offset); return *this;
+  }
   // Move the cursor backward by an offset.
-  Cursor &operator-=(offset_type offset)
-  { return *this += -offset; }
-
-  Cursor &operator-=(position_offset_type offset)
-  { return *this += std::make_pair(-offset.first, -offset.second); }
-
+  Cursor &operator-=(offset_type offset) {
+    moveBy(-offset); return *this;
+  }
   // Move the cursor forward by 1.
-  Cursor &operator++()
-  { return *this += 1; }
-
+  Cursor &operator++() {
+    moveBy(1); return *this;
+  }
   // Move the cursor backward by 1.
-  Cursor &operator--()
-  { return *this -= 1; }
+  Cursor &operator--() {
+    moveBy(-1); return *this;
+  }
 
   // }}} Cursor movement
 
   // Text accessors {{{
 
-  // Document length in UTF-8 characters/Unicode code points.
-  virtual size_type length() const = 0;
-
-  // Document size in bytes.
-  virtual size_type size() const = 0;
-
-  // Returns the byte size of a substring of the document.
-  virtual size_type size(size_type count) const = 0;
-
-  // Number of lines in the document.
-  virtual grid_size_type lines() const = 0;
-
-  // Char index span for a line. Line index is 1-based.
-  virtual std::pair<size_type, size_type> line(grid_size_type index) const;
-
-  // Get the code point at the current index.
-  virtual codepoint_type operator*() const = 0;
-
   // Get the code point at an offset to the current index.
-  virtual codepoint_type operator[](offset_type offset) const = 0;
-
+  virtual char32_t operator[](offset_type offset) const = 0;
+  // Get the code point at the current index.
+  virtual char32_t operator*() const = 0;
   // Try to copy a substring of length count from the document into buf. Only
   // copies up to bufsize bytes. Returns the number of characters copied, with
   // bufsize set to the number of bytes copied.
   virtual size_type substr(char_type *buf, size_type *bufsize, size_type count)
                            const = 0;
-
   // Read a substring from the document into str.
   //virtual size_type substr(std::string &str, size_type count) const = 0;
 
@@ -107,16 +82,14 @@ public:
 
   // Cursor information {{{
 
+  // Minimum valid offset relative to cursor position.
+  virtual offset_type minOffset() const = 0;
+  // Maximum valid offset relative to cursor position.
+  virtual offset_type maxOffset() const = 0;
   // Get the current position of the cursor.
   virtual size_type index() const = 0;
-
   // Get the 1-based line and column of the cursor.
   virtual position_type position() const = 0;
-
-  // Convert a (line, column) pair to an index.
-  virtual size_type positionToIndex(position_type position) const = 0;
-
-  virtual position_type indexToPosition(size_type index) const = 0;
 
   // }}} Cursor information
 
@@ -124,13 +97,10 @@ public:
 
   // Insert text at the current position.
   virtual size_type insert(const char_type *text) = 0;
-
   // Replace text at the current position.
   virtual size_type replace(size_type count, const char_type *text) = 0;
-
   // Erase text at the current position.
   virtual void erase(size_type count) = 0;
-
   // Clear the whole document.
   virtual void clear() = 0;
 
