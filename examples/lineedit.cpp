@@ -60,38 +60,29 @@ void abbreviatePath(std::string &path) {
   }
 }
 
-int main() {
-  term::initialize();
-  term::setShellState();
-
-  ASH_SCOPEEXIT {
-    term::restoreState();
-  };
-
-  std::string home{};
-  std::string cwd{};
-  if (auto homeEnv = getenv("HOME")) {
+int readLoop() {
+  LineEditor ln;
+  std::string_view home{};
+  if (auto homeEnv = getenv("HOME"); homeEnv && *homeEnv) {
     home = homeEnv;
     fmt::print("Home is \"{}\"\n", home);
   }
+  std::string cwd = std::filesystem::current_path();
+  if (home.length() && (std::string_view(cwd).substr(0, home.length()) == home)) {
+    cwd.erase(0, home.length() - 1);
+    cwd[0] = '~';
+  }
+  abbreviatePath(cwd);
+  auto prompt = fmt::format("{}{}{} ash!{} ",
+              term::ansi::fg::bright_blue, cwd,
+              term::ansi::fg::bright_black, term::ansi::fg::default_);
 
-  LineEditor ln;
   while (true) {
-    cwd = std::filesystem::current_path();
-    if (home.length() && (std::string_view(cwd).substr(0, home.length()) == home)) {
-      cwd.erase(0, home.length() - 1);
-      cwd[0] = '~';
-    }
-    abbreviatePath(cwd);
-    auto prompt = fmt::format("{}{}{} ash!{} ",
-                term::ansi::fg::bright_blue, cwd,
-                term::ansi::fg::bright_black, term::ansi::fg::default_);
-
     switch (ln.readLine(prompt)) {
       using Status = LineEditor::Status;
 
       case Status::Accepted:
-        fmt::print("\n");
+        fmt::print("\n{}\n", ln.substr(0));
         ln.clear();
         break;
 
@@ -101,8 +92,7 @@ int main() {
         break;
 
       case Status::Finished:
-        fmt::print("{}%{}\n", term::ansi::style::negative,
-                   term::ansi::style::clear);
+        fmt::print("\n");
         return 0;
 
       case Status::ReadError:
@@ -118,6 +108,15 @@ int main() {
         return 2;
     }
   }
+}
 
-  return 0;
+int main() {
+  term::initialize();
+  term::setShellState();
+
+  ASH_SCOPEEXIT {
+    term::restoreState();
+  };
+
+  return readLoop();
 }

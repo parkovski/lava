@@ -81,6 +81,9 @@ public:
   size_t substr(char *buf, size_t *bufsize, size_t count = std::string::npos)
                 const;
 
+  std::string substr(size_t pos, size_t count = doc::DocumentBase::npos) const
+  { return _doc.substr(pos, count); }
+
   // Length in characters.
   size_t length() const {
     return _doc.length();
