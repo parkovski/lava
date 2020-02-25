@@ -376,9 +376,9 @@ void LineEditor::moveTo(size_t pos) {
     pos = length();
   }
   _pos = pos;
-  std::tie(_y, _x) = _doc.indexToPoint(pos);
-  --_x;
-  --_y;
+  auto point = _doc.indexToPoint(pos);
+  _y = point.first - 1;
+  _x = point.second - 1;
   auto y = _y + _inputPos.y;
   auto x = _x;
   if (_y == 0) {
@@ -436,15 +436,11 @@ bool LineEditor::erase(ptrdiff_t count) {
     }
     _doc.erase(_pos, fwdcount);
     fmt::print("{}", ansi::line::delete_space((unsigned short)(fwdcount)));
-  } else if (size_t(-count) <= _pos) {
-    auto bkwdcount = static_cast<size_t>(-count);
-    if (bkwdcount > _pos) {
-      bkwdcount = _pos;
-    }
+  } else if (auto bkwdcount = static_cast<size_t>(-count); bkwdcount <= _pos) {
     unsigned short bkcount_s = static_cast<unsigned short>(bkwdcount);
     _pos -= bkwdcount;
-    if (_x > bkwdcount) {
-      _x -= bkwdcount;
+    if (_x >= bkwdcount) {
+      _x -= static_cast<unsigned short>(bkwdcount);
       fmt::print("{}{}", ansi::cursor::left(bkcount_s),
                  ansi::line::delete_space(bkcount_s));
     } else {

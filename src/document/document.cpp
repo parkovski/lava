@@ -24,11 +24,11 @@ void DocumentBase::markNewlines(size_t index, const char_type *text) {
   char_type ch = text[0];
   while (ch) {
     if (ch == '\n') {
-      _newlines.insert(index + i);
+      _newlines.insert(index + len);
     }
     ++len;
     i += utf8_codepoint_size(ch);
-     ch = text[i];
+    ch = text[i];
   }
 }
 
@@ -57,9 +57,12 @@ size_t DocumentBase::size() const {
 bool DocumentBase::append(const char_type *text) {
   auto old_length = length();
   auto old_size = size();
-  auto r = _rope.append(text);
+  if (!_rope.append(text)) {
+    return false;
+  }
+  markNewlines(old_length, text);
   emit(Insert(old_length, text, length() - old_length, size() - old_size));
-  return r;
+  return true;
 }
 
 void DocumentBase::erase(size_t index, size_t count) {
@@ -118,20 +121,20 @@ char32_t DocumentBase::operator[](size_t index) const {
 }
 
 // The document always has at least one line.
-DocumentBase::grid_size_type DocumentBase::lines() const {
-  return _newlines.size() + 1;
+auto DocumentBase::lines() const -> grid_size_type {
+  return static_cast<grid_size_type>(_newlines.size()) + 1;
 }
 
 // Returns a 1-based line index.
-DocumentBase::grid_size_type DocumentBase::lineAt(size_t index) const {
+auto DocumentBase::lineAt(size_t index) const -> grid_size_type {
   if (_newlines.empty()) {
     return 1;
   }
   auto ln = _newlines.upper_bound(index);
   if (ln == _newlines.end()) {
-    return _newlines.size() + 1;
+    return static_cast<grid_size_type>(_newlines.size()) + 1;
   }
-  return _newlines.index_for(ln) + 1;
+  return static_cast<grid_size_type>(_newlines.index_for(ln)) + 1;
 }
 
 // Make line and column a valid pair if either is out of range.
@@ -140,7 +143,7 @@ void DocumentBase::constrain(grid_size_type &line, grid_size_type &column) const
     line = 1;
   }
   if (line > _newlines.size()) {
-    line = _newlines.size() + 1;
+    line = static_cast<grid_size_type>(_newlines.size()) + 1;
   }
   if (column == 0) {
     column = 1;
@@ -148,7 +151,7 @@ void DocumentBase::constrain(grid_size_type &line, grid_size_type &column) const
   if (_newlines.size() == 0) {
     line = 1;
     if (column > length()) {
-      column = length() + 1;
+      column = static_cast<grid_size_type>(length()) + 1;
     }
     return;
   }
@@ -158,7 +161,7 @@ void DocumentBase::constrain(grid_size_type &line, grid_size_type &column) const
     auto first_col = *_newlines.rbegin() + 1;
     auto max_col = length() - first_col + 1;
     if (column > max_col) {
-      column = max_col;
+      column = static_cast<grid_size_type>(max_col);
     }
     return;
   }
@@ -172,13 +175,14 @@ void DocumentBase::constrain(grid_size_type &line, grid_size_type &column) const
 
 // Returns the (line, column) pair for a character position.
 // If pos is out of range, the last character position is returned.
-std::pair<DocumentBase::grid_size_type, DocumentBase::grid_size_type>
-DocumentBase::indexToPoint(size_t index) const {
+auto DocumentBase::indexToPoint(size_t index) const
+  -> std::pair<grid_size_type, grid_size_type>
+{
   if (index > length()) {
     index = length();
   }
   if (_newlines.empty()) {
-    return {1, index + 1};
+    return {1, static_cast<grid_size_type>(index) + 1};
   }
 
   // Newline after the current line.
@@ -186,15 +190,15 @@ DocumentBase::indexToPoint(size_t index) const {
   grid_size_type line, column;
   if (nl == _newlines.end()) {
     // Last line.
-    line = _newlines.size() + 1;
-    column = index - *_newlines.rbegin() + 1;
+    line = static_cast<grid_size_type>(_newlines.size()) + 1;
+    column = static_cast<grid_size_type>(index - *_newlines.rbegin() + 1);
   } else {
-    line = _newlines.index_for(nl) + 1;
+    line = static_cast<grid_size_type>(_newlines.index_for(nl)) + 1;
     if (line == 1) {
       // First line.
-      column = index + 1;
+      column = static_cast<grid_size_type>(index) + 1;
     } else {
-      column = index - *(nl - 1) + 1;
+      column = static_cast<grid_size_type>(index - *(nl - 1) + 1);
     }
   }
 
@@ -250,7 +254,8 @@ size_t DocumentBase::pointToIndex(grid_size_type line, grid_size_type column) co
 
 // Line numbers start at 1. The end of the span is the index of the newline
 // character, or for the last line it is the character length of the document.
-std::pair<size_t, size_t> DocumentBase::spanForLine(grid_size_type line) const {
+std::pair<size_t, size_t> DocumentBase::spanForLine(grid_size_type line) const
+{
   size_t start;
   size_t end;
 

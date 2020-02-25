@@ -21,8 +21,8 @@ endif()
 
 # find_package(range-v3 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
-find_package(Boost 1.69 REQUIRED
-  # COMPONENTS signals2
+find_package(Boost 1.72 REQUIRED
+  COMPONENTS container
 )
 
 set(ASH_INCLUDE_DIR
@@ -37,7 +37,8 @@ set(ASH_CONTRIB_INCLUDE_DIR
 
 if(MSVC)
   # C4706 - assignment within conditional.
-  add_compile_options(/W4 /wd4706)
+  add_compile_options(/W4 /wd4706 /diagnostics:caret)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 else()
   add_compile_options(-Wall -pedantic)
 endif()

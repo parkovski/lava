@@ -1,6 +1,8 @@
 #include "ash/ash.h"
 #include "rope/rope.h" 
+
 #include <catch2/catch.hpp>
+
 #include <type_traits>
 #include <random>
 #include <memory>

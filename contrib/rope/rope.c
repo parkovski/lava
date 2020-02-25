@@ -166,7 +166,9 @@ size_t rope_write_substr(rope *r, uint8_t *dest, size_t *bytes, size_t index,
     *bytes = 0;
     return 0;
   }
-  if (index + chars > len) {
+  // Careful here: We know index <= len at this point, but chars could
+  // be SIZE_MAX.
+  if (chars > len - index) {
     chars = len - index;
   }
 
@@ -576,7 +578,7 @@ ROPE_RESULT rope_insert_at_iter_n(rope *r, rope_node *e, rope_iter *iter,
       num_end_chars = e->nexts[0].skip_size - offset;
 #if ROPE_WCHAR
       size_t num_end_wchars = count_wchars_in_utf8_n(&e->str[offset_bytes], num_end_chars, num_end_bytes);
-      update_offset_list(r, iter, -num_end_chars, -num_end_wchars);
+      update_offset_list(r, iter, -num_end_chars, -(ptrdiff_t)num_end_wchars);
 #else
       update_offset_list(r, iter, -num_end_chars);
 #endif
@@ -860,6 +862,7 @@ size_t rope_write_substr_at_iter(rope *r, uint8_t *dest, size_t *bytes,
                                  rope_node *e, rope_iter *iter, size_t chars) {
   size_t copied_bytes;
   size_t copied_chars;
+  (void)r;
 
   // Copy from the first node. At this point, we're copying to the beginning
   // of the buffer from some offset within this node.

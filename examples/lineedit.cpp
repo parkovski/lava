@@ -67,7 +67,7 @@ int readLoop() {
     home = homeEnv;
     fmt::print("Home is \"{}\"\n", home);
   }
-  std::string cwd = std::filesystem::current_path();
+  std::string cwd = std::filesystem::current_path().string();
   if (home.length() && (std::string_view(cwd).substr(0, home.length()) == home)) {
     cwd.erase(0, home.length() - 1);
     cwd[0] = '~';

@@ -203,7 +203,6 @@ size_t Rope::c_substr(char_type *buf, size_t *bufsize, size_t index,
   --*bufsize;
   auto chars = substr(buf, bufsize, index, count);
   buf[*bufsize] = 0;
-  ++*bufsize;
   return chars;
 }
 
@@ -216,6 +215,7 @@ std::string Rope::substr(size_t index, size_t count) const {
     index += copied;
     count -= copied;
     s.append(buf, bufsize);
+    bufsize = sizeof(buf);
   }
 
   return s;

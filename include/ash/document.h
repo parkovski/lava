@@ -166,18 +166,18 @@ public:
   /// Delete a range of characters from the document. Indexes in characters.
   /// \param index The first character to delete.
   /// \param count The number of characters to delete.
-  void erase(size_t index, size_t count);
+  void erase(size_t index, size_t count = npos);
 
   // Clears all text and attributes.
   void clear();
 
   /// \see data::Rope::substr.
-  size_t substr(char_type *buf, size_t *bufsize, size_t index, size_t count)
-                const;
+  size_t substr(char_type *buf, size_t *bufsize, size_t index,
+                size_t count = npos) const;
 
   /// \see data::Rope::c_substr.
-  size_t c_substr(char_type *buf, size_t *bufsize, size_t index, size_t count)
-                  const;
+  size_t c_substr(char_type *buf, size_t *bufsize, size_t index,
+                  size_t count = npos) const;
 
   /// \see data::Rope::substr.
   std::string substr(size_t index, size_t count = npos) const;

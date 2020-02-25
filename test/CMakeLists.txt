@@ -1,10 +1,9 @@
-add_executable(doc doc.cpp)
-target_link_libraries(doc PRIVATE ashdocument ashterminal)
-
 add_executable(test
-  test.cpp
-  terminal.cpp
+  data.cpp
+  document.cpp
   rope.cpp
+  terminal.cpp
+  test.cpp
 )
 target_link_libraries(test PRIVATE
   Catch2::Catch2
