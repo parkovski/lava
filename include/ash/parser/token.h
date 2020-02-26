@@ -1,6 +1,8 @@
 #ifndef ASH_PARSER_TOKEN_H_
 #define ASH_PARSER_TOKEN_H_
 
+#include "ash/srcloc/sourcelocation.h"
+
 #include <string_view>
 #include <iosfwd>
 
@@ -97,22 +99,15 @@ std::string_view to_string(Tk tk);
 std::ostream &operator<<(std::ostream &os, Tk tk);
 
 struct Token {
-  explicit Token(Tk id,
-                 size_t index0, size_t index1,
-                 unsigned line0, unsigned line1,
-                 unsigned column0, unsigned column1) noexcept
-    : index0{index0}, index1{index1},
-      line0{line0}, line1{line1},
-      column0{column0}, column1{column1},
-      id{id}
+  explicit Token(Tk id, srcloc::LocId loc) noexcept
+    : loc{loc}, id{id}
   {}
 
   Token(const Token &) = default;
   Token &operator=(const Token &) = default;
 
   bool operator==(const Token &other) const {
-    return index0 == other.index0
-        && index1 == other.index1
+    return loc == other.loc
         && id == other.id;
   }
 
@@ -120,12 +115,7 @@ struct Token {
     return !(*this == other);
   }
 
-  size_t index0;
-  size_t index1;
-  unsigned line0;
-  unsigned line1;
-  unsigned column0;
-  unsigned column1;
+  srcloc::LocId loc;
   Tk id;
 };
 

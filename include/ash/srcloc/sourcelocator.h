@@ -22,6 +22,8 @@ public:
   // Append only!
   LocId mark(const SourceLocation &loc);
   SourceLocation find(LocId locId) const;
+  SourceLocation findNext(LocId locId) const;
+  SourceLocation findPrev(LocId locId) const;
 
 private:
   struct LocationRecord {

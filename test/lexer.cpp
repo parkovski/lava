@@ -165,8 +165,10 @@ R"~~~(1:1: NewLine
 
 TEST_CASE("Lexer", "[lexer]") {
   using namespace ash::parser;
+  using namespace ash::srcloc;
 
-  Lexer lexer(program);
+  SourceLocator locator;
+  Lexer lexer(program, &locator, locator.addFile("test"));
 #ifdef ASH_LEX_TEST_OUT
   std::ofstream out("lex.test.out");
 #else
@@ -177,14 +179,19 @@ TEST_CASE("Lexer", "[lexer]") {
     if (t.id == Tk::EndOfInput) {
       break;
     }
-    out << t.line0 << ":" << t.column0 << ": " << t.id;
+    auto startLoc = locator.find(t.loc);
+    auto endLoc = locator.findNext(t.loc);
+    out << startLoc.line << ":" << startLoc.column << ": " << t.id;
     switch (t.id) {
       case Tk::NewLine:
       case Tk::Whitespace:
       case Tk::Invalid:
         break;
       default:
-        out << "('" << program.substr(t.index0, t.index1 - t.index0) << "')";
+        out
+          << "('"
+          << program.substr(startLoc.index, endLoc.index - startLoc.index)
+          << "')";
     }
     out << "\n";
   }

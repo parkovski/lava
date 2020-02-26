@@ -68,6 +68,9 @@ LocId SourceLocator::mark(const SourceLocation &loc) {
 }
 
 SourceLocation SourceLocator::find(LocId locId) const {
+  if (!locId.isValid()) {
+    return SourceLocation{FileId(), 0, 0, 0};
+  }
   auto [fileIndex, recordIndex] = locIdToIndexPair(locId.id);
 
   if (fileIndex >= _files.size()) {
@@ -84,4 +87,24 @@ SourceLocation SourceLocator::find(LocId locId) const {
     record.line,
     record.column
   };
+}
+
+SourceLocation SourceLocator::findNext(LocId locId) const {
+  if (!locId.isValid()) {
+    return SourceLocation{FileId(), 0, 0, 0};
+  }
+  auto [fileIndex, recordIndex] = locIdToIndexPair(locId.id);
+  return find(LocId(indexPairToLocId(fileIndex, recordIndex + 1)));
+}
+
+SourceLocation SourceLocator::findPrev(LocId locId) const {
+  if (!locId.isValid()) {
+    return SourceLocation{FileId(), 0, 0, 0};
+  }
+  auto [fileIndex, recordIndex] = locIdToIndexPair(locId.id);
+  // Checks are not needed because of unsigned wrap-around,
+  // if this changes the assertion here will fail.
+  static_assert(LocId().id == (unsigned)(-1),
+                "Wrap-around assumption may be invalid.");
+  return find(LocId(indexPairToLocId(fileIndex, recordIndex - 1)));
 }

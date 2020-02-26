@@ -1,15 +1,22 @@
 #include "ash/parser/lexer.h"
 
+#include <cassert>
+
 using namespace ash::parser;
 
+Lexer::Lexer(std::string_view text, srcloc::SourceLocator *locator,
+             srcloc::FileId fileId)
+  : _text{text}, _index{0}, _line{1}, _column{1},
+    _locator{locator}, _fileId{fileId}
+{
+  _lastLoc = locator->mark({fileId, 0, 1, 1});
+}
+
 Token Lexer::operator()() {
-  size_t index0 = _index;
-  unsigned line0 = _line;
-  unsigned column0 = _column;
   Tk tk;
 
-  if (index0 == _text.length()) {
-    tk = Tk::EndOfInput;
+  if (_index == _text.length()) {
+    return Token(Tk::EndOfInput, _lastLoc);
   } else {
     switch (context()) {
       case Ctx::Initial:
@@ -45,17 +52,19 @@ Token Lexer::operator()() {
         break;
 
       default:
-        tk = Tk::Invalid;
+        assert(false && "Invalid lexer context.");
         break;
     }
   }
 
-  return Token(tk, index0, _index, line0, _line, column0, _column);
+  auto startLoc = _lastLoc;
+  _lastLoc = _locator->mark({_fileId, _index, _line, _column});
+  return Token(tk, startLoc);
 }
 
 Tk Lexer::readInitial() {
   char c = ch();
-  char l = c | 0x20;
+  char l = c | 0x20; // lowercase
 
   if (l >= 'a' && l <= 'z') {
     return readIdent();
@@ -637,7 +646,7 @@ Tk Lexer::readVariable() {
       break;
   }
 
-  char l = c | 0x20;
+  char l = c | 0x20; // lowercase
   if (c == '_' || (l >= 'a' && l <= 'z')) {
     fwd();
     while (true) {
