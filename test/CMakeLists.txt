@@ -3,6 +3,7 @@ add_executable(test
   document.cpp
   lexer.cpp
   rope.cpp
+  srcloc.cpp
   terminal.cpp
   test.cpp
 )
@@ -11,6 +12,7 @@ target_link_libraries(test PRIVATE
   ashdata
   ashdocument
   ashparser
+  ashsrcloc
   ashterminal
   rope
 )
