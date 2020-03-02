@@ -1,9 +1,10 @@
-#ifndef ASH_SRCLOC_SOURCELOCATION_H_
-#define ASH_SRCLOC_SOURCELOCATION_H_
+#ifndef ASH_SOURCE_LOCATION_H_
+#define ASH_SOURCE_LOCATION_H_
 
 #include <cstdlib>
+#include <utility>
 
-namespace ash::srcloc {
+namespace ash::source {
 
 struct FileId {
   constexpr FileId() noexcept : id{(unsigned)(-1)} {}
@@ -63,6 +64,8 @@ private:
   unsigned id;
 };
 
+typedef std::pair<LocId, LocId> SpanRef;
+
 struct SourceLocation {
   FileId file;
   size_t index;
@@ -74,6 +77,6 @@ struct SourceLocation {
   }
 };
 
-} // namespace ash::srcloc
+} // namespace ash::source
 
-#endif // ASH_SRCLOC_SOURCELOCATION_H_
+#endif // ASH_SOURCE_LOCATION_H_

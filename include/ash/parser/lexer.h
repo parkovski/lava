@@ -2,7 +2,7 @@
 #define ASH_PARSER_LEXER_H_
 
 #include "token.h"
-#include "ash/srcloc/sourcelocator.h"
+#include "ash/source/locator.h"
 
 #include <vector>
 
@@ -10,8 +10,8 @@ namespace ash::parser {
 
 class Lexer {
 public:
-  explicit Lexer(std::string_view text, srcloc::SourceLocator *locator,
-                 srcloc::FileId fileId);
+  explicit Lexer(std::string_view text, source::SourceLocator *locator,
+                 source::FileId fileId);
 
   Token operator()();
 
@@ -51,9 +51,9 @@ private:
   unsigned _line;
   unsigned _column;
   std::vector<Ctx> _context;
-  srcloc::SourceLocator *_locator;
-  srcloc::FileId _fileId;
-  srcloc::LocId _lastLoc;
+  source::SourceLocator *_locator;
+  source::FileId _fileId;
+  source::LocId _lastLoc;
 };
 
 } // namespace ash::parser

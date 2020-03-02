@@ -1,7 +1,7 @@
-#ifndef ASH_SRCLOC_SOURCELOCATOR_H_
-#define ASH_SRCLOC_SOURCELOCATOR_H_
+#ifndef ASH_SOURCE_LOCATOR_H_
+#define ASH_SOURCE_LOCATOR_H_
 
-#include "sourcelocation.h"
+#include "location.h"
 
 #include <vector>
 #include <string>
@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <utility>
 
-namespace ash::srcloc {
+namespace ash::source {
 
 class SourceLocator {
 public:
@@ -36,6 +36,6 @@ private:
   std::vector<std::pair<std::string, std::vector<LocationRecord>>> _files;
 };
 
-} // namespace ash::srcloc
+} // namespace ash::source
 
-#endif // ASH_SRCLOC_SOURCELOCATOR_H_
+#endif // ASH__SOURCE_LOCATOR_H_

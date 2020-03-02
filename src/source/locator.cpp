@@ -1,8 +1,8 @@
-#include "ash/srcloc/sourcelocator.h"
+#include "ash/source/locator.h"
 
 #include <cassert>
 
-using namespace ash::srcloc;
+using namespace ash::source;
 
 namespace {
   std::pair<size_t, size_t> locIdToIndexPair(unsigned locId) {

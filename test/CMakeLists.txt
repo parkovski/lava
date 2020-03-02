@@ -1,18 +1,20 @@
 add_executable(test
+  ast.cpp
   data.cpp
   document.cpp
   lexer.cpp
   rope.cpp
-  srcloc.cpp
+  source.cpp
   terminal.cpp
   test.cpp
 )
 target_link_libraries(test PRIVATE
   Catch2::Catch2
+  ashast
   ashdata
   ashdocument
   ashparser
-  ashsrcloc
+  ashsource
   ashterminal
   rope
 )

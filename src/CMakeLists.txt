@@ -1,6 +1,7 @@
 add_subdirectory(ash)
+add_subdirectory(ast)
 add_subdirectory(data)
 add_subdirectory(document)
 add_subdirectory(parser)
-add_subdirectory(srcloc)
+add_subdirectory(source)
 add_subdirectory(terminal)

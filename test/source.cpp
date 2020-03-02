@@ -1,9 +1,9 @@
-#include "ash/srcloc/sourcelocator.h"
+#include "ash/source/locator.h"
 
 #include <catch2/catch.hpp>
 
-TEST_CASE("SourceLocator basic tests", "[srcloc]") {
-  using namespace ash::srcloc;
+TEST_CASE("SourceLocator basic tests", "[source]") {
+  using namespace ash::source;
   using namespace std::string_view_literals;
 
   SourceLocator lctr;

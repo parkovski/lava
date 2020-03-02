@@ -165,7 +165,7 @@ R"~~~(1:1: NewLine
 
 TEST_CASE("Lexer", "[lexer]") {
   using namespace ash::parser;
-  using namespace ash::srcloc;
+  using namespace ash::source;
 
   SourceLocator locator;
   Lexer lexer(program, &locator, locator.addFile("test"));

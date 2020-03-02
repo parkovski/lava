@@ -4,8 +4,8 @@
 
 using namespace ash::parser;
 
-Lexer::Lexer(std::string_view text, srcloc::SourceLocator *locator,
-             srcloc::FileId fileId)
+Lexer::Lexer(std::string_view text, source::SourceLocator *locator,
+             source::FileId fileId)
   : _text{text}, _index{0}, _line{1}, _column{1},
     _locator{locator}, _fileId{fileId}
 {

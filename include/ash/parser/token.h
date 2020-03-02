@@ -1,7 +1,7 @@
 #ifndef ASH_PARSER_TOKEN_H_
 #define ASH_PARSER_TOKEN_H_
 
-#include "ash/srcloc/sourcelocation.h"
+#include "ash/source/location.h"
 
 #include <string_view>
 #include <iosfwd>
@@ -99,7 +99,7 @@ std::string_view to_string(Tk tk);
 std::ostream &operator<<(std::ostream &os, Tk tk);
 
 struct Token {
-  explicit Token(Tk id, srcloc::LocId loc) noexcept
+  explicit Token(Tk id, source::LocId loc) noexcept
     : loc{loc}, id{id}
   {}
 
@@ -115,7 +115,7 @@ struct Token {
     return !(*this == other);
   }
 
-  srcloc::LocId loc;
+  source::LocId loc;
   Tk id;
 };
 
