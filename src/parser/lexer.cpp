@@ -4,13 +4,10 @@
 
 using namespace ash::parser;
 
-Lexer::Lexer(std::string_view text, source::SourceLocator *locator,
-             source::FileId fileId)
-  : _text{text}, _index{0}, _line{1}, _column{1},
-    _locator{locator}, _fileId{fileId}
-{
-  _lastLoc = locator->mark({fileId, 0, 1, 1});
-}
+Lexer::Lexer(source::SourceLocator *locator, source::FileId fileId)
+  : _text{locator->fileText(fileId)}, _index{0}, _line{1}, _column{1},
+    _locator{locator}, _fileId{fileId}, _lastLoc{locator->first(fileId)}
+{}
 
 Token Lexer::operator()() {
   Tk tk;

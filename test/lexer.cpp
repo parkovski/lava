@@ -168,7 +168,7 @@ TEST_CASE("Lexer", "[lexer]") {
   using namespace ash::source;
 
   SourceLocator locator;
-  Lexer lexer(program, &locator, locator.addFile("test"));
+  Lexer lexer(&locator, locator.addFile("test", program));
 #ifdef ASH_LEX_TEST_OUT
   std::ofstream out("lex.test.out");
 #else
@@ -198,5 +198,7 @@ TEST_CASE("Lexer", "[lexer]") {
 
 #ifndef ASH_LEX_TEST_OUT
   REQUIRE(out.str() == expected_output);
+#else
+  INFO("Lexer output written to lex.test.out.");
 #endif
 }

@@ -4,7 +4,7 @@
 
 TEST_CASE("SourceLocator basic tests", "[source]") {
   using namespace ash::source;
-  using namespace std::string_view_literals;
+  using namespace std::literals;
 
   SourceLocator lctr;
   auto fileFoo = lctr.addFile("foo.ash"sv);
@@ -25,7 +25,8 @@ TEST_CASE("SourceLocator basic tests", "[source]") {
   constexpr size_t fooLocCount = sizeof(fooLocs) / sizeof(fooLocs[0]);
 
   LocId fooLocIds[fooLocCount];
-  for (size_t i = 0; i < fooLocCount; ++i) {
+  fooLocIds[0] = lctr.first(fileFoo);
+  for (size_t i = 1; i < fooLocCount; ++i) {
     fooLocIds[i] = lctr.mark(fooLocs[i]);
   }
 
@@ -38,7 +39,8 @@ TEST_CASE("SourceLocator basic tests", "[source]") {
   constexpr size_t barLocCount = sizeof(barLocs) / sizeof(barLocs[0]);
 
   LocId barLocIds[barLocCount];
-  for (size_t i = 0; i < barLocCount; ++i) {
+  barLocIds[0] = lctr.first(fileBar);
+  for (size_t i = 1; i < barLocCount; ++i) {
     barLocIds[i] = lctr.mark(barLocs[i]);
   }
 

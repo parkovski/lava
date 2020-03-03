@@ -10,8 +10,7 @@ namespace ash::parser {
 
 class Lexer {
 public:
-  explicit Lexer(std::string_view text, source::SourceLocator *locator,
-                 source::FileId fileId);
+  explicit Lexer(source::SourceLocator *locator, source::FileId fileId);
 
   Token operator()();
 
