@@ -2,7 +2,7 @@
 #define ASH_PARSER_LEXER_H_
 
 #include "token.h"
-#include "ash/source/locator.h"
+#include "ash/source/session.h"
 
 #include <vector>
 
@@ -10,7 +10,7 @@ namespace ash::parser {
 
 class Lexer {
 public:
-  explicit Lexer(source::SourceLocator *locator, source::FileId fileId);
+  explicit Lexer(source::Session *session);
 
   Token operator()();
 
@@ -45,13 +45,12 @@ private:
   void fwd(size_t count = 1);
   Ctx context() const;
 
+  source::Session *_session;
   std::string_view _text;
   size_t _index;
   unsigned _line;
   unsigned _column;
   std::vector<Ctx> _context;
-  source::SourceLocator *_locator;
-  source::FileId _fileId;
   source::LocId _lastLoc;
 };
 

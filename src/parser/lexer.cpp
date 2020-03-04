@@ -4,15 +4,19 @@
 
 using namespace ash::parser;
 
-Lexer::Lexer(source::SourceLocator *locator, source::FileId fileId)
-  : _text{locator->fileText(fileId)}, _index{0}, _line{1}, _column{1},
-    _locator{locator}, _fileId{fileId}, _lastLoc{locator->first(fileId)}
+Lexer::Lexer(source::Session *session)
+  : _session{session},
+    _text{session->locator().fileText(session->file())},
+    _index{0},
+    _line{1},
+    _column{1},
+    _lastLoc{session->locator().first(session->file())}
 {}
 
 Token Lexer::operator()() {
   Tk tk;
 
-  if (_index == _text.length()) {
+  if (_index >= _text.length()) {
     return Token(Tk::EndOfInput, _lastLoc);
   } else {
     switch (context()) {
@@ -55,7 +59,9 @@ Token Lexer::operator()() {
   }
 
   auto startLoc = _lastLoc;
-  _lastLoc = _locator->mark({_fileId, _index, _line, _column});
+  _lastLoc = _session->locator().mark(
+    {_session->file(), _index, _line, _column}
+  );
   return Token(tk, startLoc);
 }
 
@@ -669,7 +675,7 @@ char Lexer::ch(size_t offset) const {
 }
 
 void Lexer::fwd(size_t count) {
-  if (_index == _text.length()) {
+  if (_index >= _text.length()) {
     return;
   }
   if (_text[_index] == '\n') {
