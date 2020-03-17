@@ -2,6 +2,7 @@
 
 #include <cassert>
 
+using namespace ash;
 using namespace ash::parser;
 
 Lexer::Lexer(source::Session *session)

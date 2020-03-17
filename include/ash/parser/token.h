@@ -99,6 +99,10 @@ std::string_view to_string(Tk tk);
 std::ostream &operator<<(std::ostream &os, Tk tk);
 
 struct Token {
+  Token() noexcept
+    : loc{}, id{Tk::Invalid}
+  {}
+
   explicit Token(Tk id, source::LocId loc) noexcept
     : loc{loc}, id{id}
   {}

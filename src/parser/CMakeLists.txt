@@ -7,4 +7,5 @@ set(SOURCES
 
 add_library(ashparser STATIC ${SOURCES})
 target_include_directories(ashparser PUBLIC ${ASH_INCLUDE_DIR})
+target_link_libraries(ashparser PRIVATE Boost::container fmt::fmt-header-only)
 target_link_libraries(ashparser INTERFACE ashast ashsource)
