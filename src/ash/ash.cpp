@@ -1,6 +1,5 @@
 #include "ash/ash.h"
 #include "ash/terminal.h"
-#include "ash/terminal/lineeditor.h"
 
 #include <fstream>
 
@@ -10,22 +9,6 @@
 // an attribute is also a path=>data mapping?
 
 using namespace ash;
-
-#if 0
-static Document getInteractiveDocument() {
-  Document doc("stdin");
-  //...
-  return doc;
-}
-
-static Document getSourceDocument(std::string_view path) {
-  //...
-}
-
-static Document getCommandLineDocument(int argc, char *argv[]) {
-  //...
-}
-#endif
 
 #if 0
 static int interactiveMain(int argc, char *argv[]) {

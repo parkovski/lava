@@ -1,4 +1,4 @@
-set(SOURCES lineeditor.cpp ansi.cpp)
+set(SOURCES ansi.cpp)
 
 if(WIN32)
   list(APPEND SOURCES terminal-windows.cpp)
@@ -9,5 +9,5 @@ else()
 endif()
 
 add_library(ashterminal STATIC ${SOURCES})
-target_link_libraries(ashterminal ashdocument fmt::fmt-header-only)
+target_link_libraries(ashterminal fmt::fmt-header-only)
 target_include_directories(ashterminal PUBLIC ${ASH_INCLUDE_DIR})

@@ -9,6 +9,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+if(CMAKE_BUILD_TYPE STREQUAL "" OR CMAKE_BUILD_TYPE MATCHES "Deb")
+  set(BUILD_TESTS ON)
+  #set(BUILD_EXAMPLES ON)
+endif()
 option(BUILD_TESTS "Build tests" OFF)
 option(BUILD_EXAMPLES "Build examples" OFF)
 
@@ -19,20 +23,22 @@ else()
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 endif()
 
-# find_package(range-v3 CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
+find_package(fmt REQUIRED)
 find_package(Boost 1.72 REQUIRED
   COMPONENTS container
 )
 
 set(ASH_INCLUDE_DIR
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:
+    ${CMAKE_SOURCE_DIR}/include$<SEMICOLON>
+    ${CMAKE_BINARY_DIR}
+  >
   $<INSTALL_INTERFACE:include>
 )
 
 set(ASH_CONTRIB_INCLUDE_DIR
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/contrib>
-  $<INSTALL_INTERFACE:contrib/ash>
+  $<INSTALL_INTERFACE:include/ash/contrib>
 )
 
 if(MSVC)
@@ -43,13 +49,8 @@ else()
   add_compile_options(-Wall -pedantic)
 endif()
 
-if(CMAKE_GENERATOR STREQUAL "Ninja")
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    add_compile_options(-fdiagnostics-color=always)
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-fcolor-diagnostics)
-  endif()
-endif()
+configure_file(config.h.in config.h @ONLY)
+install(FILES config.h DESTINATION "${CMAKE_SOURCE_DIR}/include/ash")
 
 add_subdirectory(contrib)
 add_subdirectory(src)

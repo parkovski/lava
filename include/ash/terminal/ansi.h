@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
-#include <iosfwd>
+#include <ostream>
 #include <tuple>
 #include <fmt/format.h>
 
@@ -139,16 +139,16 @@ struct DecodeResult {
 DecodeResult decode(std::string_view str);
 
 // Control sequences.
-  namespace format {
+  namespace detail {
     template<typename Tuple, size_t N = std::tuple_size_v<Tuple>>
     struct OutputWrapper {
       explicit OutputWrapper(const Tuple &tuple) noexcept
-        : tuple(tuple)
+        : tuple{tuple}
       {}
 
       friend std::ostream &operator<<(std::ostream &os,
-                                      OutputWrapper self) {
-        return os << OutputWrapper<Tuple, N-1>(self.tuple)
+                                      const OutputWrapper &self) {
+        return os << OutputWrapper<Tuple, N-1>{self.tuple}
                   << std::get<N-1>(self.tuple);
       }
 
@@ -161,7 +161,7 @@ DecodeResult decode(std::string_view str);
       {}
 
       friend std::ostream &operator<<(std::ostream &os,
-                                      OutputWrapper) {
+                                      const OutputWrapper &) {
         return os;
       }
     };
@@ -169,11 +169,11 @@ DecodeResult decode(std::string_view str);
     template<typename... Args>
     struct Print {
       explicit Print(Args &&...args)
-        : tuple(std::forward<Args>(args)...)
+        : tuple{std::forward<Args>(args)...}
       {}
 
       friend std::ostream &operator<<(std::ostream &os, const Print &self) {
-        return os << OutputWrapper<std::tuple<Args...>>(self.tuple);
+        return os << OutputWrapper<std::tuple<Args...>>{self.tuple};
       }
 
       std::tuple<Args...> tuple;
@@ -181,41 +181,41 @@ DecodeResult decode(std::string_view str);
 
     template<typename... Args>
     Print(Args &&...args) -> Print<Args...>;
-  } // namespace format
+  } // namespace detail
 
   namespace cursor {
     inline auto up(unsigned short y = 1)
-    { return format::Print("\033[", y, "A"); }
+    { return detail::Print("\033[", y, "A"); }
 
     inline auto down(unsigned short y = 1)
-    { return format::Print("\033[", y, "B"); }
+    { return detail::Print("\033[", y, "B"); }
 
     inline auto right(unsigned short x = 1)
-    { return format::Print("\033[", x, "C"); }
+    { return detail::Print("\033[", x, "C"); }
 
     inline auto left(unsigned short x = 1)
-    { return format::Print("\033[", x, "D"); }
+    { return detail::Print("\033[", x, "D"); }
 
     inline auto next_line(unsigned short y = 1)
-    { return format::Print("\033[", y, "E"); }
+    { return detail::Print("\033[", y, "E"); }
 
     inline auto prev_line(unsigned short y = 1)
-    { return format::Print("\033[", y, "F"); }
+    { return detail::Print("\033[", y, "F"); }
 
     inline auto to_col(unsigned short x)
-    { return format::Print("\033[", x, "G"); }
+    { return detail::Print("\033[", x, "G"); }
 
     inline auto to_row(unsigned short y)
-    { return format::Print("\033[", y, "d"); }
+    { return detail::Print("\033[", y, "d"); }
 
     inline auto move_to(unsigned short x, unsigned short y)
-    { return format::Print("\033[", y, ";", x, "H"); }
+    { return detail::Print("\033[", y, ";", x, "H"); }
 
     inline auto to_next_tab(unsigned short n)
-    { return format::Print("\033[", n, "I"); }
+    { return detail::Print("\033[", n, "I"); }
 
     inline auto to_prev_tab(unsigned short n)
-    { return format::Print("\033[", n, "Z"); }
+    { return detail::Print("\033[", n, "Z"); }
 
     inline auto blink(bool enable = true)
     { return enable ? "\033[?12h" : "\033[?12l"; }
@@ -243,10 +243,10 @@ DecodeResult decode(std::string_view str);
 
   namespace screen {
     inline auto scroll_up(unsigned short y)
-    { return format::Print("\033[", y, "S"); }
+    { return detail::Print("\033[", y, "S"); }
 
     inline auto scroll_down(unsigned short y)
-    { return format::Print("\033[", y, "T"); }
+    { return detail::Print("\033[", y, "T"); }
 
     constexpr auto clear_down = "\033[J";
 
@@ -261,17 +261,17 @@ DecodeResult decode(std::string_view str);
     constexpr auto clear_all_tabs = "\033[3g";
 
     inline auto set_scroll_region(unsigned short top, unsigned short bottom)
-    { return format::Print("\033[", top, ";", bottom, "r"); }
+    { return detail::Print("\033[", top, ";", bottom, "r"); }
 
     constexpr auto clear_scroll_region = "\033[;r";
   } // namespace screen
 
   namespace line {
     inline auto insert_space(unsigned short n)
-    { return format::Print("\033[", n, "@"); }
+    { return detail::Print("\033[", n, "@"); }
 
     inline auto delete_space(unsigned short n)
-    { return format::Print("\033[", n, "P"); }
+    { return detail::Print("\033[", n, "P"); }
 
     constexpr auto clear_right = "\033[0K";
 
@@ -280,7 +280,7 @@ DecodeResult decode(std::string_view str);
     constexpr auto clear = "\033[2K";
 
     inline auto erase(unsigned short n)
-    { return format::Print("\033[", n, "X"); }
+    { return detail::Print("\033[", n, "X"); }
   } // namespace line
 
   namespace alt_buffer {

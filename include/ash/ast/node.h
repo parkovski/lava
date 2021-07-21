@@ -32,7 +32,7 @@ namespace detail {
 
 } // namespace detail
 
-class Writer;
+class Visitor;
 
 class Node {
 public:
@@ -52,7 +52,7 @@ public:
   // virtual source::SpanRef triviaAfter() const = 0;
   virtual source::SpanRef span() const = 0;
 
-  virtual void write(Writer &w) const = 0;
+  virtual void visit(Visitor &v) const = 0;
 };
 
 using NodePtr = std::unique_ptr<Node>;
@@ -88,7 +88,7 @@ public:
 
   source::SpanRef span() const override;
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
   bool empty() const {
     return !_span.first.isValid();
@@ -114,7 +114,7 @@ public:
 
   source::SpanRef span() const override;
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
 private:
   SmallNodeVec<1> _nodes;
@@ -133,7 +133,7 @@ public:
 
   source::SpanRef span() const override;
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
   const Trivia &trivia() const { return _trivia; }
 
@@ -161,7 +161,7 @@ public:
 
   source::SpanRef span() const override;
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
   bool empty() const {
     return _separators.empty();
@@ -193,7 +193,7 @@ public:
 
   source::SpanRef span() const override;
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
 private:
   Separator _firstSeparator;
@@ -237,7 +237,7 @@ public:
 
   source::SpanRef span() const override;
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
 private:
   source::LocId _endLoc;
@@ -271,7 +271,7 @@ public:
 
   unsigned precedence() const { return _precedence; }
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
 private:
   unsigned _precedence;
@@ -294,7 +294,7 @@ public:
 
   source::SpanRef span() const override;
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
 private:
   Trivia _trivia;
@@ -316,7 +316,7 @@ public:
 
   source::SpanRef span() const override;
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
 private:
   Operator _op;
@@ -336,7 +336,7 @@ public:
 
   source::SpanRef span() const override;
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
 private:
   Operator _op;
@@ -359,7 +359,7 @@ public:
 
   source::SpanRef span() const override;
 
-  void write(Writer &w) const override;
+  void visit(Visitor &v) const override;
 
 private:
   Terminal _openDelim;

@@ -1,0 +1,9 @@
+#ifndef ASH_CONFIG_H_
+#define ASH_CONFIG_H_
+
+#define ASH_VERSION_MAJOR @ash_VERSION_MAJOR@
+#define ASH_VERSION_MINOR @ash_VERSION_MINOR@
+#define ASH_VERSION_PATCH @ash_VERSION_PATCH@
+#define ASH_VERSION "@ash_VERSION@"
+
+#endif // ASH_CONFIG_H_

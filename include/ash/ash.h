@@ -1,6 +1,8 @@
 #ifndef ASH_ASH_H_
 #define ASH_ASH_H_
 
+#include "config.h"
+
 #define ASH_ARRAYLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #include <utility>
