@@ -1,2 +1,2 @@
-add_executable(ash ash.cpp)
-target_link_libraries(ash ashdata ashterminal)
+add_executable(ash ash.cpp eval.cpp)
+target_link_libraries(ash ashdata ashterminal ashsource ashparser)

@@ -1,80 +1,58 @@
 #include "ash/ash.h"
-#include "ash/terminal.h"
 
+#include <fmt/format.h>
+
+#include <string_view>
 #include <fstream>
 
-// symbol = index into list of interned strings
-// path = "string" of symbols (basic_string<index_t>).
-// a path can have data and attributes.
-// an attribute is also a path=>data mapping?
-
-using namespace ash;
-
-#if 0
-static int interactiveMain(int argc, char *argv[]) {
-  term::initialize();
-  term::setShellState();
-  ASH_SCOPEEXIT { term::restoreState(); };
-
-  /* Document doc("stdin");
-  LineEditor lned(&doc);
-  std::string line;
-  while (lned.readLine(line)) {
-    doc.append(line);
-  } */
-
-  return 0;
+namespace ash {
+  int eval(std::string_view code);
+  int interactiveMain();
 }
 
-static int sourceMain(int argc, char *argv[]) {
-  // try to read the file.
-  if (std::ifstream file{argv[1], std::ios::binary | std::ios::ate}) {
+static int sourceMain(const char *filename) {
+  if (std::ifstream file{filename, std::ios::binary | std::ios::ate}) {
     auto size = file.tellg();
     std::string text(size, '\0');
     file.seekg(0);
     if (!file.read(text.data(), size)) {
+      fmt::print(stderr, "Could not read `{}`.\n", filename);
       return 1;
     }
-    Document doc(argv[1], std::move(text));
-  } else {
-    return 1;
+    return ash::eval(text);
   }
-  return 0;
+
+  fmt::print(stderr, "Could not open `{}`.\n", filename);
+  return 1;
 }
 
-static int commandMain(int argc, char *argv[]) {
-  Document doc("command");
-  for (int i = 2; i < argc; ++i) {
-    doc.append(argv[i]);
-    doc.append(' ');
+static int commandMain(int argc, const char *const argv[]) {
+  if (argc == 0) {
+    fmt::print(stderr, "Nothing to evaluate\n");
+    return 1;
   }
-  return 0;
+
+  std::string program{argv[0]};
+  for (int i = 1; i < argc; ++i) {
+    program.push_back(' ');
+    program.append(argv[i]);
+  }
+
+  return ash::eval(program);
 }
-#endif
 
 int main(int argc, char *argv[]) {
-  using namespace ash;
-
   if (argc == 1) {
-    // interactive mode
-    // return interactiveMain(argc, argv);
+    return ash::interactiveMain();
   } else if (argc == 2) {
     // argv[1] is a source file to execute.
-    // return sourceMain(argc, argv);
-  } else if (argv[1][0] == '-' && argv[1][1] == 'c' && argv[1][2] == '\0' &&
+    return sourceMain(argv[1]);
+  } else if (argv[1][0] == '-' && argv[1][1] == 'e' && argv[1][2] == '\0' &&
              argc > 2) {
     // treat the command line as a script
-    // return commandMain(argc, argv);
+    return commandMain(argc - 2, &argv[2]);
   } else {
+    fmt::print(stderr, "Bad command line.\n");
     return 1;
   }
-
-  //sym::SymbolTable symtab;
-  // Document document;
-  // BaseLexer lexer;
-  // BaseParser parser;
-  // IrEmitter emitter;
-  // IrInterpreter interpreter;
-
-  return 0;
 }

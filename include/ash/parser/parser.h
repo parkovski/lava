@@ -8,6 +8,14 @@
 
 namespace ash::parser {
 
+class Visitor {
+public:
+  virtual void visitWhitespace() = 0;
+  virtual void visitComment() = 0;
+  virtual void visitLiteral() = 0;
+  virtual void visitIdentifier() = 0;
+};
+
 class Parser {
 public:
   explicit Parser(source::Session *session);

@@ -66,9 +66,14 @@ using u8char = char;
 
 inline namespace utf_cp {
 
+constexpr const char32_t invalid_char = static_cast<char32_t>(-1);
+
+/// \return the length in bytes of the UTF-8 encoded codepoint starting with
+/// \c byte, from 1 to 6, or 0 if \c byte is invalid as a codepoint starting
+/// byte.
 inline size_t utf8_codepoint_size(uint8_t byte) {
   if (byte <= 0x7f) { return 1; } // 0x74 = 0111 1111
-  else if (byte <= 0xbf) { return 1; } // 1011 1111. Invalid for a starting byte.
+  else if (byte <= 0xbf) { return 0; } // 1011 1111. Invalid for a starting byte.
   else if (byte <= 0xdf) { return 2; } // 1101 1111
   else if (byte <= 0xef) { return 3; } // 1110 1111
   else if (byte <= 0xf7) { return 4; } // 1111 0111
@@ -77,8 +82,9 @@ inline size_t utf8_codepoint_size(uint8_t byte) {
   else { return 1; }
 }
 
+/// \return The UTF-32 character at \c *buf, or \c invalid_char if \c *buf is
+/// invalid.
 inline char32_t utf8_to_utf32(const char *buf) {
-  const char32_t invalid_char = static_cast<char32_t>(-1);
   char32_t ch = 0;
   // 6: x011 1111 2222 2233 3333 4444 4455 5555
   // 5: xxxx xx00 1111 1122 2222 3333 3344 4444
@@ -118,22 +124,29 @@ inline char32_t utf8_to_utf32(const char *buf) {
   }
 }
 
+/// Convert the UTF-32 character \c to UTF-8, writing the result into \c buf.
+/// \requires sizeof(*buf) >= 6
+/// \returns The size in bytes of the UTF-8 sequence in \c buf.
+/// TODO: Detect invalid characters.
 inline size_t utf32_to_utf8(char32_t c, char *buf) {
 	if (c < 0x80) {
-    *buf = char(c);
+    buf[0] = char(c);
     return 1;
 	}
+
   if (c < 0x800) {
     buf[0] = char((c >> 6)   | 0xc0);
     buf[1] = char((c & 0x3f) | 0x80);
     return 2;
   }
+
   if (c < 0x10000) {
     buf[0] = char( (c >> 12)         | 0xe0);
     buf[1] = char(((c >>  6) & 0x3f) | 0x80);
     buf[2] = char( (c & 0x3f)        | 0x80);
     return 3;
   }
+
   if (c < 0x200000) {
     buf[0] = char( (c >> 18)         | 0xf0);
     buf[1] = char(((c >> 12) & 0x3f) | 0x80);
@@ -141,6 +154,7 @@ inline size_t utf32_to_utf8(char32_t c, char *buf) {
     buf[3] = char( (c        & 0x3f) | 0x80);
     return 4;
   }
+
   if (c < 0x4000000) {
     buf[0] = char( (c >> 24)         | 0xf8);
     buf[1] = char(((c >> 18) & 0x3f) | 0x80);

@@ -110,12 +110,12 @@ struct Token {
   Token(const Token &) = default;
   Token &operator=(const Token &) = default;
 
-  bool operator==(const Token &other) const {
+  bool operator==(const Token &other) const noexcept {
     return loc == other.loc
         && id == other.id;
   }
 
-  bool operator!=(const Token &other) const {
+  bool operator!=(const Token &other) const noexcept {
     return !(*this == other);
   }
 
