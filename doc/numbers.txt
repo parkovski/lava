@@ -1,0 +1,51 @@
+Modeling numbers with units and bounds:
+
+- No value type 'void' or 'never'
+- One value type 'null' or 'empty' or 'unknown' or 'undefined'
+- Two value type 'bool'
+- Three value type 'optbool' - true/false/null (or unknown/undefined)
+- See C++ compare_three_way
+- Marker type class 'units'
+- Trait 'is_null'
+- Trait 'to_bool'
+- Trait 'to_optbool' (tri-bool - true/false/unknown)
+- Trait(s) 'compare'
+
+bound:
+  native - no bounds checking
+  wrapping - bounds checking with wrap around
+  sentinel - special out of bounds value
+  clamped - value clamped at bound
+  throwing - exception thrown when out of bounds
+  expanding - allocates more space when bounds exceeded
+  custom - any other bounds checking behavior you want
+
+nan:
+  native - whatever the machine's default is
+  sentinel - special NaN value
+  throwing - throws an exception
+  custom
+
+empty:
+  none - no value compares equal to null
+  native - whatever the machine normally does, probably 0.
+  sentinel - special value means the thing is null.
+  range - a whole range is considered null.
+
+default:
+  native - no special initialization
+  none - no default initialization
+  some - a value
+
+kind:
+  int - signed, unsigned
+  float - ieee (recognizes machine quirks), ideal (allowed to apply math optimizations)
+  ratio<base_type>
+  etc.
+
+number<size, kind, empty, default, lbound, ubound, nan>
+
+units<type> is a type constructor where the new type needs to define some way
+to convert to another type that implements that 'units'. conversions should
+be generated using a graph of relations among that units type and then
+simplified via expression optimization.
