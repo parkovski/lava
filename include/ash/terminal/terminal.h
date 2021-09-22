@@ -1,7 +1,7 @@
 #ifndef ASH_TERMINAL_H_
 #define ASH_TERMINAL_H_
 
-#include "terminal/point.h"
+#include "point.h"
 
 #include <cstddef>
 #include <utility>

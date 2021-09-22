@@ -1,4 +1,4 @@
-#include "ash/terminal.h"
+#include "ash/terminal/terminal.h"
 #include "ash/terminal/ansi.h"
 
 #include <catch2/catch.hpp>

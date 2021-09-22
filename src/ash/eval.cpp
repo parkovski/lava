@@ -1,5 +1,5 @@
 #include "ash/parser/lexer.h"
-#include "ash/terminal.h"
+#include "ash/terminal/terminal.h"
 #include "ash/terminal/ansi.h"
 
 #include <fmt/format.h>

@@ -1,5 +1,5 @@
 #include "ash/ash.h"
-#include "ash/terminal.h"
+#include "ash/terminal/terminal.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
