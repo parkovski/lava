@@ -29,7 +29,7 @@ int interactiveMain() {
     return 1;
   }
   term::initialize();
-  term::setShellState();
+  term::ScopedRawMode _rawMode{};
 
   source::SourceLocator locator;
   auto file = locator.addFile("ash://src/shell");
