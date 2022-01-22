@@ -1,7 +1,7 @@
 #include "ash/data/slidingindex.h"
 #include "ash/data/intervaltree.h"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include <string>
 

@@ -1,7 +1,7 @@
 #include "ash/terminal/terminal.h"
 #include "ash/terminal/ansi.h"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace ash::term;
 

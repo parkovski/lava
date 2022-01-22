@@ -2,6 +2,7 @@
 #define ASH_DATA_INTERVALTREE_SEARCHITERATOR_H_
 
 #include "iterator.h"
+#include <functional>
 
 namespace ash::data::itree {
 

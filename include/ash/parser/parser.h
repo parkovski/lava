@@ -4,7 +4,6 @@
 #include "lexer.h"
 #include "keywords.h"
 #include "ash/source/session.h"
-#include "ash/ast/node.h"
 
 namespace ash::parser {
 

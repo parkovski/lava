@@ -1,6 +1,6 @@
 #include "ash/source/locator.h"
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("SourceLocator basic tests", "[source]") {
   using namespace ash::source;

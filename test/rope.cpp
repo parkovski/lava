@@ -1,7 +1,7 @@
 #include "ash/ash.h"
 #include "rope/rope.h" 
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include <type_traits>
 #include <random>
