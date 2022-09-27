@@ -3,14 +3,15 @@ add_executable(test
   lexer.cpp
   rope.cpp
   source.cpp
+  symtab.cpp
   terminal.cpp
-  test.cpp
 )
 target_link_libraries(test PRIVATE
   Catch2::Catch2WithMain
   ashdata
   ashparser
   ashsource
+  ashsym
   ashterminal
   rope
 )

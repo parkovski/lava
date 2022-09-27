@@ -5,6 +5,7 @@
 
 #include <string_view>
 #include <iosfwd>
+#include <fmt/ostream.h>
 
 namespace ash::parser {
 
@@ -124,5 +125,9 @@ struct Token {
 };
 
 } // namespace ash::parser
+
+namespace fmt {
+  template<> struct formatter<ash::parser::Tk> : ostream_formatter {};
+}
 
 #endif // ASH_PARSER_TOKEN_H_

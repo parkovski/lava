@@ -36,13 +36,13 @@ int interactiveMain() {
   source::Session session(&locator, file);
 
   std::string line;
-  fmt::print("¿ash? ");
+  fmt::print("ash‽ ");
   while (true) {
     int c = term::getChar();
     if (c == 4 && line.empty()) {
       break;
     } else if (c == 13 || c == 10) {
-      fmt::print("\r\n¿ash? ");
+      fmt::print("\r\nash‽ ");
       line.clear();
     } else if (c == 8 || c == 0x7F) {
       if (!line.empty()) {

@@ -9,6 +9,7 @@
 #include <ostream>
 #include <tuple>
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 
 namespace ash::term::ansi {
 
@@ -402,5 +403,19 @@ DecodeResult decode(std::string_view str);
   } // namespace bg
 
 } // namespace ash::term::ansi
+
+namespace fmt {
+  template<class Tuple, size_t N>
+  struct formatter<ash::term::ansi::detail::OutputWrapper<Tuple, N>>
+    : ostream_formatter {};
+
+  template<class... Args>
+  struct formatter<ash::term::ansi::detail::Print<Args...>>
+    : ostream_formatter {};
+
+  template<size_t N>
+  struct formatter<ash::term::ansi::style::Style<N>>
+    : ostream_formatter {};
+}
 
 #endif // ASH_TERMINAL_ANSI_H_
