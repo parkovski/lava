@@ -9,7 +9,7 @@ namespace ash::parser {
     switch (tk) {
       default: return {};
       ASH_TOKENS(ASH_TK)
-    }     
+    }
 #undef ASH_TK
   }
 

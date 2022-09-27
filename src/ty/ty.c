@@ -3,7 +3,8 @@
 #include <stdbool.h>
 #include <stdalign.h>
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
+//#include <malloc.h>
 
 enum {
   sid_root = 0,

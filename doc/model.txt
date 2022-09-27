@@ -1,0 +1,39 @@
+Symbolic model
+
+There are a small number of intrinsic attributes that allow building up a full
+symbolic model of a type system.
+
+- Symbol / Attribute:
+  A symbol is basically a container for a list of attributes. An attribute is
+  an instance of another symbol. Therefore the types of attributes must
+  themselves have instantiable attributes.
+
+- Namespace
+  The symbol contains names pointing to their own symbols.
+
+- Provides
+  Instances inherit attributes in this list.
+
+- Requires
+  Instances must provide attributes in this list.
+
+- Instance
+  Links to Namespace/Requires/Provides.
+
+- Indexable
+  Can look up values by index.
+
+- IndexRef
+  Refers to an index of a symbol.
+
+- MemoryInfo
+  Instance size and alignment.
+
+- ArrayInfo
+  An array of known size.
+
+- TupleInfo
+  A tuple or struct-like object.
+
+- FunctionInfo
+  Function - map from input to output.
