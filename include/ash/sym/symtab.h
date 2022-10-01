@@ -49,23 +49,38 @@ public:
     return _next_id++;
   }
 
-  void *alloc(size_t size);
+  /// Allocate memory in the symbol table's lifetime.
+  /// \param align Required alignment, 0 for the ABI default.
+  /// \param size Allocation size.
+  /// \param dtor Optional destructor.
+  void *alloc(size_t align, size_t size,
+              void (*dtor)(void *) noexcept = nullptr);
 
+  // Allocate an array `T[count]` in the symbol table's lifetime.
   template<class T>
-  T *alloc(size_t count = 1) {
-    return static_cast<T *>(alloc(count * sizeof(T)));
+  std::enable_if_t<std::is_trivially_destructible_v<T>, T *>
+  alloc(size_t count, void (*dtor)(void *) noexcept = nullptr) {
+    return static_cast<T *>(alloc(alignof(T), count * sizeof(T), dtor));
+  }
+
+  // Allocate a `T` in the symbol table's lifetime.
+  template<class T>
+  std::enable_if_t<std::is_trivially_destructible_v<T>, T *>
+  alloc(void (*dtor)(void *) noexcept = nullptr) {
+    return alloc<T>(1, dtor);
   }
 
   template<class T, class... Args>
   T *cxxnew(Args &&...args) {
-    T *p = alloc<T>();
-    new (p) T(std::forward<Args>(args)...);
-    if constexpr (!std::is_trivially_destructible_v<T>) {
-      _dtor_list.push_back(std::make_pair(
-        static_cast<void*>(p),
-        &SymbolTable::template call_dtor<T>
-      ));
+    void (*dtor)(void *) noexcept;
+    if constexpr (std::is_trivially_destructible_v<T>) {
+      dtor = nullptr;
+    } else {
+      dtor = SymbolTable::template call_dtor<T>;
     }
+
+    T *p = static_cast<T*>(this->alloc(alignof(T), sizeof(T), dtor));
+    new (p) T(std::forward<Args>(args)...);
     return p;
   }
 
@@ -106,7 +121,6 @@ public:
 private:
   id_t _next_id = 0;
   std::vector<std::pair<void *, void (*)(void *) noexcept>> _dtor_list;
-  std::vector<void *> _free_list;
   std::unordered_set<std::string_view> _strings;
   std::unordered_map<uint64_t, void *> _attr_map;
 };
