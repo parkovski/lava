@@ -1,19 +1,19 @@
-#ifndef ASH_DATA_ROPE_H_
-#define ASH_DATA_ROPE_H_
+#ifndef LAVA_DATA_ROPE_H_
+#define LAVA_DATA_ROPE_H_
 
 #include <cstddef>
 #include <string>
 #include <string_view>
 
 // Only add this symbol to the global namespace in implementation files.
-#ifdef ASH_C_ROPE_FWD
+#ifdef LAVA_C_ROPE_FWD
 struct rope;
 #endif
 
-namespace ash::data {
+namespace lava::data {
 namespace rope {
 
-#ifdef ASH_C_ROPE_FWD
+#ifdef LAVA_C_ROPE_FWD
   using c_rope_t = ::rope;
 #else
   struct c_rope_t;
@@ -116,6 +116,6 @@ private:
 
 using rope::Rope;
 
-} // namespace ash::data
+} // namespace lava::data
 
-#endif // ASH_DATA_ROPE_H_
+#endif // LAVA_DATA_ROPE_H_

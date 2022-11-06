@@ -1,4 +1,4 @@
-#include "ash/ash.h"
+#include "lava/lava.h"
 #include "rope/rope.h" 
 
 #include <catch2/catch_test_macros.hpp>
@@ -40,7 +40,7 @@ TEST_CASE("Librope additions", "[rope]") {
   rope *r = rope_new_with_utf8_n(u8(g_bigTextBlock), sizeof(g_bigTextBlock) - 1);
   // rope *r = rope_new_with_utf8(u8(g_bigTextBlock));
   REQUIRE(r);
-  ASH_SCOPEEXIT { rope_free(r); };
+  LAVA_SCOPE_EXIT { rope_free(r); };
 
   char smallbuf[6];
   size_t _bytes = sizeof(smallbuf) - 1;

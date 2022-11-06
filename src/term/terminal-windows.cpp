@@ -1,57 +1,52 @@
-#include "ash/ash.h"
-#include "ash/terminal/terminal.h"
+#include "lava/lava.h"
+#include "lava/term/terminal.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-using namespace ash::term;
+namespace {
+  static DWORD stdinMode;
+  static DWORD stdoutMode;
+  static lava::term::ResizeHandler resizeHandler = nullptr;
+  static unsigned short bufWidth, bufHeight;
 
-static DWORD stdinMode;
-static DWORD stdoutMode;
-static ResizeHandler resizeHandler = nullptr;
-static unsigned short bufWidth, bufHeight;
-
-static void postResize() {
-  CONSOLE_SCREEN_BUFFER_INFO sbi;
-  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE),
-                                 &sbi)) {
-
-    if (sbi.dwSize.X == bufWidth && sbi.dwSize.Y == bufHeight) {
-      return;
-    }
-    bufWidth = sbi.dwSize.X;
-    bufHeight = sbi.dwSize.Y;
+  static void postResize() {
     if (auto h = resizeHandler) {
-      h(Point{bufWidth, bufHeight});
+      auto size = lava::term::getScreenSize();
+      if (size.x && size.y) {
+        h(lava::term::Point{bufWidth, bufHeight});
+      }
     }
   }
-}
+} // anonymous namespace
 
-void ash::term::initialize() {
+namespace lava::term {
+
+void initialize() {
   bufWidth = 0;
   bufHeight = 0;
-  ash::term::saveState();
+  saveState();
   postResize();
 }
 
-bool ash::term::isTTYInput() {
+bool isTTYInput() {
   return GetFileType(GetStdHandle(STD_INPUT_HANDLE)) == FILE_TYPE_CHAR;
 }
 
-bool ash::term::isTTYOutput() {
+bool isTTYOutput() {
   return GetFileType(GetStdHandle(STD_OUTPUT_HANDLE)) == FILE_TYPE_CHAR;
 }
 
-bool ash::term::isTTYError() {
+bool isTTYError() {
   return GetFileType(GetStdHandle(STD_ERROR_HANDLE)) == FILE_TYPE_CHAR;
 }
 
-void ash::term::saveState() {
+void saveState() {
   GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &stdinMode);
   GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &stdoutMode);
 }
 
-void ash::term::setShellState() {
+void setShellState() {
   SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE),
                  ENABLE_WINDOW_INPUT | ENABLE_EXTENDED_FLAGS
                  | ENABLE_VIRTUAL_TERMINAL_INPUT);
@@ -61,12 +56,12 @@ void ash::term::setShellState() {
                  | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 }
 
-void ash::term::restoreState() {
+void restoreState() {
   SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), stdinMode);
   SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), stdoutMode);
 }
 
-int ash::term::getChar() {
+int getChar() {
   INPUT_RECORD inp;
   DWORD count;
   auto hStdin = GetStdHandle(STD_INPUT_HANDLE);
@@ -88,7 +83,7 @@ int ash::term::getChar() {
   return -1;
 }
 
-size_t ash::term::getChars(char *buf, size_t min, size_t max) {
+size_t getChars(char *buf, size_t min, size_t max) {
   INPUT_RECORD ir[32];
   constexpr size_t irLen = ASH_ARRAYLEN(ir);
   DWORD count;
@@ -151,14 +146,21 @@ size_t ash::term::getChars(char *buf, size_t min, size_t max) {
   return total;
 }
 
-Point ash::term::getScreenSize() {
-  postResize();
-  return Point{bufWidth, bufHeight};
+Point getScreenSize() {
+  CONSOLE_SCREEN_BUFFER_INFO sbi;
+  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &sbi)) {
+    if (sbi.dwSize.X == bufWidth && sbi.dwSize.Y == bufHeight) {
+      return {0, 0};
+    }
+  }
+  return Point{sbi.dwSize.X, sbi.dwSize.Y};
 }
 
-ResizeHandler ash::term::onResize(ResizeHandler newHandler) {
+ResizeHandler onResize(ResizeHandler newHandler) {
   auto oldHandler = resizeHandler;
   resizeHandler = newHandler;
   postResize();
   return oldHandler;
 }
+
+} // namespace lava::term

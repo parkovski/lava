@@ -1,17 +1,17 @@
-#include "ash/parser/lexer.h"
+#include "lava/parser/lexer.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string_view>
 
-#ifdef ASH_LEX_TEST_OUT
+#ifdef LAVA_LEX_TEST_OUT
 # include <fstream>
 #else
 # include <sstream>
 #endif
 
 static const std::string_view program = R"~~~(
-#!/usr/bin/env ash
+#!/usr/bin/env lava
 <# This is a block comment
  # It spans multiple lines. #>
 echo 'Hello world'
@@ -31,7 +31,7 @@ midi::listen {
 static const std::string_view expected_output =
 R"~~~(1:1: NewLine
 2:1: CommentLine('#')
-2:2: Text('!/usr/bin/env ash')
+2:2: Text('!/usr/bin/env lava')
 2:19: NewLine
 3:1: CommentBlockStart('<#')
 3:3: Text(' This is a block comment
@@ -164,13 +164,13 @@ R"~~~(1:1: NewLine
 )~~~";
 
 TEST_CASE("Lexer", "[lexer]") {
-  using namespace ash::parser;
-  using namespace ash::source;
+  using namespace lava::parser;
+  using namespace lava::source;
 
   SourceLocator locator;
   Session session(&locator, locator.addFile("test", program));
   Lexer lexer(&session);
-#ifdef ASH_LEX_TEST_OUT
+#ifdef LAVA_LEX_TEST_OUT
   std::ofstream out("lex.test.out");
 #else
   std::stringstream out;
@@ -197,7 +197,7 @@ TEST_CASE("Lexer", "[lexer]") {
     out << "\n";
   }
 
-#ifndef ASH_LEX_TEST_OUT
+#ifndef LAVA_LEX_TEST_OUT
   REQUIRE(out.str() == expected_output);
 #else
   INFO("Lexer output written to lex.test.out.");

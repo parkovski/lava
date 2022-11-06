@@ -1,4 +1,4 @@
-#include "ash/terminal/terminal.h"
+#include "lava/term/terminal.h"
 
 #include <unistd.h>
 #include <termios.h>
@@ -8,25 +8,27 @@
 #include <cstdio>
 #include <thread>
 
-using namespace ash::term;
+namespace {
+  static struct termios termAttrs;
+  static lava::term::ResizeHandler resizeHandler = nullptr;
+  //static void *resizeParam = nullptr;
 
-static struct termios termAttrs;
-static ResizeHandler resizeHandler = nullptr;
-//static void *resizeParam = nullptr;
-
-static void dispatchSigwinch(int) {
-  if (auto h = resizeHandler) {
-    auto size = getScreenSize();
-    if (size.x && size.y) {
-      h(size);
+  static void dispatchSigwinch(int) {
+    if (auto h = resizeHandler) {
+      auto size = lava::term::getScreenSize();
+      if (size.x && size.y) {
+        h(size);
+      }
     }
   }
-}
+} // anonymous namespace
 
-void ash::term::initialize() {
+namespace lava::term {
+
+void initialize() {
   tcgetattr(STDIN_FILENO, &termAttrs);
 
-  ash::term::saveState();
+  saveState();
 
   struct sigaction act;
   sigemptyset(&act.sa_mask);
@@ -35,23 +37,23 @@ void ash::term::initialize() {
   sigaction(SIGWINCH, &act, nullptr);
 }
 
-bool ash::term::isTTYInput() {
+bool isTTYInput() {
   return isatty(STDIN_FILENO);
 }
 
-bool ash::term::isTTYOutput() {
+bool isTTYOutput() {
   return isatty(STDOUT_FILENO);
 }
 
-bool ash::term::isTTYError() {
+bool isTTYError() {
   return isatty(STDERR_FILENO);
 }
 
-void ash::term::saveState() {
+void saveState() {
   tcgetattr(STDIN_FILENO, &termAttrs);
 }
 
-void ash::term::setShellState() {
+void setShellState() {
   struct termios newAttrs = termAttrs;
   newAttrs.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
   newAttrs.c_oflag |= (ONLCR);
@@ -63,16 +65,16 @@ void ash::term::setShellState() {
   setvbuf(stdout, nullptr, _IONBF, 0);
 }
 
-void ash::term::restoreState() {
+void restoreState() {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &termAttrs);
   setvbuf(stdout, nullptr, _IOFBF, BUFSIZ);
 }
 
-int ash::term::getChar() {
+int getChar() {
   return getchar();
 }
 
-size_t ash::term::getChars(char *buf, size_t min, size_t max) {
+size_t getChars(char *buf, size_t min, size_t max) {
   ssize_t amt;
   size_t total = 0;
   while ((amt = read(STDIN_FILENO, buf, max)) > 0) {
@@ -86,7 +88,7 @@ size_t ash::term::getChars(char *buf, size_t min, size_t max) {
   return total;
 }
 
-Point ash::term::getScreenSize() {
+Point getScreenSize() {
   struct winsize size;
   if (ioctl(STDIN_FILENO, TIOCGWINSZ, &size)) {
     return {0, 0};
@@ -94,8 +96,10 @@ Point ash::term::getScreenSize() {
   return Point{size.ws_row, size.ws_col};
 }
 
-ResizeHandler ash::term::onResize(ResizeHandler newHandler) {
+ResizeHandler onResize(ResizeHandler newHandler) {
   auto oldHandler = resizeHandler;
   resizeHandler = newHandler;
   return oldHandler;
 }
+
+} // namespace lava::term

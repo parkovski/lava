@@ -1,7 +1,7 @@
-#include "ash/ash.h"
-#include "ash/terminal/ansi.h"
+#include "lava/lava.h"
+#include "lava/term/ansi.h"
 
-using namespace ash::term::ansi;
+using namespace lava::term::ansi;
 
 // TODO: These are generated on Windows. May need to add more later.
 // - ^[Ox - x in [A, B, C, D, H, F, P, Q, R, S]
@@ -320,7 +320,7 @@ bool convertEscBNum(DecodeResult &r, const char *s, const char *end) {
 
 } // anonymous namespace
 
-DecodeResult ash::term::ansi::decode(std::string_view str) {
+DecodeResult lava::term::ansi::decode(std::string_view str) {
   DecodeResult result{};
   result.key = TermKey::None;
   auto const length = str.length();

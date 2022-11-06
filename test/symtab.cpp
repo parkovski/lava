@@ -1,9 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
-#include "ash/sym/symtab.h"
-#include "ash/sym/attr.h"
+#include "lava/sym/symtab.h"
+#include "lava/sym/attr.h"
 
-using namespace ash::sym;
-using namespace ash::sym::attr;
+using namespace lava::sym;
+using namespace lava::sym::attr;
 
 TEST_CASE("Symbol table", "[symtab]") {
   SymbolTable st;

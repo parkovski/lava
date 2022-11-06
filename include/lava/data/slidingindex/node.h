@@ -1,10 +1,10 @@
-#ifndef ASH_DATA_SLIDINGINDEX_NODE_H_
-#define ASH_DATA_SLIDINGINDEX_NODE_H_
+#ifndef LAVA_DATA_SLIDINGINDEX_NODE_H_
+#define LAVA_DATA_SLIDINGINDEX_NODE_H_
 
 #include <type_traits>
 #include <algorithm>
 
-namespace ash::data::slidx {
+namespace lava::data::slidx {
 
 // Type of the node colors, either red or black.
 typedef bool color_t;
@@ -194,6 +194,6 @@ private:
   offset_type _offset = 0;
 };
 
-} // namespace ash::data::slidx
+} // namespace lava::data::slidx
 
-#endif // ASH_DATA_SLIDINGINDEX_NODE_H_
+#endif // LAVA_DATA_SLIDINGINDEX_NODE_H_

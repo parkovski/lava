@@ -1,9 +1,9 @@
-#include "ash/terminal/terminal.h"
-#include "ash/terminal/ansi.h"
+#include "lava/term/terminal.h"
+#include "lava/term/ansi.h"
 
 #include <catch2/catch_test_macros.hpp>
 
-using namespace ash::term;
+using namespace lava::term;
 
 TEST_CASE("ANSI decoder works", "[terminal]") {
   using namespace ansi;

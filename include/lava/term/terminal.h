@@ -1,12 +1,15 @@
-#ifndef ASH_TERMINAL_H_
-#define ASH_TERMINAL_H_
-
-#include "point.h"
+#ifndef LAVA_TERMINAL_H_
+#define LAVA_TERMINAL_H_
 
 #include <cstddef>
 #include <utility>
 
-namespace ash::term {
+namespace lava::term {
+
+struct Point {
+  unsigned short x;
+  unsigned short y;
+};
 
 /// Initializes the terminal library and saves the previous state.
 void initialize();
@@ -56,6 +59,6 @@ struct ScopedRawMode {
   }
 };
 
-} // namespace ash::term
+} // namespace lava::term
 
-#endif /* ASH_TERMINAL_H_ */
+#endif /* LAVA_TERMINAL_H_ */

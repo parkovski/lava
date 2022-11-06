@@ -3,3 +3,6 @@
 /.clangd/
 /.cache/
 /bin
+*.env
+*.cmake-env
+compile_commands.json

@@ -1,10 +1,10 @@
-#ifndef ASH_DATA_INTERVALTREE_SEARCHITERATOR_H_
-#define ASH_DATA_INTERVALTREE_SEARCHITERATOR_H_
+#ifndef LAVA_DATA_INTERVALTREE_SEARCHITERATOR_H_
+#define LAVA_DATA_INTERVALTREE_SEARCHITERATOR_H_
 
 #include "iterator.h"
 #include <functional>
 
-namespace ash::data::itree {
+namespace lava::data::itree {
 
 using namespace detail;
 
@@ -63,7 +63,7 @@ protected:
   size_t _end;
 };
 
-#define ASH_IMPLEMENT_SEARCH_ITERATOR(Class)                                   \
+#define LAVA_IMPLEMENT_SEARCH_ITERATOR(Class)                                   \
   public:                                                                      \
     friend class Class<opposite_const_t<T>>;                                   \
                                                                                \
@@ -160,8 +160,8 @@ protected:
 #include "overlapsearchiterator.h"
 #include "equalsearchiterator.h"
 
-#undef ASH_IMPLEMENT_SEARCH_ITERATOR
+#undef LAVA_IMPLEMENT_SEARCH_ITERATOR
 
-} // namespace ash::data::itree
+} // namespace lava::data::itree
 
-#endif // ASH_DATA_INTERVALTREE_SEARCHITERATOR_H_
+#endif // LAVA_DATA_INTERVALTREE_SEARCHITERATOR_H_

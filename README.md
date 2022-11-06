@@ -1,4 +1,4 @@
-# Ash - A Language Design Experimentation Shell
+# Lava - A Language Design Experiment
 
 I'm trying to see what kinds of introspection and metaprogramming I can
 accomplish by using recent compiler techniques.
@@ -176,7 +176,7 @@ and error behavior, defined according to an ABI.
 
 ### Data
 
-Anything residing in memory. One of the goals of ash is a type system flexible enough to represent
+Anything residing in memory. One of the goals of Lava is a type system flexible enough to represent
 any type of data in any format. The type of data ranges from "something reachable via pointer" to
 "blob with a known size" to structures with individual members, padding, alignment, inheritance, etc.
 This is an area of ongoing investigation.

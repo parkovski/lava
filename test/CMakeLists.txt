@@ -1,18 +1,18 @@
 add_executable(test
   data.cpp
-  lexer.cpp
+  # lexer.cpp
   rope.cpp
-  source.cpp
-  symtab.cpp
+  # source.cpp
+  # symtab.cpp
   terminal.cpp
 )
 target_link_libraries(test PRIVATE
   Catch2::Catch2WithMain
-  ashdata
-  ashparser
-  ashsource
-  ashsym
-  ashterminal
+  lava-data
+  # lava-parser
+  # lava-source
+  # lava-sym
+  lava-term
   rope
 )
 

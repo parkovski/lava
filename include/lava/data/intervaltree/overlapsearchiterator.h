@@ -1,11 +1,11 @@
-#ifndef ASH_IMPLEMENT_SEARCH_ITERATOR
+#ifndef LAVA_IMPLEMENT_SEARCH_ITERATOR
 #error This file should be included by intervaltree/searchiterator.h
 #endif
 
 // This iterator finds ranges that overlap the search range at some point.
 template<typename T>
 class OverlapSearchIterator final : public SearchIteratorBase<T> {
-  ASH_IMPLEMENT_SEARCH_ITERATOR(OverlapSearchIterator)
+  LAVA_IMPLEMENT_SEARCH_ITERATOR(OverlapSearchIterator)
 
   // For overlapping nodes, we have to look at any node starting before end
   // with a max after start.

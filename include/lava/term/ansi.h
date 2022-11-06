@@ -1,7 +1,7 @@
-#ifndef ASH_TERMINAL_ANSI_H_
-#define ASH_TERMINAL_ANSI_H_
+#ifndef LAVA_TERM_ANSI_H_
+#define LAVA_TERM_ANSI_H_
 
-#include "point.h"
+#include "terminal.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,7 +11,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-namespace ash::term::ansi {
+namespace lava::term::ansi {
 
 // What kind of information does this character or sequence provide?
 enum DecodeResultKind : uint8_t {
@@ -402,20 +402,20 @@ DecodeResult decode(std::string_view str);
     constexpr auto bright_white   = style::Style<>(107);
   } // namespace bg
 
-} // namespace ash::term::ansi
+} // namespace lava::term::ansi
 
 namespace fmt {
   template<class Tuple, size_t N>
-  struct formatter<ash::term::ansi::detail::OutputWrapper<Tuple, N>>
+  struct formatter<lava::term::ansi::detail::OutputWrapper<Tuple, N>>
     : ostream_formatter {};
 
   template<class... Args>
-  struct formatter<ash::term::ansi::detail::Print<Args...>>
+  struct formatter<lava::term::ansi::detail::Print<Args...>>
     : ostream_formatter {};
 
   template<size_t N>
-  struct formatter<ash::term::ansi::style::Style<N>>
+  struct formatter<lava::term::ansi::style::Style<N>>
     : ostream_formatter {};
 }
 
-#endif // ASH_TERMINAL_ANSI_H_
+#endif // LAVA_TERMINAL_ANSI_H_

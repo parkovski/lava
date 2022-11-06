@@ -1,11 +1,11 @@
-#include "ash/ash.h"
-#define ASH_C_ROPE_FWD
-#include "ash/data/rope.h"
+#include "lava/lava.h"
+#define LAVA_C_ROPE_FWD
+#include "lava/data/rope.h"
 
 #include <rope/rope.h>
 
-using namespace ash;
-using namespace ash::data::rope;
+using namespace lava;
+using namespace lava::data::rope;
 
 namespace {
 

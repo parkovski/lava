@@ -1,20 +1,20 @@
-#include "ash/source/locator.h"
+#include "lava/source/locator.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("SourceLocator basic tests", "[source]") {
-  using namespace ash::source;
+  using namespace lava::source;
   using namespace std::literals;
 
   SourceLocator lctr;
-  auto fileFoo = lctr.addFile("foo.ash"sv);
-  auto fileBar = lctr.addFile("bar.ash"sv);
+  auto fileFoo = lctr.addFile("foo.lava"sv);
+  auto fileBar = lctr.addFile("bar.lava"sv);
 
-  REQUIRE(lctr.findFile("foo.ash"sv) == fileFoo);
-  REQUIRE(lctr.findFile("bar.ash"sv) == fileBar);
+  REQUIRE(lctr.findFile("foo.lava"sv) == fileFoo);
+  REQUIRE(lctr.findFile("bar.lava"sv) == fileBar);
   REQUIRE_FALSE(lctr.findFile("does_not_exist"sv).isValid());
-  REQUIRE(lctr.fileName(fileFoo) == "foo.ash"sv);
-  REQUIRE(lctr.fileName(fileBar) == "bar.ash"sv);
+  REQUIRE(lctr.fileName(fileFoo) == "foo.lava"sv);
+  REQUIRE(lctr.fileName(fileBar) == "bar.lava"sv);
   REQUIRE(lctr.fileName(FileId()).empty());
 
   SourceLocation fooLocs[] = {

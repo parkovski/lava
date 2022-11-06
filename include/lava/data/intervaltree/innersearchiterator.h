@@ -1,11 +1,11 @@
-#ifndef ASH_IMPLEMENT_SEARCH_ITERATOR
+#ifndef LAVA_IMPLEMENT_SEARCH_ITERATOR
 #error This file should be included by intervaltree/searchiterator.h
 #endif
 
 // This iterator finds ranges that are completely inside the search range.
 template<typename T>
 class InnerSearchIterator final : public SearchIteratorBase<T> {
-  ASH_IMPLEMENT_SEARCH_ITERATOR(InnerSearchIterator)
+  LAVA_IMPLEMENT_SEARCH_ITERATOR(InnerSearchIterator)
 
   // Based on starting at the lowest possible start and moving to eligible
   // higher nodes.

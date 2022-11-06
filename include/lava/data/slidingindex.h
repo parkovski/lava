@@ -1,10 +1,10 @@
-#ifndef ASH_DATA_SLIDINGINDEX_H_
-#define ASH_DATA_SLIDINGINDEX_H_
+#ifndef LAVA_DATA_SLIDINGINDEX_H_
+#define LAVA_DATA_SLIDINGINDEX_H_
 
 #include "slidingindex/node.h"
 #include "slidingindex/iterator.h"
 
-namespace ash::data {
+namespace lava::data {
 namespace slidx {
 
 // A sorted set of numbers where all the following operations take O(log n):
@@ -827,6 +827,6 @@ void SlidingIndex<P, O, Compare>::rotate_right(node_type pivot) {
 
 using slidx::SlidingIndex;
 
-} // namespace ash::data
+} // namespace lava::data
 
-#endif // ASH_DATA_SLIDINGINDEX_H_
+#endif // LAVA_DATA_SLIDINGINDEX_H_

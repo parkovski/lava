@@ -1,11 +1,11 @@
-#ifndef ASH_IMPLEMENT_SEARCH_ITERATOR
+#ifndef LAVA_IMPLEMENT_SEARCH_ITERATOR
 #error This file should be included by intervaltree/searchiterator.h
 #endif
 
 // This iterator finds ranges that are equal to the search range.
 template<typename T>
 class EqualSearchIterator final : public SearchIteratorBase<T> {
-  ASH_IMPLEMENT_SEARCH_ITERATOR(EqualSearchIterator)
+  LAVA_IMPLEMENT_SEARCH_ITERATOR(EqualSearchIterator)
 
   // Rule out any nodes whose position is different from the start position or
   // whose max is too small.

@@ -1,10 +1,10 @@
-#ifndef ASH_AST_POLYVECTOR_H_
-#define ASH_AST_POLYVECTOR_H_
+#ifndef LAVA_AST_POLYVECTOR_H_
+#define LAVA_AST_POLYVECTOR_H_
 
 #include <type_traits>
 #include <utility>
 
-namespace ash::data {
+namespace lava::data {
 
 namespace detail {
 
@@ -355,6 +355,6 @@ private:
   vector_type _vector;
 };
 
-} // namespace ash::data
+} // namespace lava::data
 
-#endif // ASH_AST_POLYVECTOR_H_
+#endif // LAVA_AST_POLYVECTOR_H_

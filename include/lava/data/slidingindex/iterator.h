@@ -1,5 +1,5 @@
-#ifndef ASH_DATA_SLIDINGINDEX_ITERATOR_H_
-#define ASH_DATA_SLIDINGINDEX_ITERATOR_H_
+#ifndef LAVA_DATA_SLIDINGINDEX_ITERATOR_H_
+#define LAVA_DATA_SLIDINGINDEX_ITERATOR_H_
 
 #include "node.h"
 
@@ -8,7 +8,7 @@
 #include <utility>
 #include <cassert>
 
-namespace ash::data::slidx {
+namespace lava::data::slidx {
 
 // This iterator meets all the requirements of a random access iterator
 // _except_ arbitrary movement is not constant time.
@@ -200,6 +200,6 @@ protected:
 };
 
 
-} // namespace ash::data::slidx
+} // namespace lava::data::slidx
 
-#endif // ASH_DATA_SLIDINGINDEX_ITERATOR_H_
+#endif // LAVA_DATA_SLIDINGINDEX_ITERATOR_H_

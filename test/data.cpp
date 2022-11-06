@@ -1,12 +1,12 @@
-#include "ash/data/slidingindex.h"
-#include "ash/data/intervaltree.h"
+#include "lava/data/slidingindex.h"
+#include "lava/data/intervaltree.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
 
 TEST_CASE("Sliding index", "[slidx]") {
-  using namespace ash::data::slidx;
+  using namespace lava::data::slidx;
   SlidingIndex<> set;
   set.insert(50);
   set.insert(30);
@@ -37,7 +37,7 @@ TEST_CASE("Sliding index", "[slidx]") {
 }
 
 TEST_CASE("Interval tree", "[itree]") {
-  using namespace ash::data::itree;
+  using namespace lava::data::itree;
 
   IntervalTree<std::string_view> tree;
 #define MAKE_PAIR(a, b) #a ", " #b
