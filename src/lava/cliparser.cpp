@@ -160,7 +160,9 @@ noexcept {
   if (auto arg = (*this)[argn]; arg[argi + 1]) {
    // Current arg contains more characters; consume them.
     value = &arg[argi + 1];
-    argi = std::numeric_limits<int>::max();
+    // Set to INT_MAX - 1 so that when the loop increments this it won't
+    // overflow.
+    argi = std::numeric_limits<int>::max() - 1;
     return true;
   }
 

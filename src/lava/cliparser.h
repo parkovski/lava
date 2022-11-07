@@ -56,8 +56,7 @@ protected:
 
   /// Handle a single character (`-a`) argument. Multiple arguments can be
   /// listed after the `-`. On Windows, also matches a single argument in the
-  /// form `/a`. The default implementation forwards everything to
-  /// `apply_long`.
+  /// form `/a`.
   /// @param c Argument character.
   /// @param more `true` if there are more arguments in this set, otherwise
   ///        false.

@@ -1,4 +1,6 @@
 add_executable(test
+  cliparser.cpp
+  ../src/lava/cliparser.cpp
   data.cpp
   # lexer.cpp
   rope.cpp
