@@ -1,4 +1,5 @@
 add_executable(test
+  arena.cpp
   cliparser.cpp
   ../src/lava/cliparser.cpp
   data.cpp
