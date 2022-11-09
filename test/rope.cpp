@@ -1,4 +1,5 @@
 #include "lava/lava.h"
+#include "lava/util/scope_exit.h"
 #include "rope/rope.h" 
 
 #include <catch2/catch_test_macros.hpp>

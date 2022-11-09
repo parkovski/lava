@@ -1,4 +1,5 @@
 #include "lava/lava.h"
+#include "lava/util/utf_cp.h"
 #define LAVA_C_ROPE_FWD
 #include "lava/data/rope.h"
 

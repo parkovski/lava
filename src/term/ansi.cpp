@@ -1,4 +1,5 @@
 #include "lava/lava.h"
+#include "lava/util/utf_cp.h"
 #include "lava/term/ansi.h"
 
 using namespace lava::term::ansi;
