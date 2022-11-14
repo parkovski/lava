@@ -1,6 +1,9 @@
 #include "options.h"
 #include "cliparser.h"
+#include "lava/term/terminal.h"
 #include <fmt/format.h>
+
+#include <boost/algorithm/string.hpp>
 
 using namespace std::string_view_literals;
 
@@ -16,94 +19,140 @@ struct OptionsParser : CliParser {
 protected:
   int apply_short(char arg, bool more, int &argi) noexcept override;
   int apply_long(std::string_view arg, std::string_view value)
-    noexcept override;
+                noexcept override;
   int apply_other(std::string_view arg) noexcept override;
 
 private:
+  int apply_option(CliOpt opt, std::string_view value) noexcept;
+
   int invalid_option() noexcept;
   int duplicate_option() noexcept;
   int expected_option(std::string_view what) noexcept;
   int expected_value(std::string_view option,
                      std::string_view values) noexcept;
 
+  /// @param value Boolean-ish CLI option value.
+  /// @param allow_auto Allow the value "auto" (or unset).
+  /// @return For truthy values (yes, on, true, 1), returns `OptTrue`.
+  ///         For falsey values (no, off, false, 0), returns `OptFalse`.
+  ///         If `allow_auto` is true, returns `OptAuto` for `auto` or empty.
+  ///         Otherwise returns `OptNull` for invalid input.
+  OptBool get_bool_value(std::string_view value, bool allow_auto = false)
+                        noexcept;
+
   Options *_opts;
 };
 
 int OptionsParser::apply_short(char arg, bool more, int &argi)
-noexcept {
+                              noexcept {
+  CliOpt opt = CliOpt::_count_;
+  std::string_view value{};
   switch (arg) {
   default:
     return invalid_option();
 
   case '-':
+    opt = CliOpt::Stdin;
     if (argi != 0) {
+      // Dash option must be in position 0 - not combined with other options.
       return invalid_option();
     }
-    if (_opts->wants_stdin) {
-      return duplicate_option();
-    }
-
-    _opts->wants_stdin = 1;
     break;
 
-  case 'e': {
-    if (!_opts->eval_source.empty()) {
-      return duplicate_option();
-    }
-
-    std::string_view value;
+  case 'e':
+    opt = CliOpt::Eval;
     if (!value_short(value, argi)) {
       return expected_option("expression");
     }
-
-    _opts->eval_source = value;
     break;
-  }
+
+  case 'E':
+    opt = CliOpt::Edit;
+    break;
 
   case 'h':
-    _opts->wants_help = 1;
+    opt = CliOpt::Help;
+    break;
+
+  case 'i':
+    opt = CliOpt::Interactive;
     break;
   }
 
-  return 0;
+  return apply_option(opt, value);
 }
 
 int OptionsParser::apply_long(std::string_view arg, std::string_view value)
 noexcept {
+  CliOpt opt = CliOpt::_count_;
+
   if (arg == "help"sv) {
-    _opts->wants_help = 1;
-    return 0;
-  }
-
-  if (arg == "eval"sv) {
-    if (!_opts->eval_source.empty()) {
-      return duplicate_option();
+    opt = CliOpt::Help;
+  } else if (arg == "color"sv) {
+    opt = CliOpt::Color;
+    if (!value_long(value)) {
+      return expected_value("--color", "yes/no/auto");
     }
-
+  } else if (arg == "eval"sv) {
+    opt = CliOpt::Eval;
     if (!value_long(value)) {
       return expected_option("expression"sv);
     }
-
-    _opts->eval_source = value;
-    return 0;
+  } else if (arg == "--interactive"sv) {
+    opt = CliOpt::Interactive;
+  } else if (arg == "--edit") {
+    opt = CliOpt::Edit;
+  } else {
+    return invalid_option();
   }
 
-  if (arg == "color"sv) {
-    if (value == "no"sv) {
-      _opts->wants_color = 0;
-    } else if (value == "yes"sv) {
-      _opts->wants_color = 1;
-    } else {
-      return expected_value("--color", "'yes' or 'no'");
-    }
-    return 0;
-  }
-
-  return invalid_option();
+  return apply_option(opt, value);
 }
 
 int OptionsParser::apply_other(std::string_view arg) noexcept {
   _opts->sources.emplace_back(arg);
+  return 0;
+}
+
+int OptionsParser::apply_option(CliOpt opt, std::string_view value) noexcept {
+  switch (opt) {
+  default:
+    return invalid_option();
+
+  case CliOpt::Help:
+    _opts->wants_help = 1;
+    break;
+
+  case CliOpt::Stdin:
+    if (_opts->wants_stdin) {
+      return duplicate_option();
+    }
+    _opts->wants_stdin = 1;
+    break;
+
+  case CliOpt::Color:
+    if ((_opts->wants_color = get_bool_value(value)) == OptNull) {
+      return expected_option("yes/no/auto");
+    }
+    break;
+
+  case CliOpt::Eval:
+    if (!_opts->eval_source.empty()) {
+      // Add another source line for each eval option.
+      _opts->eval_source.append(1, '\n');
+    }
+    _opts->eval_source.append(value);
+    break;
+
+  case CliOpt::Interactive:
+    _opts->startup_mode = StartupModeInteractive;
+    break;
+
+  case CliOpt::Edit:
+    _opts->startup_mode = StartupModeEditText;
+    break;
+  }
+
   return 0;
 }
 
@@ -127,6 +176,37 @@ int OptionsParser::expected_value(std::string_view option,
   fmt::print(stderr, "Expected {} after '{}'", values, option);
   return 1;
 }
+
+OptBool OptionsParser::get_bool_value(std::string_view value, bool allow_auto)
+                                     noexcept {
+  if (boost::algorithm::iequals(value, "on"sv)
+   || boost::algorithm::iequals(value, "yes"sv)
+   || boost::algorithm::iequals(value, "true"sv)
+   || value == "1"sv) {
+    return OptTrue;
+  }
+
+  if (boost::algorithm::iequals(value, "off"sv)
+   || boost::algorithm::iequals(value, "no"sv)
+   || boost::algorithm::iequals(value, "false"sv)
+   || value == "0"sv) {
+    return OptFalse;
+  }
+
+  if (allow_auto && (value.empty()
+                  || boost::algorithm::iequals(value, "auto"sv))) {
+    return OptAuto;
+  }
+
+  return OptNull;
+}
+
+Options::Options() noexcept
+  : wants_help{0}
+  , wants_stdin{0}
+  , wants_color{OptAuto}
+  , startup_mode{StartupModeInteractive}
+{}
 
 std::variant<Options, int>
 Options::from_args(int argc, const char *const *argv) noexcept {

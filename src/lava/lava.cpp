@@ -1,3 +1,4 @@
+#include "lava/lava.h"
 #include "cliparser.h"
 #include "options.h"
 #include <fmt/format.h>
@@ -37,10 +38,31 @@ static int commandMain(int argc, const char *const argv[]) {
 }
 #endif
 
+static void print_help(bool islong) {
+  (void)islong;
+
+  fmt::print(
+R"===(Usage: lava [options...] [main.lava] [script.lava...] [arguments...]
+
+Options:
+  -h, --help        Print this help message.
+  -                 Read script from stdin.
+  --                Stop parsing Lava options.
+
+  --color=[bool]    Use color when printing diagnostics.
+  -e, --eval=...    Evaluate expression.
+  -i, --interactive Interactive mode; default if no files are specified and
+                    stdin is a tty. Necessary if specifying other scripts to
+                    load on the command line.
+  -E, --edit        Basic text editor mode.
+)==="
+  );
+}
+
 #ifndef _WIN32
 int main(int argc, char **argv)
 #else
-static int win32_main(int argc, char **argv)
+static int u8main(int argc, char **argv)
 #endif
 {
   auto opts_or_error = Options::from_args(argc, argv);
@@ -50,12 +72,25 @@ static int win32_main(int argc, char **argv)
 
   auto opts = std::get<Options>(opts_or_error);
 
-  fmt::print("help? {}\nstdin? {}\ncolor? {}\n",
-             (bool)opts.wants_help,
-             (bool)opts.wants_stdin,
-             (bool)opts.wants_color);
-  for (auto const &src : opts.sources) {
-    fmt::print("> {}\n", src.native());
+  if (opts.wants_help) {
+    print_help(false);
+    return 0;
+  }
+
+  switch (opts.startup_mode) {
+  case StartupModeInteractive:
+
+  case StartupModeCliEval:
+    break;
+
+  case StartupModeMainFile:
+    break;
+
+  case StartupModeEditText:
+    break;
+
+  default:
+    LAVA_UNREACHABLE();
   }
 
   return 0;
@@ -98,6 +133,6 @@ int wmain() {
     }
   }
 
-  return win32_main(argc, argv);
+  return u8main(argc, argv);
 }
 #endif // _WIN32

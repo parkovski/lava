@@ -3,6 +3,7 @@
 
 #include "lava/lava.h"
 #include <type_traits>
+#include <utility>
 
 namespace lava::detail {
 

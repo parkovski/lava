@@ -1,15 +1,15 @@
-#ifndef ASH_PARSER_TOKEN_H_
-#define ASH_PARSER_TOKEN_H_
+#ifndef LAVA_PARSER_TOKEN_H_
+#define LAVA_PARSER_TOKEN_H_
 
-#include "ash/source/location.h"
+#include "location.h"
 
 #include <string_view>
 #include <iosfwd>
 #include <fmt/ostream.h>
 
-namespace ash::parser {
+namespace lava::source {
 
-#define ASH_TOKENS(M)    \
+#define LAVA_TOKENS(M)   \
   M(Invalid)             \
   M(EndOfInput)          \
   M(Whitespace)          \
@@ -91,9 +91,9 @@ namespace ash::parser {
   M(Question)            \
 
 enum class Tk : uint16_t {
-#define ASH_TK(t) t,
-  ASH_TOKENS(ASH_TK)
-#undef ASH_TK
+#define LAVA_TK(t) t,
+  LAVA_TOKENS(LAVA_TK)
+#undef LAVA_TK
 };
 
 std::string_view to_string(Tk tk);
@@ -124,10 +124,10 @@ struct Token {
   Tk id;
 };
 
-} // namespace ash::parser
+} // namespace lava::source
 
 namespace fmt {
-  template<> struct formatter<ash::parser::Tk> : ostream_formatter {};
+  template<> struct formatter<lava::source::Tk> : ostream_formatter {};
 }
 
-#endif // ASH_PARSER_TOKEN_H_
+#endif // LAVA_PARSER_TOKEN_H_

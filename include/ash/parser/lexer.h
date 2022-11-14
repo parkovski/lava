@@ -1,16 +1,13 @@
-#ifndef ASH_PARSER_LEXER_H_
-#define ASH_PARSER_LEXER_H_
+#ifndef LAVA_PARSER_LEXER_H_
+#define LAVA_PARSER_LEXER_H_
 
 #include "token.h"
-#include "ash/source/session.h"
-
 #include <vector>
 
-namespace ash::parser {
+namespace lava::source {
 
-class Lexer {
-public:
-  explicit Lexer(source::Session *session);
+struct Lexer {
+  explicit Lexer(Source &source);
 
   Token operator()();
 
@@ -45,7 +42,6 @@ private:
   void fwd(size_t count = 1);
   Ctx context() const;
 
-  source::Session *_session;
   std::string_view _text;
   size_t _index;
   unsigned _line;
@@ -54,6 +50,6 @@ private:
   source::LocId _lastLoc;
 };
 
-} // namespace ash::parser
+} // namespace lava::source
 
-#endif // ASH_PARSER_LEXER_H_
+#endif // LAVA_PARSER_LEXER_H_

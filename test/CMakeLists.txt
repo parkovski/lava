@@ -2,19 +2,14 @@ add_executable(test
   arena.cpp
   cliparser.cpp
   ../src/lava/cliparser.cpp
-  data.cpp
-  # lexer.cpp
+  intervaltree.cpp
   rope.cpp
-  # source.cpp
-  # symtab.cpp
+  slidingindex.cpp
   terminal.cpp
 )
 target_link_libraries(test PRIVATE
   Catch2::Catch2WithMain
   lava-data
-  # lava-parser
-  # lava-source
-  # lava-sym
   lava-term
   rope
 )

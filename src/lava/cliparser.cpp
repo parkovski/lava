@@ -1,5 +1,6 @@
 #include "cliparser.h"
 #include <cassert>
+#include <limits>
 
 using namespace lava::cli;
 

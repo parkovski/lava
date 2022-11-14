@@ -4,4 +4,4 @@ set(SOURCES
   options.cpp
 )
 add_executable(lava ${SOURCES})
-target_link_libraries(lava lava-data lava-term)
+target_link_libraries(lava lava-data fmt::fmt Boost::headers)
