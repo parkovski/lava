@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 project(ash VERSION 0.1.0)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -24,9 +24,13 @@ else()
 endif()
 
 find_package(fmt REQUIRED)
-find_package(Boost 1.72 REQUIRED
-  COMPONENTS container
-)
+find_package(Boost 1.72 REQUIRED COMPONENTS container)
+if(WIN32)
+  set(uriparser_COMPONENTS char wchar_t)
+else()
+  set(uriparser_COMPONENTS char)
+endif()
+find_package(uriparser 0.9.7 REQUIRED COMPONENTS ${uriparser_COMPONENTS})
 
 set(ASH_INCLUDE_DIR
   $<BUILD_INTERFACE:

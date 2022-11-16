@@ -24,6 +24,10 @@ int eval(std::string_view code) {
   return 0;
 }
 
+void prompt() {
+  fmt::print("\r\nash> ");
+}
+
 int interactiveMain() {
   if (!term::isTTYInput()) {
     return 1;
@@ -36,13 +40,13 @@ int interactiveMain() {
   source::Session session(&locator, file);
 
   std::string line;
-  fmt::print("ash‽ ");
+  prompt();
   while (true) {
     int c = term::getChar();
     if (c == 4 && line.empty()) {
       break;
     } else if (c == 13 || c == 10) {
-      fmt::print("\r\nash‽ ");
+      prompt();
       line.clear();
     } else if (c == 8 || c == 0x7F) {
       if (!line.empty()) {

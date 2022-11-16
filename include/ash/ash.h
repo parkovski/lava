@@ -58,7 +58,7 @@ namespace ash::detail {
 
 namespace ash {
 
-#ifdef _cpp_char8_t
+#ifdef __cpp_char8_t
 using u8char = char8_t;
 #else
 using u8char = char;
