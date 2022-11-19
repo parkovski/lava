@@ -10,9 +10,16 @@ add_executable(test
 target_link_libraries(test PRIVATE
   Catch2::Catch2WithMain
   lava-data
+  lava-syn
   lava-term
   rope
 )
+
+add_executable(test-print test-print.cpp)
+target_link_libraries(test-print lava-syn lava-src fmt::fmt)
+
+# add_executable(test-reconstruct test-reconstruct.cpp)
+# target_link_libraries(test-reconstruct lava-syn lava-src fmt::fmt)
 
 include(CTest)
 include(Catch)

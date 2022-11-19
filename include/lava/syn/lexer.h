@@ -2,14 +2,34 @@
 #define LAVA_PARSER_LEXER_H_
 
 #include "token.h"
+#include "lava/src/source.h"
 #include <vector>
 
-namespace lava::source {
+namespace lava::syn {
 
 struct Lexer {
-  explicit Lexer(Source &source);
+  enum class Context : uint8_t {
+    Initial,
+    EmbedParens,
+    EmbedBraces,
+    StringBacktick,
+    StringDQuote,
+    StringSQuote,
+    CommentLine,
+    CommentBlock,
+  };
+
+  struct State {
+    Location loc;
+    Context ctx;
+  };
+
+  explicit Lexer(src::SourceFile &source);
 
   Token operator()();
+  Location location() const noexcept {
+    return _loc;
+  }
 
 private:
   Tk readInitial();
@@ -27,27 +47,13 @@ private:
   Tk readEscape();
   Tk readVariable();
 
-  enum class Ctx : uint8_t {
-    Initial,
-    EmbedParens,
-    EmbedBraces,
-    StringBacktick,
-    StringDQuote,
-    StringSQuote,
-    CommentLine,
-    CommentBlock,
-  };
-
   char ch(size_t offset = 0) const;
   void fwd(size_t count = 1);
-  Ctx context() const;
+  Context context() const;
 
-  std::string_view _text;
-  size_t _index;
-  unsigned _line;
-  unsigned _column;
-  std::vector<Ctx> _context;
-  source::LocId _lastLoc;
+  src::SourceFile *_src;
+  Location _loc;
+  std::vector<Context> _context;
 };
 
 } // namespace lava::source

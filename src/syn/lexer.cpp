@@ -1,55 +1,53 @@
-#include "ash/parser/lexer.h"
+#include "lava/syn/lexer.h"
 
 #include <cassert>
 
-using namespace ash;
-using namespace ash::parser;
+using namespace lava;
+using namespace lava::syn;
 
-Lexer::Lexer(source::Session *session)
-  : _session{session},
-    _text{session->locator().fileText(session->file())},
-    _index{0},
-    _line{1},
-    _column{1},
-    _lastLoc{session->locator().first(session->file())}
+Lexer::Lexer(src::SourceFile &source)
+  : _src{&source}
+  , _loc{0, 1, 1}
+  , _context{}
 {}
 
 Token Lexer::operator()() {
   Tk tk;
+  auto startLoc = _loc;
 
-  if (_index >= _text.length()) {
-    return Token(Tk::EndOfInput, _lastLoc);
+  if (_loc.index >= _src->size()) {
+    return Token(Tk::EndOfInput, {_loc, _loc});
   } else {
     switch (context()) {
-      case Ctx::Initial:
+      case Context::Initial:
         tk = readInitial();
         break;
 
-      case Ctx::EmbedParens:
+      case Context::EmbedParens:
         tk = readEmbedParens();
         break;
 
-      case Ctx::EmbedBraces:
+      case Context::EmbedBraces:
         tk = readEmbedBraces();
         break;
 
-      case Ctx::StringBacktick:
+      case Context::StringBacktick:
         tk = readStringBacktick();
         break;
 
-      case Ctx::StringDQuote:
+      case Context::StringDQuote:
         tk = readStringDQuote();
         break;
 
-      case Ctx::StringSQuote:
+      case Context::StringSQuote:
         tk = readStringSQuote();
         break;
 
-      case Ctx::CommentLine:
+      case Context::CommentLine:
         tk = readCommentLine();
         break;
 
-      case Ctx::CommentBlock:
+      case Context::CommentBlock:
         tk = readCommentBlock();
         break;
 
@@ -59,11 +57,12 @@ Token Lexer::operator()() {
     }
   }
 
-  auto startLoc = _lastLoc;
-  _lastLoc = _session->locator().mark(
-    {_session->file(), _index, _line, _column}
-  );
-  return Token(tk, startLoc);
+  if (tk == Tk::Ident) {
+    return Token(kw_from_string(std::string_view{
+      &(*_src)[startLoc.index], _loc.index - startLoc.index
+    }), {startLoc, _loc});
+  }
+  return Token(tk, {startLoc, _loc});
 }
 
 Tk Lexer::readInitial() {
@@ -91,9 +90,9 @@ Tk Lexer::readInitial() {
 
     case '\r':
       if (ch(1) == '\n') {
-        _index += 2;
-        ++_line;
-        _column = 1;
+        _loc.index += 2;
+        ++_loc.line;
+        _loc.column = 1;
         return Tk::NewLine;
       }
       return readWhitespace();
@@ -109,24 +108,28 @@ Tk Lexer::readInitial() {
       return readVariable();
 
     case '\'':
-      _context.push_back(Ctx::StringSQuote);
+      _context.push_back(Context::StringSQuote);
       fwd();
       return Tk::SingleQuote;
 
     case '"':
-      _context.push_back(Ctx::StringDQuote);
+      _context.push_back(Context::StringDQuote);
       fwd();
       return Tk::DoubleQuote;
 
     case '`':
-      _context.push_back(Ctx::StringBacktick);
+      _context.push_back(Context::StringBacktick);
       fwd();
       return Tk::Backtick;
 
     case '#':
-      _context.push_back(Ctx::CommentLine);
       fwd();
-      return Tk::CommentLine;
+      if (_loc.index == 1 && ch() == '!') {
+        fwd();
+        _context.push_back(Context::CommentLine);
+        return Tk::HashBang;
+      }
+      return Tk::Hash;
 
     case '~':
       fwd();
@@ -243,7 +246,7 @@ Tk Lexer::readInitial() {
         return Tk::LessLess;
       } else if (c == '#') {
         fwd();
-        _context.push_back(Ctx::CommentBlock);
+        _context.push_back(Context::CommentBlock);
         return Tk::CommentBlockStart;
       }
       return Tk::Less;
@@ -266,9 +269,18 @@ Tk Lexer::readInitial() {
 
     case '/':
       fwd();
-      if (ch() == '=') {
+      c = ch();
+      if (c == '=') {
         fwd();
         return Tk::SlashEqual;
+      } else if (c == '*') {
+        fwd();
+        _context.push_back(Context::CommentBlock);
+        return Tk::CommentBlockStart;
+      } else if (c == '/') {
+        fwd();
+        _context.push_back(Context::CommentLine);
+        return Tk::CommentLine;
       }
       return Tk::Slash;
 
@@ -457,14 +469,22 @@ Tk Lexer::readCommentLine() {
 }
 
 Tk Lexer::readCommentBlock() {
-  char c = ch();
+  char c = ch(), c1;
   if (c == 0) {
     return Tk::EndOfInput;
   }
-  if (c == '#' && ch(1) == '>') {
+
+  c1 = ch(1);
+  if (c == '*' && c1 == '/') {
     _context.pop_back();
     fwd(2);
     return Tk::CommentBlockEnd;
+  }
+  if (c == '/' && c1 == '*') {
+    // Nested comment.
+    _context.push_back(Context::CommentBlock);
+    fwd(2);
+    return Tk::CommentBlockStart;
   }
 
   while (true) {
@@ -473,7 +493,9 @@ Tk Lexer::readCommentBlock() {
     if (c == 0) {
       break;
     }
-    if (c == '#' && ch(1) == '>') {
+
+    c1 = ch(1);
+    if ((c == '*' && c1 == '/') || (c == '/' && c1 == '*')) {
       break;
     }
   }
@@ -618,12 +640,12 @@ Tk Lexer::readVariable() {
   switch (c) {
     case '(':
       fwd();
-      _context.push_back(Ctx::EmbedParens);
+      _context.push_back(Context::EmbedParens);
       return Tk::DollarLeftParen;
 
     case '{':
       fwd();
-      _context.push_back(Ctx::EmbedBraces);
+      _context.push_back(Context::EmbedBraces);
       return Tk::DollarLeftBrace;
 
     case '!':
@@ -669,35 +691,35 @@ Tk Lexer::readVariable() {
 }
 
 char Lexer::ch(size_t offset) const {
-  if (_index + offset >= _text.length()) {
+  if (_loc.index + offset >= _src->size()) {
     return 0;
   }
-  return _text[_index + offset];
+  return (*_src)[_loc.index + offset];
 }
 
 void Lexer::fwd(size_t count) {
-  if (_index >= _text.length()) {
+  if (_loc.index >= _src->size()) {
     return;
   }
-  if (_text[_index] == '\n') {
-    ++_line;
-    _column = 1;
-  } else if (_text[_index] == '\r' && ch(1) == '\n') {
-    ++_line;
-    _column = 1;
-    ++_index;
+  if ((*_src)[_loc.index] == '\n') {
+    ++_loc.line;
+    _loc.column = 1;
+  } else if ((*_src)[_loc.index] == '\r' && ch(1) == '\n') {
+    ++_loc.line;
+    _loc.column = 1;
+    ++_loc.index;
   } else {
-    ++_column;
+    ++_loc.column;
   }
-  ++_index;
+  ++_loc.index;
   if (count > 1) {
     fwd(count - 1);
   }
 }
 
-Lexer::Ctx Lexer::context() const {
+Lexer::Context Lexer::context() const {
   if (_context.empty()) {
-    return Ctx::Initial;
+    return Context::Initial;
   }
   return _context.back();
 }
