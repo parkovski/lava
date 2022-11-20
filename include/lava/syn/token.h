@@ -2,10 +2,14 @@
 #define LAVA_PARSER_TOKEN_H_
 
 #include "location.h"
+
 #include <string_view>
 #include <iosfwd>
-#include <fmt/ostream.h>
 #include <compare>
+
+#include <fmt/ostream.h>
+
+#include <boost/container/small_vector.hpp>
 
 namespace lava::syn {
 
@@ -17,6 +21,7 @@ namespace lava::syn {
                          \
   M(HashBang)            \
   M(CommentLine)         \
+  M(CommentLineText)     \
   M(CommentBlockStart)   \
   M(CommentBlockText)    \
   M(CommentBlockEnd)     \
@@ -38,14 +43,14 @@ namespace lava::syn {
   M(SingleQuote)         \
                          \
   M(Tilde)               \
-  M(Not)                 \
-  M(NotEqual)            \
+  M(Excl)                \
+  M(ExclEqual)           \
   M(At)                  \
   M(Hash)                \
   M(Percent)             \
   M(PercentEqual)        \
-  M(Caret)               \
-  M(CaretEqual)          \
+  M(Hat)                 \
+  M(HatEqual)            \
   M(And)                 \
   M(AndAnd)              \
   M(AndEqual)            \
@@ -54,9 +59,11 @@ namespace lava::syn {
   M(StarEqual)           \
   M(StarStarEqual)       \
   M(Minus)               \
+  M(MinusMinus)          \
   M(MinusEqual)          \
   M(MinusArrowRight)     \
   M(Plus)                \
+  M(PlusPlus)            \
   M(PlusEqual)           \
   M(Equal)               \
   M(EqualEqual)          \
@@ -146,40 +153,64 @@ std::string_view to_string(Kw kw);
 std::ostream &operator<<(std::ostream &os, Kw kw);
 Kw kw_from_string(std::string_view str);
 
-struct Token {
-  constexpr Token() noexcept
+struct SimpleToken {
+  constexpr SimpleToken() noexcept
     : _span{}, _id{Tk::Invalid}, _kw{Kw::_undef}
   {}
 
-  constexpr explicit Token(Tk id, Span span) noexcept
+  constexpr explicit SimpleToken(Tk id, Span span) noexcept
     : _span{span}, _id{id}, _kw{Kw::_undef}
   {}
 
-  constexpr explicit Token(Kw kw, Span span) noexcept
+  constexpr explicit SimpleToken(Kw kw, Span span) noexcept
     : _span{span}, _id{Tk::Ident}, _kw{kw}
   {}
 
-  constexpr Token(const Token &) noexcept = default;
-  constexpr Token &operator=(const Token &) noexcept = default;
+  constexpr SimpleToken(const SimpleToken &) noexcept = default;
+  constexpr SimpleToken &operator=(const SimpleToken &) noexcept = default;
 
-  constexpr bool operator==(const Token &other) const noexcept = default;
+  constexpr bool operator==(const SimpleToken &other) const noexcept = default;
 
-  const Span &span() const noexcept
+  constexpr const Span &span() const noexcept
   { return _span; }
 
-  Tk id() const noexcept
+  constexpr Tk id() const noexcept
   { return _id; }
 
-  Kw keyword() const noexcept
+  constexpr Kw keyword() const noexcept
   { return _kw; }
 
-  explicit operator bool() const noexcept
+  constexpr explicit operator bool() const noexcept
   { return bool(_span); }
 
 private:
   Span _span;
   Tk _id;
   Kw _kw;
+};
+
+struct Token : SimpleToken {
+  using SimpleToken::SimpleToken;
+  using TriviaList = boost::container::small_vector<SimpleToken, 1>;
+
+  explicit Token(const SimpleToken &token, const TriviaList &trivia)
+    : SimpleToken{token}
+    , _trivia{trivia}
+  {}
+
+  Token(const Token &) noexcept = default;
+  Token &operator=(const Token &) noexcept = default;
+
+  bool operator==(const Token &other) const noexcept = default;
+
+  TriviaList &trivia() noexcept
+  { return _trivia; }
+
+  const TriviaList &trivia() const noexcept
+  { return _trivia; }
+
+private:
+  TriviaList _trivia;
 };
 
 } // namespace lava::source

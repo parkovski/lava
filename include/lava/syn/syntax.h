@@ -18,7 +18,6 @@ struct Visitor;
 struct Trivia;
 struct Tree;
 
-typedef boost::container::small_vector<Token, 1> TriviaList;
 typedef std::unique_ptr<struct Node> NodePtr;
 
 // Base classes {{{
@@ -226,19 +225,19 @@ struct Leaf : Node {
   { return _token; }
 
   /// @returns The Trivia node preceding this node.
-  TriviaList &trivia_before() noexcept
-  { return _trivia_before; }
+  Token::TriviaList &trivia_before() noexcept
+  { return _token.trivia(); }
 
   /// @returns The Trivia node preceding this node.
-  const TriviaList &trivia_before() const noexcept
-  { return _trivia_before; }
+  const Token::TriviaList &trivia_before() const noexcept
+  { return _token.trivia(); }
 
   /// @returns Pointer to the Trivia node following this node; may be null.
-  TriviaList *trivia_after() noexcept
+  Token::TriviaList *trivia_after() noexcept
   { return _trivia_after; }
 
   /// @returns Pointer to the Trivia node following this node; may be null.
-  const TriviaList *trivia_after() const noexcept
+  const Token::TriviaList *trivia_after() const noexcept
   { return _trivia_after; }
 
   explicit operator bool() const noexcept
@@ -246,8 +245,7 @@ struct Leaf : Node {
 
 private:
   Token _token;
-  TriviaList _trivia_before;
-  TriviaList *_trivia_after;
+  Token::TriviaList *_trivia_after;
 };
 
 // }}}

@@ -5,7 +5,7 @@ using namespace lava;
 using namespace std::string_view_literals;
 
 static void print_lex(syn::Lexer &lexer, src::SourceFile &file) {
-  syn::Token token;
+  syn::SimpleToken token;
   do {
     token = lexer();
     auto loc = lexer.location();

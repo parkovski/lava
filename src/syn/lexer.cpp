@@ -11,12 +11,12 @@ Lexer::Lexer(src::SourceFile &source)
   , _context{}
 {}
 
-Token Lexer::operator()() {
+SimpleToken Lexer::operator()() {
   Tk tk;
   auto startLoc = _loc;
 
   if (_loc.index >= _src->size()) {
-    return Token(Tk::EndOfInput, {_loc, _loc});
+    return SimpleToken(Tk::EndOfInput, {_loc, _loc});
   } else {
     switch (context()) {
       case Context::Initial:
@@ -58,11 +58,11 @@ Token Lexer::operator()() {
   }
 
   if (tk == Tk::Ident) {
-    return Token(kw_from_string(std::string_view{
+    return SimpleToken(kw_from_string(std::string_view{
       &(*_src)[startLoc.index], _loc.index - startLoc.index
     }), {startLoc, _loc});
   }
-  return Token(tk, {startLoc, _loc});
+  return SimpleToken(tk, {startLoc, _loc});
 }
 
 Tk Lexer::readInitial() {
@@ -139,9 +139,9 @@ Tk Lexer::readInitial() {
       fwd();
       if (ch() == '=') {
         fwd();
-        return Tk::NotEqual;
+        return Tk::ExclEqual;
       }
-      return Tk::Not;
+      return Tk::Excl;
 
     case '@':
       fwd();
@@ -159,9 +159,9 @@ Tk Lexer::readInitial() {
       fwd();
       if (ch() == '=') {
         fwd();
-        return Tk::CaretEqual;
+        return Tk::HatEqual;
       }
-      return Tk::Caret;
+      return Tk::Hat;
 
     case '&':
       fwd();
@@ -465,7 +465,7 @@ Tk Lexer::readCommentLine() {
       break;
     }
   }
-  return Tk::Text;
+  return Tk::CommentLineText;
 }
 
 Tk Lexer::readCommentBlock() {
@@ -499,7 +499,7 @@ Tk Lexer::readCommentBlock() {
       break;
     }
   }
-  return Tk::Text;
+  return Tk::CommentBlockText;
 }
 
 Tk Lexer::readWhitespace() {

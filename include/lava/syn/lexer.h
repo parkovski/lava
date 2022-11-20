@@ -26,7 +26,7 @@ struct Lexer {
 
   explicit Lexer(src::SourceFile &source);
 
-  Token operator()();
+  SimpleToken operator()();
   Location location() const noexcept {
     return _loc;
   }
