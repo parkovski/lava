@@ -1,6 +1,7 @@
 set(SOURCES
   lexer.cpp
-  #  parser.cpp
+  parser.cpp
+  printer.cpp
   syntax.cpp
   token.cpp
 )

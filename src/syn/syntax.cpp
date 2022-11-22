@@ -16,6 +16,18 @@ TYPE_INFO(Infix, infix)
 
 #undef TYPE_INFO
 
+Node::~Node() {}
+
+Leaf::~Leaf() {}
+
+Adjacent::~Adjacent() {}
+
+Bracketed::~Bracketed() {}
+
+Unary::~Unary() {}
+
+Infix::~Infix() {}
+
 // Node spans {{{
 
 RefSpan Leaf::span() const noexcept {
@@ -88,7 +100,7 @@ Node *Infix::get_child(unsigned n) noexcept {
   std::pair<NodePtr, NodePtr> *pair;
   if (is_right_recursive) {
     if (n == chain.size() * 2) return first.get();
-    pair = &chain[chain.size() - (n / 2)];
+    pair = &chain[chain.size() - (n / 2) - 1];
   } else {
     if (n == 0) return first.get();
     pair = &chain[(n - 1) / 2];

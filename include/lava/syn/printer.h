@@ -11,7 +11,21 @@ struct Printer : Visitor {
     : _src{&src}
   {}
 
-  void visit_trivia(const TriviaList &trivia);
+  void visit_trivia(const Token::TriviaList &trivia);
+  void visit_leaf(Leaf &node) override final;
+  void visit_adjacent(Adjacent &node) override final;
+  void visit_bracketed(Bracketed &node) override final;
+  void visit_unary(Unary &node) override final;
+  void visit_infix(Infix &node) override final;
+
+  src::SourceFile *_src;
+};
+
+struct LispPrinter : Visitor {
+  LispPrinter(src::SourceFile &src)
+    : _src{&src}
+  {}
+
   void visit_leaf(Leaf &node) override final;
   void visit_adjacent(Adjacent &node) override final;
   void visit_bracketed(Bracketed &node) override final;

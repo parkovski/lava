@@ -198,8 +198,11 @@ struct Token : SimpleToken {
     , _trivia{trivia}
   {}
 
-  Token(const Token &) noexcept = default;
-  Token &operator=(const Token &) noexcept = default;
+  Token(const Token &) = default;
+  Token &operator=(const Token &) = default;
+
+  Token(Token &&) noexcept = default;
+  Token &operator=(Token &&) noexcept = default;
 
   bool operator==(const Token &other) const noexcept = default;
 

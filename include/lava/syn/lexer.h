@@ -31,6 +31,8 @@ struct Lexer {
     return _loc;
   }
 
+  src::SourceFile &source() { return *_src; }
+
 private:
   Tk readInitial();
   Tk readEmbedParens();

@@ -38,6 +38,8 @@ struct Node {
     : _parent{parent}
   {}
 
+  virtual ~Node() = 0;
+
   // The root node is the only node with no parent.
   bool is_root() const noexcept
   { return _parent == nullptr; }
@@ -61,7 +63,7 @@ struct Node {
 
 private:
   // Parent node; only the root node may be null.
-  Tree *_parent;
+  Tree *_parent = nullptr;
 };
 
 struct Tree : virtual Node {
@@ -81,7 +83,7 @@ struct Tree : virtual Node {
     typedef const Node &reference;
     typedef std::bidirectional_iterator_tag iterator_category;
 
-    explicit const_iterator(const Tree *parent, unsigned index = unsigned(-1))
+    explicit const_iterator(const Tree *parent, unsigned index)
              noexcept
       : _parent{const_cast<Tree*>(parent)}
       , _index{index}
@@ -132,8 +134,8 @@ struct Tree : virtual Node {
     }
 
   protected:
-    Tree *_parent;
-    unsigned _index;
+    Tree *_parent = nullptr;
+    unsigned _index = 0;
   };
 
   struct iterator : const_iterator {
@@ -214,6 +216,8 @@ struct Leaf : Node {
     , _token{token}
   {}
 
+  ~Leaf();
+
   RefSpan span() const noexcept override final;
   Type type() const noexcept override final;
   void visit(Visitor &v) override final;
@@ -244,8 +248,8 @@ struct Leaf : Node {
   { return bool(_token); }
 
 private:
-  Token _token;
-  Token::TriviaList *_trivia_after;
+  Token _token = {};
+  Token::TriviaList *_trivia_after = nullptr;
 };
 
 // }}}
@@ -254,6 +258,8 @@ private:
 struct Adjacent : Tree {
   using Tree::Tree;
 
+  ~Adjacent();
+
   RefSpan span() const noexcept override final;
 
   Type type() const noexcept override final;
@@ -262,13 +268,15 @@ struct Adjacent : Tree {
   unsigned child_count() const noexcept override final;
   Node *get_child(unsigned n) noexcept override final;
 
-  boost::container::small_vector<NodePtr, 2> chain;
+  boost::container::small_vector<NodePtr, 2> chain = {};
 };
 
 // Expression of type '(' <expr> ')'
 struct Bracketed : Tree {
   using Tree::Tree;
 
+  ~Bracketed();
+
   RefSpan span() const noexcept override final;
 
   Type type() const noexcept override final;
@@ -277,9 +285,9 @@ struct Bracketed : Tree {
   unsigned child_count() const noexcept override final;
   Node *get_child(unsigned n) noexcept override final;
 
-  NodePtr open;
-  NodePtr close;
-  NodePtr expr;
+  NodePtr open = {};
+  NodePtr close = {};
+  NodePtr expr = {};
 };
 
 // When is_postfix is false:
@@ -288,6 +296,8 @@ struct Bracketed : Tree {
 //   <expr> <op>
 struct Unary : Tree {
   using Tree::Tree;
+
+  ~Unary();
 
   RefSpan span() const noexcept override final;
 
@@ -298,8 +308,8 @@ struct Unary : Tree {
   Node *get_child(unsigned n) noexcept override final;
 
   bool is_postfix = false;
-  NodePtr op;
-  NodePtr expr;
+  NodePtr op = {};
+  NodePtr expr = {};
 };
 
 // When `is_right_recursive` is false:
@@ -308,6 +318,8 @@ struct Unary : Tree {
 //   (<expr2> <op2> (<expr1> <op1> (<expr0> <op0> <first>)))...
 struct Infix : Tree {
   using Tree::Tree;
+
+  ~Infix();
 
   RefSpan span() const noexcept override final;
 
@@ -319,10 +331,10 @@ struct Infix : Tree {
 
   bool is_right_recursive = false;
 
-  NodePtr first;
+  NodePtr first = {};
 
   // Pairs of {op, expr}.
-  boost::container::small_vector<std::pair<NodePtr, NodePtr>, 1> chain;
+  boost::container::small_vector<std::pair<NodePtr, NodePtr>, 1> chain = {};
 };
 
 struct Visitor {

@@ -1,4 +1,6 @@
 #include "lava/syn/lexer.h"
+#include "lava/syn/parser.h"
+#include "lava/syn/printer.h"
 #include <fmt/format.h>
 
 using namespace lava;
@@ -53,6 +55,15 @@ static void print_lex(syn::Lexer &lexer, src::SourceFile &file) {
   } while (token.id() != syn::Tk::EndOfInput);
 }
 
+static void print_parse(syn::Parser &parser, syn::Visitor &printer) {
+  auto node = parser();
+  if (!node) {
+    fmt::print(stderr, "Parser returned null!\n");
+    return;
+  }
+  node->visit(printer);
+}
+
 int main(int argc, char *argv[]) {
   if (argc != 3) {
     fmt::print(stderr, "Usage: test-print [mode] [file].");
@@ -60,9 +71,17 @@ int main(int argc, char *argv[]) {
   }
   std::filesystem::path path{argv[2]};
   src::SourceFile src{path};
-  syn::Lexer lexer{src};
   if (argv[1] == "lex"sv) {
+    syn::Lexer lexer{src};
     print_lex(lexer, src);
+  } else if (argv[1] == "parse"sv) {
+    syn::Parser parser{src};
+    syn::Printer printer{src};
+    print_parse(parser, printer);
+  } else if (argv[1] == "lisp"sv) {
+    syn::Parser parser{src};
+    syn::LispPrinter printer{src};
+    print_parse(parser, printer);
   } else {
     fmt::print(stderr, "Unknown mode '{}'.", argv[1]);
     return 1;
