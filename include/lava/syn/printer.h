@@ -4,6 +4,13 @@
 #include "syntax.h"
 #include "../src/source.h"
 
+#define LAVA_DECLARE_VISITOR \
+  void visit_leaf(Leaf &node) override final;           \
+  void visit_adjacent(Adjacent &node) override final;   \
+  void visit_bracketed(Bracketed &node) override final; \
+  void visit_unary(Unary &node) override final;         \
+  void visit_infix(Infix &node) override final
+
 namespace lava::syn {
 
 struct Printer : Visitor {
@@ -11,26 +18,27 @@ struct Printer : Visitor {
     : _src{&src}
   {}
 
+  LAVA_DECLARE_VISITOR;
+
   void visit_trivia(const Token::TriviaList &trivia);
-  void visit_leaf(Leaf &node) override final;
-  void visit_adjacent(Adjacent &node) override final;
-  void visit_bracketed(Bracketed &node) override final;
-  void visit_unary(Unary &node) override final;
-  void visit_infix(Infix &node) override final;
 
   src::SourceFile *_src;
 };
 
-struct LispPrinter : Visitor {
-  LispPrinter(src::SourceFile &src)
+struct PrinterLisp : Visitor {
+  PrinterLisp(src::SourceFile &src)
     : _src{&src}
   {}
 
-  void visit_leaf(Leaf &node) override final;
-  void visit_adjacent(Adjacent &node) override final;
-  void visit_bracketed(Bracketed &node) override final;
-  void visit_unary(Unary &node) override final;
-  void visit_infix(Infix &node) override final;
+  LAVA_DECLARE_VISITOR;
+
+  src::SourceFile *_src;
+};
+
+struct PrinterXml : Visitor {
+  PrinterXml(src::SourceFile &src);
+
+  LAVA_DECLARE_VISITOR;
 
   src::SourceFile *_src;
 };

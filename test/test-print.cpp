@@ -80,7 +80,11 @@ int main(int argc, char *argv[]) {
     print_parse(parser, printer);
   } else if (argv[1] == "lisp"sv) {
     syn::Parser parser{src};
-    syn::LispPrinter printer{src};
+    syn::PrinterLisp printer{src};
+    print_parse(parser, printer);
+  } else if (argv[1] == "xml"sv) {
+    syn::Parser parser{src};
+    syn::PrinterXml printer{src};
     print_parse(parser, printer);
   } else {
     fmt::print(stderr, "Unknown mode '{}'.", argv[1]);
