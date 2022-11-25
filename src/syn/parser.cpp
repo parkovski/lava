@@ -12,7 +12,7 @@ Parser::Parser(src::SourceFile &src)
 {}
 
 NodePtr Parser::operator()(unsigned flags) {
-  auto list = std::make_unique<Adjacent>(nullptr);
+  auto list = std::make_unique<Adjacent>();
   while (peek().id() != Tk::EndOfInput) {
     list->chain.emplace_back(parse_expr(list.get(), 1));
   }
@@ -171,7 +171,7 @@ NodePtr Parser::parse_expr_terminal(Tree *parent) {
   case Tk::FloatLit:
   case Tk::Ident:
   case Tk::Variable:
-    return std::make_unique<Leaf>(parent, take());
+    return std::make_unique<Leaf>(take());
 
   // case Tk::Text: ???
 
@@ -191,9 +191,9 @@ NodePtr Parser::parse_expr_prefix(Tree *parent, unsigned flags) {
 
   unsigned prec = prec_prefix(peek().id(), flags);
   if (prec != 0) {
-    auto prefix = std::make_unique<Unary>(parent);
+    auto prefix = std::make_unique<Unary>();
     prefix->is_postfix = false;
-    prefix->op = std::make_unique<Leaf>(prefix.get(), take());
+    prefix->op = std::make_unique<Leaf>(take());
     prefix->expr = parse_expr(prefix.get(), prec);
     return prefix;
   }
@@ -236,11 +236,11 @@ NodePtr Parser::parse_expr_bracketed(Tree *parent, unsigned flags) {
 
   // TODO: if (flags & EF_String)
 
-  auto bk = std::make_unique<Bracketed>(parent);
-  bk->open = std::make_unique<Leaf>(bk.get(), take());
+  auto bk = std::make_unique<Bracketed>();
+  bk->open = std::make_unique<Leaf>(take());
   bk->expr = parse_expr(bk.get(), (flags & EF_FlagMask) | 1);
   if (peek().id() == close_tk) {
-    bk->close = std::make_unique<Leaf>(bk.get(), take());
+    bk->close = std::make_unique<Leaf>(take());
   } else {
     // Expected close operator
   }
@@ -274,11 +274,11 @@ NodePtr Parser::parse_expr_left(Tree *parent, NodePtr left,
       auto op = take();
       auto right = parse_expr_prefix(parent, flags & EF_FlagMask);
       if (right) {
-        auto bin = std::make_unique<Infix>(parent);
+        auto bin = std::make_unique<Infix>();
         right = parse_expr_right(bin.get(), std::move(right), infix_prec);
         bin->first = std::move(left);
         bin->chain.emplace_back(
-          std::make_unique<Leaf>(bin.get(), std::move(op)),
+          std::make_unique<Leaf>(std::move(op)),
           std::move(right)
         );
         left = std::move(bin);
@@ -287,9 +287,9 @@ NodePtr Parser::parse_expr_left(Tree *parent, NodePtr left,
     }
 
     if (postfix_prec >= left_prec) {
-      auto postfix = std::make_unique<Unary>(parent /* TODO ??? */);
+      auto postfix = std::make_unique<Unary>();
       postfix->is_postfix = true;
-      postfix->op = std::make_unique<Leaf>(postfix.get(), take());
+      postfix->op = std::make_unique<Leaf>(take());
       postfix->expr = std::move(left);
       left = std::move(postfix);
     }
@@ -318,11 +318,11 @@ NodePtr Parser::parse_expr_right(Tree *parent, NodePtr left,
       return nullptr;
     }
 
-    auto bin = std::make_unique<Infix>(parent);
+    auto bin = std::make_unique<Infix>();
     bin->is_right_recursive = true;
     bin->first = std::move(right);
     bin->chain.emplace_back(
-      std::make_unique<Leaf>(bin.get(), std::move(op)),
+      std::make_unique<Leaf>(std::move(op)),
       std::move(left)
     );
     left = std::move(bin);
