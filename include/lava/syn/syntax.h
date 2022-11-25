@@ -33,16 +33,14 @@ struct Node {
     Adjacent,
   };
 
-  // Construct a node. `parent` may only be null at the root.
-  explicit Node(Tree *parent) noexcept
-    : _parent{parent}
-  {}
-
   virtual ~Node() = 0;
 
   // The root node is the only node with no parent.
   bool is_root() const noexcept
   { return _parent == nullptr; }
+
+  void set_parent(Tree *parent) noexcept
+  { _parent = parent; }
 
   // Get this node's parent node. Always defined unless `is_root()` is true.
   Tree *parent() noexcept
@@ -51,6 +49,12 @@ struct Node {
   // Get this node's parent node. Always defined unless `is_root()` is true.
   const Tree *parent() const noexcept
   { return _parent; }
+
+  void set_tag(const char *tag) noexcept
+  { _tag = tag; }
+
+  const char *tag() const noexcept
+  { return _tag; }
 
   // Total source span of all the tokens in this node.
   virtual RefSpan span() const noexcept = 0;
@@ -62,13 +66,12 @@ struct Node {
   virtual void visit(Visitor &v) = 0;
 
 private:
+  const char *_tag = nullptr;
   // Parent node; only the root node may be null.
   Tree *_parent = nullptr;
 };
 
 struct Tree : virtual Node {
-  using Node::Node;
-
   virtual unsigned child_count() const noexcept = 0;
 
   virtual Node *get_child(unsigned n) noexcept = 0;
@@ -211,9 +214,8 @@ struct Tree : virtual Node {
 
 // A Leaf represents one token with the surrounding trivia.
 struct Leaf : Node {
-  explicit Leaf(Tree *parent, Token token)
-    : Node{parent}
-    , _token{token}
+  explicit Leaf(Token token)
+    : _token{token}
   {}
 
   ~Leaf();
@@ -256,8 +258,6 @@ private:
 
 // Expression of kind <expr0> <expr1>...
 struct Adjacent : Tree {
-  using Tree::Tree;
-
   ~Adjacent();
 
   RefSpan span() const noexcept override final;
@@ -273,8 +273,6 @@ struct Adjacent : Tree {
 
 // Expression of type '(' <expr> ')'
 struct Bracketed : Tree {
-  using Tree::Tree;
-
   ~Bracketed();
 
   RefSpan span() const noexcept override final;
@@ -295,8 +293,6 @@ struct Bracketed : Tree {
 // When is_postfix is true:
 //   <expr> <op>
 struct Unary : Tree {
-  using Tree::Tree;
-
   ~Unary();
 
   RefSpan span() const noexcept override final;
@@ -317,8 +313,6 @@ struct Unary : Tree {
 // When `is_right_recursive` is true:
 //   (<expr2> <op2> (<expr1> <op1> (<expr0> <op0> <first>)))...
 struct Infix : Tree {
-  using Tree::Tree;
-
   ~Infix();
 
   RefSpan span() const noexcept override final;

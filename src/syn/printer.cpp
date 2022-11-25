@@ -149,9 +149,10 @@ void PrinterXml::visit_bracketed(Bracketed &node) {
 }
 
 void PrinterXml::visit_unary(Unary &node) {
-  fmt::print("<unary op=\"{}\">", get_text_escaped(*_src, *node.op));
+  const char *what = node.is_postfix ? "postfix" : "prefix";
+  fmt::print("<{} op=\"{}\">", what, get_text_escaped(*_src, *node.op));
   node.expr->visit(*this);
-  fmt::print("</unary>");
+  fmt::print("</{}>", what);
 }
 
 void PrinterXml::visit_infix(Infix &node) {
