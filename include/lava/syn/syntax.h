@@ -20,18 +20,21 @@ struct Tree;
 
 typedef std::unique_ptr<struct Node> NodePtr;
 
+#define LAVA_EXTENDS_TREE(TypeName)                             \
+  static constinit const std::string_view Tag;                  \
+  ~TypeName();                                                  \
+  RefSpan span() const noexcept override final;                 \
+  void visit(Visitor &v) override final;                        \
+  std::string_view tag() const noexcept override final;         \
+  bool isa(std::string_view tag) const noexcept override final; \
+  unsigned child_count() const noexcept override final;         \
+  Node *get_child(unsigned n) noexcept override final           \
+
 // Base classes {{{
 
 // Syntax tree base type.
 struct Node {
-  // Type info for subclasses of Node.
-  enum class Type {
-    Leaf,
-    Bracketed,
-    Unary,
-    Infix,
-    Adjacent,
-  };
+  static constinit const std::string_view Tag;
 
   virtual ~Node() = 0;
 
@@ -39,6 +42,7 @@ struct Node {
   bool is_root() const noexcept
   { return _parent == nullptr; }
 
+  // Set the parent node after construction.
   void set_parent(Tree *parent) noexcept
   { _parent = parent; }
 
@@ -50,28 +54,37 @@ struct Node {
   const Tree *parent() const noexcept
   { return _parent; }
 
-  void set_tag(const char *tag) noexcept
-  { _tag = tag; }
-
-  const char *tag() const noexcept
-  { return _tag; }
-
   // Total source span of all the tokens in this node.
   virtual RefSpan span() const noexcept = 0;
 
-  // Runtime type info.
-  virtual Type type() const noexcept = 0;
-
   // Visit this node.
-  virtual void visit(Visitor &v) = 0;
+  virtual void visit(Visitor &v);
+
+  // Runtime type info - type name.
+  virtual std::string_view tag() const noexcept = 0;
+
+  // Runtime type info - valid inputs are constinit static Tag members only.
+  virtual bool isa(std::string_view tag) const noexcept;
+
+  // Runtime type info test.
+  template<class T>
+  bool isa() const noexcept
+  { return isa(T::Tag); }
 
 private:
-  const char *_tag = nullptr;
   // Parent node; only the root node may be null.
   Tree *_parent = nullptr;
 };
 
-struct Tree : virtual Node {
+struct Tree : Node {
+  static constinit const std::string_view Tag;
+
+  void visit(Visitor &v) override;
+
+  std::string_view tag() const noexcept override;
+
+  bool isa(std::string_view tag) const noexcept override;
+
   virtual unsigned child_count() const noexcept = 0;
 
   virtual Node *get_child(unsigned n) noexcept = 0;
@@ -79,119 +92,7 @@ struct Tree : virtual Node {
   const Node *get_child(unsigned n) const noexcept
   { return const_cast<Tree*>(this)->get_child(n); }
 
-  struct const_iterator {
-    typedef void difference_type;
-    typedef const Node &value_type;
-    typedef const Node *pointer;
-    typedef const Node &reference;
-    typedef std::bidirectional_iterator_tag iterator_category;
-
-    explicit const_iterator(const Tree *parent, unsigned index)
-             noexcept
-      : _parent{const_cast<Tree*>(parent)}
-      , _index{index}
-    {}
-
-    const_iterator(const const_iterator &) = default;
-    const_iterator &operator=(const const_iterator &) = default;
-
-    friend bool operator==(const const_iterator &a, const const_iterator &b)
-                = default;
-    friend auto operator<=>(const const_iterator &a, const const_iterator &b)
-                = default;
-
-    friend void swap(const_iterator &a, const_iterator &b) noexcept {
-      using std::swap;
-      swap(a._parent, b._parent);
-      swap(a._index, b._index);
-    }
-
-    const Node &operator*() const {
-      return *_parent->get_child(_index);
-    }
-
-    const Node &operator->() const {
-      return **this;
-    }
-
-    const_iterator &operator++() {
-      ++_index;
-      return *this;
-    }
-
-    const_iterator operator++(int) {
-      const_iterator pre = *this;
-      ++_index;
-      return pre;
-    }
-
-    const_iterator &operator--() {
-      --_index;
-      return *this;
-    }
-
-    const_iterator operator--(int) {
-      const_iterator pre = *this;
-      --_index;
-      return pre;
-    }
-
-  protected:
-    Tree *_parent = nullptr;
-    unsigned _index = 0;
-  };
-
-  struct iterator : const_iterator {
-    using const_iterator::difference_type;
-    typedef Node &value_type;
-    typedef Node *pointer;
-    typedef Node &reference;
-    using const_iterator::iterator_category;
-
-    explicit iterator(Tree *parent, unsigned index) noexcept
-      : const_iterator{parent, index}
-    {}
-
-    iterator(const iterator &) = default;
-    iterator &operator=(const iterator &) = default;
-
-    friend bool operator==(const iterator &a, const iterator &b) = default;
-    friend auto operator<=>(const iterator &a, const iterator &b) = default;
-
-    friend void swap(iterator &a, iterator &b) {
-      swap(static_cast<const_iterator&>(a), static_cast<const_iterator&>(b));
-    }
-
-    Node &operator*() {
-      return *_parent->get_child(_index);
-    }
-
-    Node &operator->() {
-      return **this;
-    }
-
-    iterator &operator++() {
-      ++_index;
-      return *this;
-    }
-
-    iterator operator++(int) {
-      iterator pre = *this;
-      ++_index;
-      return pre;
-    }
-
-    iterator &operator--() {
-      --_index;
-      return *this;
-    }
-
-    iterator operator--(int) {
-      iterator pre = *this;
-      --_index;
-      return pre;
-    }
-  };
+#include "tree-iterator.inc"
 
   const_iterator cbegin() const noexcept
   { return const_iterator{this, 0}; }
@@ -214,14 +115,20 @@ struct Tree : virtual Node {
 
 // A Leaf represents one token with the surrounding trivia.
 struct Leaf : Node {
+  static constinit const std::string_view Tag;
+
   explicit Leaf(Token token)
     : _token{token}
   {}
 
   ~Leaf();
 
+  std::string_view tag() const noexcept override final;
+
+  bool isa(std::string_view tag) const noexcept override final;
+
   RefSpan span() const noexcept override final;
-  Type type() const noexcept override final;
+
   void visit(Visitor &v) override final;
 
   Token &token() noexcept
@@ -254,34 +161,30 @@ private:
   Token::TriviaList *_trivia_after = nullptr;
 };
 
-// }}}
-
-// Expression of kind <expr0> <expr1>...
-struct Adjacent : Tree {
-  ~Adjacent();
-
-  RefSpan span() const noexcept override final;
-
-  Type type() const noexcept override final;
-  void visit(Visitor &v) override final;
-
-  unsigned child_count() const noexcept override final;
-  Node *get_child(unsigned n) noexcept override final;
+// List of adjacent nodes.
+struct List : Tree {
+  LAVA_EXTENDS_TREE(List);
 
   boost::container::small_vector<NodePtr, 2> chain = {};
 };
 
+// }}}
+
+// Expressions {{{
+
+struct Expr : Tree {
+  static constinit const std::string_view Tag;
+
+  void visit(Visitor &v) override;
+
+  std::string_view tag() const noexcept override;
+
+  bool isa(std::string_view tag) const noexcept override;
+};
+
 // Expression of type '(' <expr> ')'
-struct Bracketed : Tree {
-  ~Bracketed();
-
-  RefSpan span() const noexcept override final;
-
-  Type type() const noexcept override final;
-  void visit(Visitor &v) override final;
-
-  unsigned child_count() const noexcept override final;
-  Node *get_child(unsigned n) noexcept override final;
+struct Bracketed : Expr {
+  LAVA_EXTENDS_TREE(Bracketed);
 
   NodePtr open = {};
   NodePtr close = {};
@@ -292,16 +195,8 @@ struct Bracketed : Tree {
 //   <op> <expr>
 // When is_postfix is true:
 //   <expr> <op>
-struct Unary : Tree {
-  ~Unary();
-
-  RefSpan span() const noexcept override final;
-
-  Type type() const noexcept override final;
-  void visit(Visitor &v) override final;
-
-  unsigned child_count() const noexcept override final;
-  Node *get_child(unsigned n) noexcept override final;
+struct Unary : Expr {
+  LAVA_EXTENDS_TREE(Unary);
 
   bool is_postfix = false;
   NodePtr op = {};
@@ -312,16 +207,9 @@ struct Unary : Tree {
 //   (((<first> <op0> <expr0>) <op1> <expr1>) <op2> <expr2>)...
 // When `is_right_recursive` is true:
 //   (<expr2> <op2> (<expr1> <op1> (<expr0> <op0> <first>)))...
-struct Infix : Tree {
-  ~Infix();
-
-  RefSpan span() const noexcept override final;
-
-  Type type() const noexcept override final;
-  void visit(Visitor &v) override final;
-
-  unsigned child_count() const noexcept override final;
-  Node *get_child(unsigned n) noexcept override final;
+// If `chain` has more than one element, all operators should be the same.
+struct Infix : Expr {
+  LAVA_EXTENDS_TREE(Infix);
 
   bool is_right_recursive = false;
 
@@ -331,12 +219,125 @@ struct Infix : Tree {
   boost::container::small_vector<std::pair<NodePtr, NodePtr>, 1> chain = {};
 };
 
+// }}}
+
+// Items {{{
+
+struct ItemDecl : Tree {
+  LAVA_EXTENDS_TREE(ItemDecl);
+
+  Leaf item_word;
+  Leaf first_item;
+
+  // Pair of {comma, ident}.
+  std::vector<std::pair<Leaf, Leaf>> item_list;
+};
+
+struct NamespaceDef : Tree {
+  LAVA_EXTENDS_TREE(NamespaceDef);
+
+  Leaf ns_word;
+  Infix path;
+  Leaf open_brace;
+  NodePtr body;
+  Leaf close_brace;
+};
+
+struct InterfaceDef : Tree {
+  LAVA_EXTENDS_TREE(InterfaceDef);
+
+  Leaf interface_word;
+  Leaf name;
+  Leaf open_brace;
+  NodePtr body;
+  Leaf close_brace;
+};
+
+struct StructUnionDef : Tree {
+  LAVA_EXTENDS_TREE(StructUnionDef);
+
+  Leaf struct_union_word;
+  Leaf name;
+  // TODO align
+  Leaf open_brace;
+  NodePtr body;
+  Leaf close_brace;
+};
+
+struct EnumDef : Tree {
+  LAVA_EXTENDS_TREE(EnumDef);
+
+  Leaf enum_word;
+  Leaf name;
+  // TODO ': base_type'
+  Leaf open_brace;
+  NodePtr body;
+  Leaf close_brace;
+};
+
+struct TypeDef : Tree {
+  LAVA_EXTENDS_TREE(TypeDef);
+
+  Leaf type_word;
+  Leaf name;
+  Leaf eq;
+  NodePtr target;
+  Leaf semi;
+};
+
+struct FunDecl : Tree {
+  LAVA_EXTENDS_TREE(FunDecl);
+
+  Leaf fun_word;
+  Leaf name;
+  Leaf open_paren;
+  NodePtr param_list;
+  Leaf close_paren;
+  Leaf semi;
+};
+
+struct FunDef : Tree {
+  LAVA_EXTENDS_TREE(FunDef);
+
+  Leaf fun_word;
+  Leaf name;
+  Leaf open_paren;
+  NodePtr param_list;
+  Leaf close_paren;
+  Leaf open_brace;
+  NodePtr body;
+  Leaf close_brace;
+};
+
+struct VarDef : Tree {
+  LAVA_EXTENDS_TREE(VarDef);
+
+  Leaf var_word;
+  Leaf name;
+  Leaf semi;
+};
+
+// }}}
+
+// The default visitor visits every Leaf in order (DFS).
 struct Visitor {
+  virtual void visit_node(Node &node);
   virtual void visit_leaf(Leaf &node);
-  virtual void visit_adjacent(Adjacent &node);
+  virtual void visit_tree(Tree &node);
+  virtual void visit_list(List &node);
+  virtual void visit_expr(Expr &node);
   virtual void visit_bracketed(Bracketed &node);
   virtual void visit_unary(Unary &node);
   virtual void visit_infix(Infix &node);
+  virtual void visit_item_decl(ItemDecl &node);
+  virtual void visit_namespace_def(NamespaceDef &node);
+  virtual void visit_interface_def(InterfaceDef &node);
+  virtual void visit_struct_union_def(StructUnionDef &node);
+  virtual void visit_enum_def(EnumDef &node);
+  virtual void visit_type_def(TypeDef &node);
+  virtual void visit_fun_decl(FunDecl &node);
+  virtual void visit_fun_def(FunDef &node);
+  virtual void visit_var_def(VarDef &node);
 };
 
 } // namespace lava::syn

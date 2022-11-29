@@ -120,6 +120,7 @@ std::ostream &operator<<(std::ostream &os, Tk tk);
   K(Continue) \
   K(Do) \
   K(Else) \
+  K(Enum) \
   K(For) \
   K(Fun) \
   K(If) \
@@ -130,8 +131,10 @@ std::ostream &operator<<(std::ostream &os, Tk tk);
   K(Let) \
   K(Loop) \
   K(Mutable) \
+  K(Namespace) \
   K(Or) \
   K(Return) \
+  K(Requires) \
   K(Struct) \
   K(Then) \
   K(Type) \

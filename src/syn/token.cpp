@@ -59,6 +59,7 @@ Kw kw_from_string(std::string_view str) {
 
   case 'e':
     if (rest == "lse"sv) return Kw::Else;
+    if (rest == "num"sv) return Kw::Enum;
     break;
 
   case 'f':
@@ -89,11 +90,16 @@ Kw kw_from_string(std::string_view str) {
     break;
 
   case 'l':
+    if (rest == "et"sv) return Kw::Let;
     if (rest == "oop"sv) return Kw::Loop;
     break;
 
   case 'm':
     if (rest == "utable"sv) return Kw::Mutable;
+    break;
+
+  case 'n':
+    if (rest == "amespace"sv) return Kw::Namespace;
     break;
 
   case 'o':
@@ -102,6 +108,7 @@ Kw kw_from_string(std::string_view str) {
 
   case 'r':
     if (rest == "eturn"sv) return Kw::Return;
+    if (rest == "equires"sv) return Kw::Requires;
     break;
 
   case 's':

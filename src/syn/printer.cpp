@@ -27,49 +27,35 @@ void Printer::visit_leaf(Leaf &node) {
   fmt::print("{}", get_text(*_src, node.token().span()));
 }
 
-void Printer::visit_adjacent(Adjacent &node) {
-  for (auto &child : node) {
-    child.visit(*this);
-  }
-}
-
-void Printer::visit_bracketed(Bracketed &node) {
-  for (auto &child : node) {
-    child.visit(*this);
-  }
-}
-
-void Printer::visit_unary(Unary &node) {
-  for (auto &child : node) {
-    child.visit(*this);
-  }
-}
-
-void Printer::visit_infix(Infix &node) {
-  for (auto &child : node) {
-    child.visit(*this);
-  }
-}
-
 // }}}
 
 // PrinterLisp {{{
+
+void PrinterLisp::visit_tree(Tree &node) {
+  fmt::print("(");
+  for (auto &child : node) {
+    child.visit(*this);
+  }
+  fmt::print(")");
+}
 
 void PrinterLisp::visit_leaf(Leaf &node) {
   fmt::print("{}", get_text(*_src, node.span()));
 }
 
-void PrinterLisp::visit_adjacent(Adjacent &node) {
+void PrinterLisp::visit_list(List &node) {
+  fmt::print("[");
   for (auto &child : node) {
     child.visit(*this);
-    fmt::print("\n");
   }
+  fmt::print("]");
 }
 
 void PrinterLisp::visit_bracketed(Bracketed &node) {
-  //fmt::print("'{}' ", get_text(*_src, node.open->span()));
+  fmt::print("({}{} ", get_text(*_src, node.open->span()),
+             get_text(*_src, node.close->span()));
   node.expr->visit(*this);
-  //fmt::print(" '{}'", get_text(*_src, node.close->span()));
+  fmt::print(")");
 }
 
 void PrinterLisp::visit_unary(Unary &node) {
@@ -101,7 +87,7 @@ void PrinterLisp::visit_infix(Infix &node) {
 namespace {
   std::string_view get_text_escaped(lava::src::SourceFile &file, Node &node) {
     // TODO Use a real escape function.
-    if (node.type() == Node::Type::Leaf) {
+    if (node.isa<Leaf>()) {
       switch (static_cast<Leaf&>(node).token().id()) {
       default: break;
       case Tk::And: return "&amp;"; break;
@@ -127,42 +113,17 @@ PrinterXml::PrinterXml(lava::src::SourceFile &src)
   fmt::print("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
 }
 
-void PrinterXml::visit_leaf(Leaf &node) {
-  fmt::print("<leaf kind=\"{}\">{}</leaf>",
-             node.token().id(), get_text_escaped(*_src, node));
-}
-
-void PrinterXml::visit_adjacent(Adjacent &node) {
-  fmt::print("<adjacent>");
+void PrinterXml::visit_tree(Tree &node) {
+  fmt::print("<{}>", node.tag());
   for (auto &child : node) {
     child.visit(*this);
   }
-  fmt::print("</adjacent>");
+  fmt::print("</{}>", node.tag());
 }
 
-void PrinterXml::visit_bracketed(Bracketed &node) {
-  auto open = get_text_escaped(*_src, *node.open);
-  auto close = get_text_escaped(*_src, *node.close);
-  fmt::print("<bracketed kind=\"{}{}\">", open, close);
-  node.expr->visit(*this);
-  fmt::print("</bracketed>");
-}
-
-void PrinterXml::visit_unary(Unary &node) {
-  const char *what = node.is_postfix ? "postfix" : "prefix";
-  fmt::print("<{} op=\"{}\">", what, get_text_escaped(*_src, *node.op));
-  node.expr->visit(*this);
-  fmt::print("</{}>", what);
-}
-
-void PrinterXml::visit_infix(Infix &node) {
-  fmt::print("<infix op=\"{}\">",
-             get_text_escaped(*_src, *node.chain.begin()->first));
-  node.first->visit(*this);
-  for (unsigned i = 0; i < node.chain.size(); ++i) {
-    node.chain[i].second->visit(*this);
-  }
-  fmt::print("</infix>");
+void PrinterXml::visit_leaf(Leaf &node) {
+  fmt::print("<leaf kind=\"{}\">{}</leaf>",
+             node.token().id(), get_text_escaped(*_src, node));
 }
 
 // }}}
