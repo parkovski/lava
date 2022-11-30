@@ -21,14 +21,14 @@ LAVA_NODE_TYPE_IMPL(Bracketed, bracketed, Expr);
 LAVA_NODE_TYPE_IMPL(Unary, unary, Expr);
 LAVA_NODE_TYPE_IMPL(Infix, infix, Expr);
 LAVA_NODE_TYPE_IMPL(ItemDecl, item_decl, Tree);
-LAVA_NODE_TYPE_IMPL(NamespaceDef, namespace_def, Tree);
-LAVA_NODE_TYPE_IMPL(InterfaceDef, interface_def, Tree);
-LAVA_NODE_TYPE_IMPL(StructUnionDef, struct_union_def, Tree);
-LAVA_NODE_TYPE_IMPL(EnumDef, enum_def, Tree);
-LAVA_NODE_TYPE_IMPL(TypeDef, type_def, Tree);
+LAVA_NODE_TYPE_IMPL(Namespace, namespace, Tree);
+LAVA_NODE_TYPE_IMPL(Interface, interface, Tree);
+LAVA_NODE_TYPE_IMPL(StructUnion, struct_union, Tree);
+LAVA_NODE_TYPE_IMPL(Enum, enum, Tree);
+LAVA_NODE_TYPE_IMPL(TypeAlias, type_alias, Tree);
 LAVA_NODE_TYPE_IMPL(FunDecl, fun_decl, Tree);
-LAVA_NODE_TYPE_IMPL(FunDef, fun_def, Tree);
-LAVA_NODE_TYPE_IMPL(VarDef, var_def, Tree);
+LAVA_NODE_TYPE_IMPL(Fun, fun, Tree);
+LAVA_NODE_TYPE_IMPL(Var, var, Tree);
 
 // Node {{{
 
@@ -107,14 +107,14 @@ void Visitor::visit_bracketed(Bracketed &node) {}
 void Visitor::visit_unary(Unary &node) {}
 void Visitor::visit_infix(Infix &node) {}
 void Visitor::visit_item_decl(ItemDecl &node) {}
-void Visitor::visit_namespace_def(NamespaceDef &node) {}
-void Visitor::visit_interface_def(InterfaceDef &node) {}
-void Visitor::visit_struct_union_def(StructUnionDef &node) {}
-void Visitor::visit_enum_def(EnumDef &node) {}
-void Visitor::visit_type_def(TypeDef &node) {}
+void Visitor::visit_namespace(Namespace &node) {}
+void Visitor::visit_interface(Interface &node) {}
+void Visitor::visit_struct_union(StructUnion &node) {}
+void Visitor::visit_enum(Enum &node) {}
+void Visitor::visit_type_alias(TypeAlias &node) {}
 void Visitor::visit_fun_decl(FunDecl &node) {}
-void Visitor::visit_fun_def(FunDef &node) {}
-void Visitor::visit_var_def(VarDef &node) {}
+void Visitor::visit_fun(Fun &node) {}
+void Visitor::visit_var(Var &node) {}
 
 // }}}
 
@@ -159,23 +159,23 @@ RefSpan ItemDecl::span() const noexcept {
   }
 }
 
-RefSpan NamespaceDef::span() const noexcept {
+RefSpan Namespace::span() const noexcept {
   return RefSpan{ns_word.span().start(), close_brace.span().end()};
 }
 
-RefSpan InterfaceDef::span() const noexcept {
+RefSpan Interface::span() const noexcept {
   return RefSpan{interface_word.span().start(), close_brace.span().end()};
 }
 
-RefSpan StructUnionDef::span() const noexcept {
+RefSpan StructUnion::span() const noexcept {
   return RefSpan{struct_union_word.span().start(), close_brace.span().end()};
 }
 
-RefSpan EnumDef::span() const noexcept {
+RefSpan Enum::span() const noexcept {
   return RefSpan{enum_word.span().start(), close_brace.span().end()};
 }
 
-RefSpan TypeDef::span() const noexcept {
+RefSpan TypeAlias::span() const noexcept {
   return RefSpan{type_word.span().start(), semi.span().end()};
 }
 
@@ -183,11 +183,11 @@ RefSpan FunDecl::span() const noexcept {
   return RefSpan{fun_word.span().start(), semi.span().end()};
 }
 
-RefSpan FunDef::span() const noexcept {
+RefSpan Fun::span() const noexcept {
   return RefSpan{fun_word.span().start(), close_brace.span().end()};
 }
 
-RefSpan VarDef::span() const noexcept {
+RefSpan Var::span() const noexcept {
   return RefSpan{var_word.span().start(), semi.span().end()};
 }
 
@@ -263,11 +263,11 @@ Node *ItemDecl::get_child(unsigned n) noexcept {
   }
 }
 
-unsigned NamespaceDef::child_count() const noexcept {
+unsigned Namespace::child_count() const noexcept {
   return 5;
 }
 
-Node *NamespaceDef::get_child(unsigned n) noexcept {
+Node *Namespace::get_child(unsigned n) noexcept {
   switch (n) {
   case 0: return &ns_word;
   case 1: return &path;
@@ -278,11 +278,11 @@ Node *NamespaceDef::get_child(unsigned n) noexcept {
   }
 }
 
-unsigned InterfaceDef::child_count() const noexcept {
+unsigned Interface::child_count() const noexcept {
   return 5;
 }
 
-Node *InterfaceDef::get_child(unsigned n) noexcept {
+Node *Interface::get_child(unsigned n) noexcept {
   switch (n) {
   case 0: return &interface_word;
   case 1: return &name;
@@ -293,11 +293,11 @@ Node *InterfaceDef::get_child(unsigned n) noexcept {
   }
 }
 
-unsigned StructUnionDef::child_count() const noexcept {
+unsigned StructUnion::child_count() const noexcept {
   return 5;
 }
 
-Node *StructUnionDef::get_child(unsigned n) noexcept {
+Node *StructUnion::get_child(unsigned n) noexcept {
   switch (n) {
   case 0: return &struct_union_word;
   case 1: return &name;
@@ -308,11 +308,11 @@ Node *StructUnionDef::get_child(unsigned n) noexcept {
   }
 }
 
-unsigned EnumDef::child_count() const noexcept {
+unsigned Enum::child_count() const noexcept {
   return 5;
 }
 
-Node *EnumDef::get_child(unsigned n) noexcept {
+Node *Enum::get_child(unsigned n) noexcept {
   switch (n) {
   case 0: return &enum_word;
   case 1: return &name;
@@ -323,11 +323,11 @@ Node *EnumDef::get_child(unsigned n) noexcept {
   }
 }
 
-unsigned TypeDef::child_count() const noexcept {
+unsigned TypeAlias::child_count() const noexcept {
   return 5;
 }
 
-Node *TypeDef::get_child(unsigned n) noexcept {
+Node *TypeAlias::get_child(unsigned n) noexcept {
   switch (n) {
   case 0: return &type_word;
   case 1: return &name;
@@ -354,11 +354,11 @@ Node *FunDecl::get_child(unsigned n) noexcept {
   }
 }
 
-unsigned FunDef::child_count() const noexcept {
+unsigned Fun::child_count() const noexcept {
   return 8;
 }
 
-Node *FunDef::get_child(unsigned n) noexcept {
+Node *Fun::get_child(unsigned n) noexcept {
   switch (n) {
   case 0: return &fun_word;
   case 1: return &name;
@@ -372,11 +372,11 @@ Node *FunDef::get_child(unsigned n) noexcept {
   }
 }
 
-unsigned VarDef::child_count() const noexcept {
+unsigned Var::child_count() const noexcept {
   return 3;
 }
 
-Node *VarDef::get_child(unsigned n) noexcept {
+Node *Var::get_child(unsigned n) noexcept {
   switch (n) {
   case 0: return &var_word;
   case 1: return &name;

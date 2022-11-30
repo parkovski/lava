@@ -43,13 +43,13 @@ private:
 
   NodePtr parse_top();
 
-  NodePtr parse_namespace();
-  NodePtr parse_scoped_name();
-  NodePtr parse_interface();
+  Namespace parse_namespace();
+  Infix parse_scoped_name();
+  Interface parse_interface();
   NodePtr parse_interface_inner();
   NodePtr parse_struct_union();
   NodePtr parse_struct_union_inner();
-  NodePtr parse_enum();
+  Enum parse_enum();
   NodePtr parse_enum_inner();
   NodePtr parse_type(bool decl_only = false);
   NodePtr parse_fun(bool decl_only = false);

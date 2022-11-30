@@ -22,6 +22,11 @@ typedef std::unique_ptr<struct Node> NodePtr;
 
 #define LAVA_EXTENDS_TREE(TypeName)                             \
   static constinit const std::string_view Tag;                  \
+  TypeName() = default;                                         \
+  TypeName(const TypeName &) = delete;                          \
+  TypeName &operator=(const TypeName &) = delete;               \
+  TypeName(TypeName &&) = default;                              \
+  TypeName &operator=(TypeName &&) = default;                   \
   ~TypeName();                                                  \
   RefSpan span() const noexcept override final;                 \
   void visit(Visitor &v) override final;                        \
@@ -116,6 +121,12 @@ struct Tree : Node {
 // A Leaf represents one token with the surrounding trivia.
 struct Leaf : Node {
   static constinit const std::string_view Tag;
+
+  Leaf() = default;
+  Leaf(const Leaf &) = delete;
+  Leaf &operator=(const Leaf &) = delete;
+  Leaf(Leaf &&) = default;
+  Leaf &operator=(Leaf &&) = default;
 
   explicit Leaf(Token token)
     : _token{token}
@@ -233,8 +244,8 @@ struct ItemDecl : Tree {
   std::vector<std::pair<Leaf, Leaf>> item_list;
 };
 
-struct NamespaceDef : Tree {
-  LAVA_EXTENDS_TREE(NamespaceDef);
+struct Namespace : Tree {
+  LAVA_EXTENDS_TREE(Namespace);
 
   Leaf ns_word;
   Infix path;
@@ -243,8 +254,8 @@ struct NamespaceDef : Tree {
   Leaf close_brace;
 };
 
-struct InterfaceDef : Tree {
-  LAVA_EXTENDS_TREE(InterfaceDef);
+struct Interface : Tree {
+  LAVA_EXTENDS_TREE(Interface);
 
   Leaf interface_word;
   Leaf name;
@@ -253,8 +264,8 @@ struct InterfaceDef : Tree {
   Leaf close_brace;
 };
 
-struct StructUnionDef : Tree {
-  LAVA_EXTENDS_TREE(StructUnionDef);
+struct StructUnion : Tree {
+  LAVA_EXTENDS_TREE(StructUnion);
 
   Leaf struct_union_word;
   Leaf name;
@@ -264,8 +275,8 @@ struct StructUnionDef : Tree {
   Leaf close_brace;
 };
 
-struct EnumDef : Tree {
-  LAVA_EXTENDS_TREE(EnumDef);
+struct Enum : Tree {
+  LAVA_EXTENDS_TREE(Enum);
 
   Leaf enum_word;
   Leaf name;
@@ -275,8 +286,8 @@ struct EnumDef : Tree {
   Leaf close_brace;
 };
 
-struct TypeDef : Tree {
-  LAVA_EXTENDS_TREE(TypeDef);
+struct TypeAlias : Tree {
+  LAVA_EXTENDS_TREE(TypeAlias);
 
   Leaf type_word;
   Leaf name;
@@ -296,8 +307,8 @@ struct FunDecl : Tree {
   Leaf semi;
 };
 
-struct FunDef : Tree {
-  LAVA_EXTENDS_TREE(FunDef);
+struct Fun : Tree {
+  LAVA_EXTENDS_TREE(Fun);
 
   Leaf fun_word;
   Leaf name;
@@ -309,8 +320,8 @@ struct FunDef : Tree {
   Leaf close_brace;
 };
 
-struct VarDef : Tree {
-  LAVA_EXTENDS_TREE(VarDef);
+struct Var : Tree {
+  LAVA_EXTENDS_TREE(Var);
 
   Leaf var_word;
   Leaf name;
@@ -330,14 +341,14 @@ struct Visitor {
   virtual void visit_unary(Unary &node);
   virtual void visit_infix(Infix &node);
   virtual void visit_item_decl(ItemDecl &node);
-  virtual void visit_namespace_def(NamespaceDef &node);
-  virtual void visit_interface_def(InterfaceDef &node);
-  virtual void visit_struct_union_def(StructUnionDef &node);
-  virtual void visit_enum_def(EnumDef &node);
-  virtual void visit_type_def(TypeDef &node);
+  virtual void visit_namespace(Namespace &node);
+  virtual void visit_interface(Interface &node);
+  virtual void visit_struct_union(StructUnion &node);
+  virtual void visit_enum(Enum &node);
+  virtual void visit_type_alias(TypeAlias &node);
   virtual void visit_fun_decl(FunDecl &node);
-  virtual void visit_fun_def(FunDef &node);
-  virtual void visit_var_def(VarDef &node);
+  virtual void visit_fun(Fun &node);
+  virtual void visit_var(Var &node);
 };
 
 } // namespace lava::syn

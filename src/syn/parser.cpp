@@ -33,17 +33,17 @@ NodePtr Parser::parse_top() {
 
   switch (tk.keyword()) {
   case Kw::Namespace:
-    return parse_namespace();
+    return std::make_unique<Namespace>(parse_namespace());
 
   case Kw::Interface:
-    return parse_interface();
+    return std::make_unique<Interface>(parse_interface());
 
   case Kw::Struct:
   case Kw::Union:
     return parse_struct_union();
 
   case Kw::Enum:
-    return parse_enum();
+    return std::make_unique<Enum>(parse_enum());
 
   case Kw::Type:
     return parse_type();
@@ -66,58 +66,53 @@ NodePtr Parser::parse_top() {
   return nullptr;
 }
 
-NodePtr Parser::parse_namespace() {
+Namespace Parser::parse_namespace() {
   assert(peek().keyword() == Kw::Namespace);
-  auto ns = std::make_unique<List>();
-  ns->chain.emplace_back(take_as_leaf());
-
-  ns->chain.emplace_back(parse_scoped_name());
+  Namespace ns;
+  ns.ns_word = Leaf(take());
+  ns.path = parse_scoped_name();
 
   expect(Tk::LeftBrace, "expected '{' after namespace");
-  auto body = std::make_unique<Bracketed>();
-  body->open = take_as_leaf();
+  ns.open_brace = Leaf(take());
 
-  body->expr = (*this)();
+  ns.body = (*this)();
 
   expect(Tk::RightBrace, "expected '}'");
-  body->close = take_as_leaf();
+  ns.close_brace = Leaf(take());
 
-  ns->chain.emplace_back(std::move(body));
   return ns;
 }
 
-NodePtr Parser::parse_scoped_name() {
+Infix Parser::parse_scoped_name() {
   expect(Tk::Ident, "expected identifier");
-  auto infix = std::make_unique<Infix>();
-  infix->first = take_as_leaf();
+  Infix infix;
+  infix.first = take_as_leaf();
 
   while (peek().id() == Tk::Dot) {
     auto dot = take_as_leaf();
     expect(Tk::Ident, "expected identifier after '.'");
-    infix->chain.emplace_back(std::move(dot), take_as_leaf());
+    infix.chain.emplace_back(std::move(dot), take_as_leaf());
   }
 
   return infix;
 }
 
-NodePtr Parser::parse_interface() {
+Interface Parser::parse_interface() {
   assert(peek().keyword() == Kw::Interface);
-  auto ifc = std::make_unique<List>();
-  ifc->chain.emplace_back(take_as_leaf());
+  Interface ifc;
+  ifc.interface_word = Leaf(take());
 
   expect(Tk::Ident, "expected identifier after interface");
-  ifc->chain.emplace_back(take_as_leaf());
+  ifc.name = Leaf(take());
 
   expect(Tk::LeftBrace, "expected '{' after interface");
-  auto body = std::make_unique<Bracketed>();
-  body->open = take_as_leaf();
+  ifc.open_brace = Leaf(take());
 
-  body->expr = many(&Parser::parse_interface_inner);
+  ifc.body = many(&Parser::parse_interface_inner);
 
   expect(Tk::RightBrace, "expected '}'");
-  body->close = take_as_leaf();
+  ifc.close_brace = Leaf(take());
 
-  ifc->chain.emplace_back(std::move(body));
   return ifc;
 }
 
@@ -144,7 +139,7 @@ NodePtr Parser::parse_interface_inner() {
     auto stmt = std::make_unique<Unary>();
     stmt->is_postfix = true;
     stmt->op = take_as_leaf();
-    stmt->expr = std::move(name);
+    stmt->expr = std::make_unique<Infix>(std::move(name));
     return stmt;
   }
 
@@ -194,25 +189,23 @@ NodePtr Parser::parse_struct_union_inner() {
   }
 }
 
-NodePtr Parser::parse_enum() {
+Enum Parser::parse_enum() {
   auto const &tk = peek();
   assert(tk.keyword() == Kw::Enum);
-  auto enm = std::make_unique<List>();
-  enm->chain.emplace_back(take_as_leaf());
+  Enum enm;
+  enm.enum_word = Leaf(take());
 
   expect(Tk::Ident, "expected identifier after enum");
-  enm->chain.emplace_back(take_as_leaf());
+  enm.name = Leaf(take());
 
   expect(Tk::LeftBrace, "expected '{' after enum");
-  auto body = std::make_unique<Bracketed>();
-  body->open = take_as_leaf();
+  enm.open_brace = Leaf(take());
 
-  body->expr = many(&Parser::parse_enum_inner);
+  enm.body = parse_enum_inner();
 
   expect(Tk::RightBrace, "expected '}' after enum body");
-  body->close = take_as_leaf();
+  enm.close_brace = Leaf(take());
 
-  enm->chain.emplace_back(std::move(body));
   return enm;
 }
 
@@ -232,7 +225,7 @@ NodePtr Parser::parse_type(bool decl_only) {
   expect(Tk::Equal, "expected '=' after type name");
   type->chain.emplace_back(take_as_leaf());
 
-  type->chain.emplace_back(parse_scoped_name());
+  type->chain.emplace_back(std::make_unique<Infix>(parse_scoped_name()));
 
   expect(Tk::Semicolon, "expected ';'");
   type->chain.emplace_back(take_as_leaf());
