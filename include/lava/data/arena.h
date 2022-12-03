@@ -60,6 +60,7 @@ void *lava_arena_alloc(lava_arena *arena, size_t align, size_t size);
 
 #include <new>
 #include <limits>
+#include <type_traits>
 
 namespace lava::data {
 

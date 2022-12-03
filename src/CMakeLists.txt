@@ -1,5 +1,6 @@
 add_subdirectory(data)
 add_subdirectory(lava)
 add_subdirectory(src)
+add_subdirectory(sym)
 add_subdirectory(syn)
 add_subdirectory(term)
