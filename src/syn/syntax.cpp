@@ -142,6 +142,10 @@ RefSpan Unary::span() const noexcept {
   }
 }
 
+RefSpan PostfixBracketed::span() const noexcept {
+  return RefSpan{expr->span().start(), bracketed->span().end()};
+}
+
 RefSpan Infix::span() const noexcept {
   if (is_right_recursive) {
     return RefSpan{chain.front().second->span().start(), first->span().end()};

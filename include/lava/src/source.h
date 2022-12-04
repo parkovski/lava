@@ -29,6 +29,9 @@ struct SourceFile {
   const char &at(size_t pos) const noexcept
   { return _content.at(pos); }
 
+  std::string_view text(size_t pos, size_t count) const noexcept
+  { return std::string_view{_content.data() + pos, count}; }
+
 private:
   std::string _path;
   std::vector<char, default_init_allocator<char>> _content;

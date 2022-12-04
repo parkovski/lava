@@ -123,14 +123,15 @@ struct Leaf : Node {
   static constinit const std::string_view Tag;
 
   Leaf() = default;
-  Leaf(const Leaf &) = delete;
-  Leaf &operator=(const Leaf &) = delete;
-  Leaf(Leaf &&) = default;
-  Leaf &operator=(Leaf &&) = default;
 
   explicit Leaf(Token token)
     : _token{token}
   {}
+
+  Leaf(const Leaf &) = delete;
+  Leaf &operator=(const Leaf &) = delete;
+  Leaf(Leaf &&) = default;
+  Leaf &operator=(Leaf &&) = default;
 
   ~Leaf();
 
@@ -168,7 +169,7 @@ struct Leaf : Node {
   { return bool(_token); }
 
 private:
-  Token _token = {};
+  Token _token;
   Token::TriviaList *_trivia_after = nullptr;
 };
 

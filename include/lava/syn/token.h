@@ -1,6 +1,7 @@
 #ifndef LAVA_PARSER_TOKEN_H_
 #define LAVA_PARSER_TOKEN_H_
 
+#include "lava/src/source.h"
 #include "location.h"
 
 #include <string_view>
@@ -158,35 +159,48 @@ Kw kw_from_string(std::string_view str);
 
 struct SimpleToken {
   constexpr SimpleToken() noexcept
-    : _span{}, _id{Tk::Invalid}, _kw{Kw::_undef}
+    : _file{nullptr}
+    , _span{}
+    , _id{Tk::Invalid}
+    , _kw{Kw::_undef}
   {}
 
-  constexpr explicit SimpleToken(Tk id, Span span) noexcept
-    : _span{span}, _id{id}, _kw{Kw::_undef}
+  explicit SimpleToken(Tk id, src::SourceFile *file, Span span) noexcept
+    : _file{file}
+    , _span{span}
+    , _id{id}
+    , _kw{Kw::_undef}
   {}
 
-  constexpr explicit SimpleToken(Kw kw, Span span) noexcept
-    : _span{span}, _id{Tk::Ident}, _kw{kw}
+  explicit SimpleToken(Kw kw, src::SourceFile *file, Span span) noexcept
+    : _file{file}
+    , _span{span}
+    , _id{Tk::Ident}
+    , _kw{kw}
   {}
 
-  constexpr SimpleToken(const SimpleToken &) noexcept = default;
-  constexpr SimpleToken &operator=(const SimpleToken &) noexcept = default;
+  SimpleToken(const SimpleToken &) noexcept = default;
+  SimpleToken &operator=(const SimpleToken &) noexcept = default;
 
-  constexpr bool operator==(const SimpleToken &other) const noexcept = default;
+  bool operator==(const SimpleToken &other) const noexcept = default;
 
-  constexpr const Span &span() const noexcept
+  const Span &span() const noexcept
   { return _span; }
 
-  constexpr Tk id() const noexcept
+  Tk id() const noexcept
   { return _id; }
 
-  constexpr Kw keyword() const noexcept
+  Kw keyword() const noexcept
   { return _kw; }
 
-  constexpr explicit operator bool() const noexcept
+  std::string_view text() const noexcept
+  { return _file->text(_span.start().index, _span.length()); }
+
+  explicit operator bool() const noexcept
   { return bool(_span); }
 
 private:
+  src::SourceFile *_file;
   Span _span;
   Tk _id;
   Kw _kw;

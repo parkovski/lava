@@ -16,7 +16,7 @@ SimpleToken Lexer::operator()() {
   auto startLoc = _loc;
 
   if (_loc.index >= _src->size()) {
-    return SimpleToken(Tk::EndOfInput, {_loc, _loc});
+    return SimpleToken(Tk::EndOfInput, _src, {_loc, _loc});
   } else {
     switch (context()) {
       case Context::Initial:
@@ -60,9 +60,9 @@ SimpleToken Lexer::operator()() {
   if (tk == Tk::Ident) {
     return SimpleToken(kw_from_string(std::string_view{
       &(*_src)[startLoc.index], _loc.index - startLoc.index
-    }), {startLoc, _loc});
+    }), _src, {startLoc, _loc});
   }
-  return SimpleToken(tk, {startLoc, _loc});
+  return SimpleToken(tk, _src, {startLoc, _loc});
 }
 
 Tk Lexer::readInitial() {
