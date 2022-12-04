@@ -19,6 +19,7 @@ LAVA_NODE_TYPE_IMPL(Leaf, leaf, Node);
 LAVA_NODE_TYPE_IMPL(List, list, Tree);
 LAVA_NODE_TYPE_IMPL(Bracketed, bracketed, Expr);
 LAVA_NODE_TYPE_IMPL(Unary, unary, Expr);
+LAVA_NODE_TYPE_IMPL(PostfixBracketed, postfix_bracketed, Expr);
 LAVA_NODE_TYPE_IMPL(Infix, infix, Expr);
 LAVA_NODE_TYPE_IMPL(ItemDecl, item_decl, Tree);
 LAVA_NODE_TYPE_IMPL(Namespace, namespace, Tree);
@@ -105,6 +106,7 @@ void Visitor::visit_list(List &node) {}
 void Visitor::visit_expr(Expr &node) {}
 void Visitor::visit_bracketed(Bracketed &node) {}
 void Visitor::visit_unary(Unary &node) {}
+void Visitor::visit_postfix_bracketed(PostfixBracketed &node) {}
 void Visitor::visit_infix(Infix &node) {}
 void Visitor::visit_item_decl(ItemDecl &node) {}
 void Visitor::visit_namespace(Namespace &node) {}
@@ -223,6 +225,15 @@ unsigned Unary::child_count() const noexcept {
 Node *Unary::get_child(unsigned n) noexcept {
   if (is_postfix ^ (n == 0)) return op.get();
   return expr.get();
+}
+
+unsigned PostfixBracketed::child_count() const noexcept {
+  return 2;
+}
+
+Node *PostfixBracketed::get_child(unsigned n) noexcept {
+  if (n == 0) return expr.get();
+  return bracketed.get();
 }
 
 unsigned Infix::child_count() const noexcept {

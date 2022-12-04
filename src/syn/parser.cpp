@@ -418,10 +418,9 @@ NodePtr Parser::parse_expr_left(NodePtr left, unsigned prec_and_flags) {
           error("expected close bracket");
         }
 
-        auto postfix = std::make_unique<Unary>();
-        postfix->is_postfix = true;
-        postfix->op = std::move(bracketed);
+        auto postfix = std::make_unique<PostfixBracketed>();
         postfix->expr = std::move(left);
+        postfix->bracketed = std::move(bracketed);
         left = std::move(postfix);
         continue;
       } else {

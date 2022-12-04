@@ -214,6 +214,14 @@ struct Unary : Expr {
   NodePtr expr = {};
 };
 
+// Call or index expressions.
+struct PostfixBracketed : Expr {
+  LAVA_EXTENDS_TREE(PostfixBracketed);
+
+  std::unique_ptr<Node> expr = {};
+  std::unique_ptr<Bracketed> bracketed = {};
+};
+
 // When `is_right_recursive` is false:
 //   (((<first> <op0> <expr0>) <op1> <expr1>) <op2> <expr2>)...
 // When `is_right_recursive` is true:
@@ -339,6 +347,7 @@ struct Visitor {
   virtual void visit_expr(Expr &node);
   virtual void visit_bracketed(Bracketed &node);
   virtual void visit_unary(Unary &node);
+  virtual void visit_postfix_bracketed(PostfixBracketed &node);
   virtual void visit_infix(Infix &node);
   virtual void visit_item_decl(ItemDecl &node);
   virtual void visit_namespace(Namespace &node);
