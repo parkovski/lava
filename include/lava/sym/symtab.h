@@ -12,7 +12,7 @@
 
 namespace lava::sym {
 
-struct meminfo32 {
+struct MemInfo32 {
   uint32_t size       : 29;
   uint32_t alignshift : 3;
 
@@ -20,7 +20,7 @@ struct meminfo32 {
   { return UINT32_C(1) << alignshift; }
 };
 
-struct meminfo64 {
+struct MemInfo64 {
   uint64_t size       : 59;
   uint64_t alignshift : 5;
 
@@ -29,9 +29,9 @@ struct meminfo64 {
 };
 
 #if SIZE_MAX == UINT32_MAX
-typedef meminfo32 meminfosz;
+typedef MemInfo32 MemInfoSz;
 #elif SIZE_MAX == UINT64_MAX
-typedef meminfo64 meminfosz;
+typedef MemInfo64 MemInfoSz;
 #else
 # error "Unsupported size_t size"
 #endif
@@ -39,10 +39,16 @@ typedef meminfo64 meminfosz;
 enum ID : uint32_t {
   ID_undefined = uint32_t(-1),
   ID_root = 0,
-  ID_meminfo32,
-  ID_meminfo64,
-  ID_meminfosz,
-  ID_scopemap,
+  ID_void,
+  ID_null,
+  ID_requires,
+  ID_provides,
+  ID_implements,
+  ID_inherits,
+  ID_MemInfo32,
+  ID_MemInfo64,
+  ID_MemInfoSz,
+  ID_ScopeMap,
 };
 
 // Interned constant reference.
@@ -59,13 +65,23 @@ struct CRef {
   { return p != nullptr; }
 };
 
+// List of attribute IDs used for requires and inherits lists.
+typedef std::vector<uint32_t> IdList;
+
+// List of attribute instances used for provides and implements lists.
+typedef std::vector<std::pair<uint32_t, void*>> InstanceList;
+
 // Maps name to pair of [id, index].
-typedef std::unordered_map<CRef, std::pair<uint32_t, uint32_t>> scopemap;
+typedef std::unordered_map<CRef, std::pair<uint32_t, uint32_t>> ScopeMap;
 
 struct Symtab {
   Symtab();
   ~Symtab();
 
+private:
+  void fill_initial_symbols();
+
+public:
   // Find an interned data block.
   CRef find_data(const void *p, size_t size) const noexcept;
 
@@ -111,10 +127,28 @@ struct Symtab {
 
 private:
   struct SymbolData {
+    SymbolData(uint32_t id, uint32_t parent, CRef name)
+      : id{id}, parent{parent}, name{name}
+    {}
+
     uint32_t id;
     uint32_t parent;
     CRef name;
-    std::vector<std::pair<uint32_t, void*>> attrs;
+
+    // TODO remove this.
+    InstanceList attrs;
+
+    // List of symbol IDs that this symbol considers its parent types.
+    IdList inherits_list;
+
+    // List of symbol instances attached uniquely to this symbol.
+    InstanceList implements_list;
+
+    // List of symbol IDs that must be implemented to inherit from this symbol.
+    IdList requires_list;
+
+    // List of symbol instances provided to instances of this symbol.
+    InstanceList provides_list;
   };
 
   lava_arena _arena;

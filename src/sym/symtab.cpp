@@ -5,12 +5,29 @@ using namespace lava::sym;
 
 Symtab::Symtab() {
   lava_arena_init(&_arena);
-  mksym(ID_undefined, CRef{});
-  get_or_put_attr<scopemap>(0, ID_scopemap);
+  fill_initial_symbols();
 }
 
 Symtab::~Symtab() {
   lava_arena_fini(&_arena);
+}
+
+void Symtab::fill_initial_symbols() {
+  auto void_s = intern_str("void");
+  auto null_s = intern_str("null");
+
+  static_assert(ID_root == 0);
+  _symbol_data.emplace_back(ID_root, ID_undefined, CRef{});
+
+  static_assert(ID_void == 1);
+  _symbol_data.emplace_back(ID_void, ID_root, void_s);
+
+  static_assert(ID_null == 2);
+  _symbol_data.emplace_back(ID_null, ID_root, null_s);
+
+  get_or_put_attr<ScopeMap>(ID_root, ID_ScopeMap).first->emplace(
+    null_s, std::make_pair(ID_null, 0)
+  );
 }
 
 CRef Symtab::find_data(const void *p, size_t size) const noexcept {
@@ -48,7 +65,7 @@ uint32_t Symtab::id(uint32_t parent, CRef name) const noexcept {
     return ID_root;
   }
 
-  auto *sm = this->get_attr<scopemap>(parent, ID_scopemap);
+  auto *sm = this->get_attr<ScopeMap>(parent, ID_ScopeMap);
   if (!sm) {
     return ID_undefined;
   }
@@ -69,12 +86,12 @@ uint32_t Symtab::parent(uint32_t id) const noexcept {
 
 uint32_t Symtab::mksym(uint32_t parent, CRef name) {
   auto id = static_cast<uint32_t>(_symbol_data.size());
-  auto sm = get_attr<scopemap>(parent, ID_scopemap);
+  auto sm = get_attr<ScopeMap>(parent, ID_ScopeMap);
   if (sm == nullptr) {
     return ID_undefined;
   }
   uint32_t childnum = static_cast<uint32_t>(sm->size());
-  _symbol_data.emplace_back(SymbolData{id, parent, name, {}});
+  _symbol_data.emplace_back(SymbolData{id, parent, name});
   sm->emplace(name, std::make_pair(id, childnum));
   return id;
 }
@@ -92,12 +109,12 @@ Symtab::get_or_put_attr(uint32_t id, uint32_t attr_id) {
   if (void *p = get_attr(id, attr_id)) return {p, false};
   size_t align = 0, size;
   for (auto &a : _symbol_data[attr_id].attrs) {
-    if (a.first == ID_meminfo32) {
-      align = static_cast<meminfo32*>(a.second)->align();
-      size = static_cast<meminfo32*>(a.second)->size;
-    } else if (a.first == ID_meminfo64) {
-      align = static_cast<meminfo64*>(a.second)->align();
-      size = static_cast<meminfo64*>(a.second)->size;
+    if (a.first == ID_MemInfo32) {
+      align = static_cast<MemInfo32*>(a.second)->align();
+      size = static_cast<MemInfo32*>(a.second)->size;
+    } else if (a.first == ID_MemInfo64) {
+      align = static_cast<MemInfo64*>(a.second)->align();
+      size = static_cast<MemInfo64*>(a.second)->size;
     }
   }
   if (!align) return {nullptr, false};
