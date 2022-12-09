@@ -1,170 +1,208 @@
 #ifndef LAVA_SYM_SYMTAB_H_
 #define LAVA_SYM_SYMTAB_H_
 
+#include "core.h"
 #include "lava/data/arena.h"
 
 #include <cstdint>
-#include <vector>
-#include <unordered_map>
-#include <unordered_set>
-#include <span>
+#include <type_traits>
+#include <utility>
 #include <string_view>
+#include <unordered_set>
+#include <tuple>
 
 namespace lava::sym {
-
-struct MemInfo32 {
-  uint32_t size       : 29;
-  uint32_t alignshift : 3;
-
-  constexpr uint32_t align() const noexcept
-  { return UINT32_C(1) << alignshift; }
-};
-
-struct MemInfo64 {
-  uint64_t size       : 59;
-  uint64_t alignshift : 5;
-
-  constexpr uint64_t align() const noexcept
-  { return UINT64_C(1) << alignshift; }
-};
-
-#if SIZE_MAX == UINT32_MAX
-typedef MemInfo32 MemInfoSz;
-#elif SIZE_MAX == UINT64_MAX
-typedef MemInfo64 MemInfoSz;
-#else
-# error "Unsupported size_t size"
-#endif
-
-enum ID : uint32_t {
-  ID_undefined = uint32_t(-1),
-  ID_root = 0,
-  ID_void,
-  ID_null,
-  ID_requires,
-  ID_provides,
-  ID_implements,
-  ID_inherits,
-  ID_MemInfo32,
-  ID_MemInfo64,
-  ID_MemInfoSz,
-  ID_ScopeMap,
-};
-
-// Interned constant reference.
-struct CRef {
-  size_t size = 0;
-  const char *p = nullptr;
-
-  friend bool operator==(const CRef &, const CRef &) = default;
-
-  operator std::string_view() const noexcept
-  { return std::string_view{p, size}; }
-
-  constexpr explicit operator bool() const noexcept
-  { return p != nullptr; }
-};
-
-// List of attribute IDs used for requires and inherits lists.
-typedef std::vector<uint32_t> IdList;
-
-// List of attribute instances used for provides and implements lists.
-typedef std::vector<std::pair<uint32_t, void*>> InstanceList;
-
-// Maps name to pair of [id, index].
-typedef std::unordered_map<CRef, std::pair<uint32_t, uint32_t>> ScopeMap;
 
 struct Symtab {
   Symtab();
   ~Symtab();
 
-private:
-  void fill_initial_symbols();
+  void add_initial_symbols();
 
-public:
   // Find an interned data block.
-  CRef find_data(const void *p, size_t size) const noexcept;
+  InternRef find_interned(const void *p, size_t size) const noexcept;
 
   // Intern a chunk of data.
-  CRef intern_data(const void *p, size_t align, size_t size);
+  InternRef intern(const void *p, size_t align, size_t size);
 
   // Find an interned string (equivalent to
   // `find_data(str.data(), str.size())`).
-  CRef find_str(std::string_view str) const noexcept;
+  InternRef find_interned(std::string_view str) const noexcept
+  { return find_interned(str.data(), str.size()); }
 
   // Intern a string (equivalent to `intern_data(str.data(), 1, str.size())`).
-  CRef intern_str(std::string_view str);
+  InternRef intern(std::string_view str)
+  { return intern(str.data(), 1, str.size()); }
 
-  // Get the ID of a named symbol.
-  uint32_t id(uint32_t parent, CRef name) const noexcept;
+  /// Insert a new symbol under `parent` with a unique name. `parent` must have
+  /// a `ScopeMap` attribute.
+  /// @returns A pair containing the ID of the new symbol, or `ID_undefined` if
+  /// the symbol could not be inserted, and a flag indicating whether the
+  /// symbol was newly inserted (true) or already existed (false).
+  std::pair<uint32_t, bool> add_symbol(uint32_t parent, InternRef name);
 
-  uint32_t id(uint32_t parent, std::string_view name) const noexcept;
+  std::pair<uint32_t, bool> add_symbol(uint32_t parent, std::string_view name)
+  { return add_symbol(parent, intern(name)); }
 
-  uint32_t parent(uint32_t id) const noexcept;
+  Symbol &operator[](uint32_t id) noexcept
+  { return _symbols[id]; }
 
-  uint32_t mksym(uint32_t parent, CRef name);
+  const Symbol &operator[](uint32_t id) const noexcept
+  { return _symbols[id]; }
 
-  void *get_attr(uint32_t id, uint32_t attr_id) noexcept;
+  // Add a symbol to the meta list for `symid`.
+  bool add_meta(uint32_t symid, uint32_t metaid);
 
-  const void *get_attr(uint32_t id, uint32_t attr_id) const noexcept
-  { return const_cast<Symtab*>(this)->get_attr(id, attr_id); }
+  // Gets the number of metasymbols defined for `symid`.
+  uint32_t get_meta_count(uint32_t symid) const noexcept
+  { return static_cast<uint32_t>(_symbols[symid].metas.size()); }
+
+  // Gets the ID of the metasymbol for `symid` at `index`.
+  uint32_t get_meta_at(uint32_t symid, uint32_t index) const noexcept
+  { return _symbols[symid].metas[index]; }
+
+  // Finds the index of `metaid` in `symid`, or `ID_undefined` if not present.
+  uint32_t get_meta_index(uint32_t symid, uint32_t metaid) const noexcept;
+
+  // Add an instance to a symbol's attribute list.
+  void *add_attr(uint32_t symid, uint32_t attrid);
 
   template<class T>
-  T *get_attr(uint32_t id, uint32_t attr_id) noexcept
-  { return static_cast<T*>(get_attr(id, attr_id)); }
+  T *add_attr(uint32_t symid, uint32_t attrid)
+  { return static_cast<T*>(add_attr(symid, attrid)); }
+
+  uint32_t get_own_attr_count(uint32_t symid) const noexcept
+  { return static_cast<uint32_t>(_symbols[symid].attrs.size()); }
+
+  std::pair<uint32_t, void *>
+  get_own_attr_at(uint32_t symid, uint32_t index) const noexcept
+  { return _symbols[symid].attrs[index]; }
+
+  uint32_t get_own_attr_index(uint32_t symid, uint32_t attrid) const noexcept;
+
+  // Looks for an attribute in the symbol's own attribute list.
+  void *get_own_attr(uint32_t symid, uint32_t attrid) noexcept;
+
+  const void *get_own_attr(uint32_t symid, uint32_t attrid) const noexcept
+  { return const_cast<Symtab*>(this)->get_own_attr(symid, attrid); }
 
   template<class T>
-  const T *get_attr(uint32_t id, uint32_t attr_id) const noexcept
-  { return const_cast<Symtab*>(this)->get_attr<T>(id, attr_id); }
-
-  std::pair<void *, bool> get_or_put_attr(uint32_t id, uint32_t attr_id);
+  T *get_own_attr(uint32_t symid, uint32_t attrid) noexcept
+  { return static_cast<T*>(get_own_attr(symid, attrid)); }
 
   template<class T>
-  std::pair<T*, bool> get_or_put_attr(uint32_t id, uint32_t attr_id) {
-    auto [p, inserted] = get_or_put_attr(id, attr_id);
-    return std::make_pair(static_cast<T*>(p), inserted);
+  const T *get_own_attr(uint32_t symid, uint32_t attrid) const noexcept
+  { return const_cast<Symtab*>(this)->get_own_attr<T>(symid, attrid); }
+
+  /// Looks for an attribute in the symbol's attribute list, and if not found,
+  /// searches the symbols in the meta list.
+  /// @returns A pair of the symbol ID that actually owns the attribute and a
+  ///          pointer to the attribute value.
+  std::pair<uint32_t, void *>
+  get_rec_attr(uint32_t symid, uint32_t attrid) noexcept;
+
+  std::pair<uint32_t, const void *>
+  get_rec_attr(uint32_t symid, uint32_t attrid) const noexcept {
+    auto [a, b] = const_cast<Symtab*>(this)->get_rec_attr(symid, attrid);
+    return std::pair<uint32_t, const void*>(a, b);
   }
 
+  template<class T>
+  std::pair<uint32_t, T*>
+  get_rec_attr(uint32_t symid, uint32_t attrid) noexcept {
+    auto [a, b] = get_rec_attr(symid, attrid);
+    return std::pair<uint32_t, T*>(a, static_cast<T*>(b));
+  }
+
+  template<class T>
+  std::pair<uint32_t, const T *>
+  get_rec_attr(uint32_t symid, uint32_t attrid) const noexcept {
+    auto [a, b] = const_cast<Symtab*>(this)->get_rec_attr<T>(symid, attrid);
+    return std::pair<uint32_t, const T*>(a, b);
+  }
+
+  /// Recursively enumerates all properties on symbol `symid` and its
+  /// metasymbols.
+  /// @param f Receives the attribute ID and value and returns true to keep
+  ///          enumerating or false to stop.
+  template<class F>
+  std::enable_if_t<
+    std::is_invocable_r_v<bool, F, uint32_t, void*>,
+    bool
+  >
+  enum_attrs(uint32_t symid, const F &f) {
+    auto &sym = _symbols[symid];
+    for (auto &a : sym.attrs) {
+      if (!f(a.first, a.second)) return false;
+    }
+    for (auto m : sym.metas) {
+      if (!enum_attrs<F>(m, f)) return false;
+    }
+    return true;
+  }
+
+  /// Recursively enumerates all properties on symbol `symid` and its
+  /// metasymbols.
+  /// @param f Receives the attribute ID and value and returns true to keep
+  ///          enumerating or false to stop.
+  template<class F>
+  std::enable_if_t<
+    std::is_invocable_r_v<bool, F, uint32_t, const void*>,
+    bool
+  >
+  enum_attrs(uint32_t symid, const F &f) const {
+    auto const &sym = _symbols[symid];
+    for (auto const &a : sym.attrs) {
+      if (!f(a.first, a.second)) return false;
+    }
+    for (auto m : sym.metas) {
+      if (!enum_attrs<F>(m, f)) return false;
+    }
+    return true;
+  }
+
+  // Get the ID of the symbol's parent (its enclosing scope).
+  uint32_t get_parent(uint32_t symid) const noexcept;
+
+  // Get a pair `[id, index]` for a named child symbol of `parent`.
+  std::pair<uint32_t, uint32_t>
+  get_own_child_index(uint32_t parent, InternRef name) const noexcept;
+
+  // Get a pair `[id, index]` for a named child symbol of `parent` with
+  // convenience intern string lookup.
+  std::pair<uint32_t, uint32_t>
+  get_own_child_index(uint32_t parent, std::string_view name) const noexcept
+  { return get_own_child_index(parent, find_interned(name)); }
+
+  // Get the ID of a named symbol.
+  uint32_t get_own_child(uint32_t parent, InternRef name) const noexcept
+  { return get_own_child_index(parent, name).first; }
+
+  // Get the ID of a named symbol with intern string lookup.
+  uint32_t get_own_child(uint32_t parent, std::string_view name) const noexcept
+  { return get_own_child(parent, find_interned(name)); }
+
+  // Returns a tuple `[owner_id, child_id, index]` where `owner_id` is the
+  // owning symbol of the child and a meta symbol of `parent`, `child_id` is
+  // the own symbol ID of `parent` with name `name`, and `index` is the index
+  // of `child_id` in `parent_id`.
+  std::tuple<uint32_t, uint32_t, uint32_t>
+  get_rec_child(uint32_t parent, InternRef name) const noexcept;
+
+  // Returns a tuple `[parent_id, child_id, index]` where `parent_id` is the
+  // owning symbol of the child and a meta symbol of `parent`, `child_id` is
+  // the own symbol ID of `parent` with name `name`, and `index` is the index
+  // of `child_id` in `parent_id`.
+  std::tuple<uint32_t, uint32_t, uint32_t>
+  get_rec_child(uint32_t parent, std::string_view name) const noexcept
+  { return get_rec_child(parent, find_interned(name)); }
+
 private:
-  struct SymbolData {
-    SymbolData(uint32_t id, uint32_t parent, CRef name)
-      : id{id}, parent{parent}, name{name}
-    {}
-
-    uint32_t id;
-    uint32_t parent;
-    CRef name;
-
-    // TODO remove this.
-    InstanceList attrs;
-
-    // List of symbol IDs that this symbol considers its parent types.
-    IdList inherits_list;
-
-    // List of symbol instances attached uniquely to this symbol.
-    InstanceList implements_list;
-
-    // List of symbol IDs that must be implemented to inherit from this symbol.
-    IdList requires_list;
-
-    // List of symbol instances provided to instances of this symbol.
-    InstanceList provides_list;
-  };
-
   lava_arena _arena;
+  std::vector<Symbol, lava::data::arena_allocator<Symbol>> _symbols;
   std::unordered_set<std::string_view> _intern_data;
-  std::vector<SymbolData> _symbol_data;
 };
 
 } // namespace lava::sym
-
-namespace std {
-  template<>
-  struct hash<lava::sym::CRef> {
-    size_t operator()(const lava::sym::CRef &c) const noexcept {
-      return hash<const void*>{}(c.p);
-    }
-  };
-}
 
 #endif /* LAVA_SYM_SYMTAB_H_ */

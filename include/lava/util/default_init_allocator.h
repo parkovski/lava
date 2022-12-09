@@ -28,7 +28,9 @@ public:
     ::new(static_cast<void*>(ptr)) U;
   }
   template <typename U, typename...Args>
-  void construct(U* ptr, Args&&... args) {
+  void construct(U* ptr, Args&&... args)
+    noexcept(noexcept(a_t::construct(static_cast<A&>(*this), ptr,
+                                     std::forward<Args>(args)...))) {
     a_t::construct(static_cast<A&>(*this),
                    ptr, std::forward<Args>(args)...);
   }

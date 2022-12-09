@@ -1,45 +1,165 @@
 #include "lava/sym/symtab.h"
+
 #include <cstring>
 
 using namespace lava::sym;
 
-Symtab::Symtab() {
+Symtab::Symtab()
+  : _symbols{lava::data::arena_allocator<Symbol>{&_arena}}
+{
   lava_arena_init(&_arena);
-  fill_initial_symbols();
+  add_initial_symbols();
 }
 
 Symtab::~Symtab() {
   lava_arena_fini(&_arena);
 }
 
-void Symtab::fill_initial_symbols() {
-  auto void_s = intern_str("void");
-  auto null_s = intern_str("null");
+void Symtab::add_initial_symbols() {
+  constexpr uint32_t align_native = sizeof(void*) == 8 ? 3 : 2;
 
-  static_assert(ID_root == 0);
-  _symbol_data.emplace_back(ID_root, ID_undefined, CRef{});
+  auto &s_root = _symbols.emplace_back(ID_root, ID_undefined, intern("(root)"));
+  auto *root_scopemap = static_cast<ScopeMap*>(
+    lava_arena_alloc(&_arena, alignof(ScopeMap), sizeof(ScopeMap)));
+  new (root_scopemap) ScopeMap;
+  s_root.attrs.emplace_back(ID_ScopeMap, root_scopemap);
 
-  static_assert(ID_void == 1);
-  _symbol_data.emplace_back(ID_void, ID_root, void_s);
+  auto &s_never = _symbols.emplace_back(ID_never, ID_root, intern("never"));
 
-  static_assert(ID_null == 2);
-  _symbol_data.emplace_back(ID_null, ID_root, null_s);
+  auto &s_void = _symbols.emplace_back(ID_void, ID_root, intern("void"));
+  auto *mi = static_cast<MemInfo32*>(s_void.attrs.emplace_back(
+    ID_MemInfo32,
+    lava_arena_alloc(&_arena, alignof(MemInfo32), sizeof(MemInfo32))
+  ).second);
+  mi->_size = 0;
+  mi->_alignshift = 0;
 
-  get_or_put_attr<ScopeMap>(ID_root, ID_ScopeMap).first->emplace(
-    null_s, std::make_pair(ID_null, 0)
-  );
+  auto &s_null = _symbols.emplace_back(ID_null, ID_root, intern("null"));
+  mi = static_cast<MemInfo32*>(s_null.attrs.emplace_back(
+    ID_MemInfo32,
+    lava_arena_alloc(&_arena, alignof(MemInfo32), sizeof(MemInfo32))
+  ).second);
+  mi->_size = sizeof(void*);
+  mi->_alignshift = align_native;
+
+  auto &s_MemInfo32 = _symbols.emplace_back(
+    ID_MemInfo32, ID_root, intern("MemInfo32"));
+  mi = static_cast<MemInfo32*>(s_MemInfo32.attrs.emplace_back(
+    ID_MemInfo32,
+    lava_arena_alloc(&_arena, alignof(MemInfo32), sizeof(MemInfo32))
+  ).second);
+  mi->_size = sizeof(MemInfo32);
+  mi->_alignshift = 2;
+
+  auto &s_MemInfo64 = _symbols.emplace_back(
+    ID_MemInfo64, ID_root, intern("MemInfo64"));
+  mi = static_cast<MemInfo32*>(s_MemInfo64.attrs.emplace_back(
+    ID_MemInfo32,
+    lava_arena_alloc(&_arena, alignof(MemInfo32), sizeof(MemInfo32))
+  ).second);
+  mi->_size = sizeof(MemInfo64);
+  mi->_alignshift = 3;
+
+  auto &s_ScopeMap = _symbols.emplace_back(
+    ID_ScopeMap, ID_root, intern("ScopeMap"));
+  mi = static_cast<MemInfo32*>(s_ScopeMap.attrs.emplace_back(
+    ID_MemInfo32,
+    lava_arena_alloc(&_arena, alignof(MemInfo32), sizeof(MemInfo32))
+  ).second);
+  mi->_size = sizeof(ScopeMap);
+  mi->_alignshift = align_native;
+
+  *reinterpret_cast<void(**)(void*)>(s_ScopeMap.attrs.emplace_back(
+    ID_init,
+    lava_arena_alloc(&_arena, alignof(void(*)(void*)), sizeof(void(*)(void*)))
+  ).second) = [](void *data) {
+    new (data) ScopeMap;
+  };
+
+  *reinterpret_cast<void(**)(void*)>(s_ScopeMap.attrs.emplace_back(
+    ID_fini,
+    lava_arena_alloc(&_arena, alignof(void(*)(void*)), sizeof(void(*)(void*)))
+  ).second) = [](void *data) {
+    static_cast<ScopeMap*>(data)->~ScopeMap();
+  };
+
+  auto &s_Symbol = _symbols.emplace_back(
+    ID_Symbol, ID_root, intern("Symbol"));
+  mi = static_cast<MemInfo32*>(s_Symbol.attrs.emplace_back(
+    ID_MemInfo32,
+    lava_arena_alloc(&_arena, alignof(MemInfo32), sizeof(MemInfo32))
+  ).second);
+  mi->_size = sizeof(Symbol);
+  mi->_alignshift = align_native;
+
+  *reinterpret_cast<void(**)(void*)>(s_Symbol.attrs.emplace_back(
+    ID_init,
+    lava_arena_alloc(&_arena, alignof(void(*)(void*)), sizeof(void(*)(void*)))
+  ).second) = [](void *data) {
+    new (data) Symbol;
+  };
+
+  *reinterpret_cast<void(**)(void*)>(s_Symbol.attrs.emplace_back(
+    ID_fini,
+    lava_arena_alloc(&_arena, alignof(void(*)(void*)), sizeof(void(*)(void*)))
+  ).second) = [](void *data) {
+    static_cast<Symbol*>(data)->~Symbol();
+  };
+
+  auto &s_prototype = _symbols.emplace_back(
+    ID_prototype, ID_root, intern("prototype"));
+  s_prototype.metas.emplace_back(ID_Symbol);
+
+  auto &s_GenericFn = _symbols.emplace_back(
+    ID_GenericFn, ID_root, intern("GenericFn"));
+  mi = static_cast<MemInfo32*>(s_GenericFn.attrs.emplace_back(
+    ID_MemInfo32,
+    lava_arena_alloc(&_arena, alignof(MemInfo32), sizeof(MemInfo32))
+  ).second);
+  mi->_size = sizeof(GenericFn);
+  mi->_alignshift = align_native;
+
+  auto &s_ContextFn = _symbols.emplace_back(
+    ID_ContextFn, ID_root, intern("ContextFn"));
+  mi = static_cast<MemInfo32*>(s_ContextFn.attrs.emplace_back(
+    ID_MemInfo32,
+    lava_arena_alloc(&_arena, alignof(MemInfo32), sizeof(MemInfo32))
+  ).second);
+  mi->_size = sizeof(ContextFn);
+  mi->_alignshift = align_native;
+
+  auto &s_init = _symbols.emplace_back(
+    ID_init, ID_root, intern("init"));
+  s_init.metas.emplace_back(ID_GenericFn);
+
+  auto &s_fini = _symbols.emplace_back(
+    ID_fini, ID_root, intern("fini"));
+  s_fini.metas.emplace_back(ID_GenericFn);
+
+  root_scopemap->emplace(std::make_pair(s_never.name, std::make_pair(ID_never, 0)));
+  root_scopemap->emplace(std::make_pair(s_void.name, std::make_pair(ID_void, 1)));
+  root_scopemap->emplace(std::make_pair(s_null.name, std::make_pair(ID_null, 2)));
+  root_scopemap->emplace(std::make_pair(s_MemInfo32.name, std::make_pair(ID_MemInfo32, 3)));
+  root_scopemap->emplace(std::make_pair(s_MemInfo64.name, std::make_pair(ID_MemInfo64, 4)));
+  root_scopemap->emplace(std::make_pair(s_ScopeMap.name, std::make_pair(ID_ScopeMap, 5)));
+  root_scopemap->emplace(std::make_pair(s_Symbol.name, std::make_pair(ID_Symbol, 6)));
+  root_scopemap->emplace(std::make_pair(s_prototype.name, std::make_pair(ID_prototype, 7)));
+  root_scopemap->emplace(std::make_pair(s_GenericFn.name, std::make_pair(ID_GenericFn, 8)));
+  root_scopemap->emplace(std::make_pair(s_ContextFn.name, std::make_pair(ID_ContextFn, 9)));
+  root_scopemap->emplace(std::make_pair(s_init.name, std::make_pair(ID_init, 10)));
+  root_scopemap->emplace(std::make_pair(s_fini.name, std::make_pair(ID_fini, 11)));
 }
 
-CRef Symtab::find_data(const void *p, size_t size) const noexcept {
+InternRef Symtab::find_interned(const void *p, size_t size) const noexcept {
   std::string_view sv{static_cast<const char*>(p), size};
   auto it = _intern_data.find(sv);
   if (it == _intern_data.end()) {
-    return {};
+    return InternRef{};
   }
-  return {it->size(), it->data()};
+  return InternRef{it->size(), it->data()};
 }
 
-CRef Symtab::intern_data(const void *p, size_t align, size_t size) {
+InternRef Symtab::intern(const void *p, size_t align, size_t size) {
   std::string_view sv{static_cast<const char*>(p), size};
   auto [it, inserted] = _intern_data.insert(sv);
   if (inserted) {
@@ -47,79 +167,144 @@ CRef Symtab::intern_data(const void *p, size_t align, size_t size) {
       lava_arena_alloc(&_arena, align, sv.size()));
     memcpy(pc, p, size);
     const_cast<std::string_view&>(*it) = std::string_view{pc, size};
-    return {size, pc};
+    return InternRef{size, pc};
   }
-  return {it->size(), it->data()};
+  return InternRef{it->size(), it->data()};
 }
 
-CRef Symtab::find_str(std::string_view str) const noexcept {
-  return find_data(str.data(), str.size());
+std::pair<uint32_t, bool>
+Symtab::add_symbol(uint32_t parent, InternRef name) {
+  auto *map = get_own_attr<ScopeMap>(parent, ID_ScopeMap);
+  if (!map) {
+    return std::make_pair(ID_undefined, false);
+  }
+  auto id = static_cast<uint32_t>(_symbols.size());
+  auto index = static_cast<uint32_t>(map->size());
+  auto [it, inserted] = map->emplace(name, std::make_pair(id, index));
+  if (inserted) {
+    _symbols.emplace_back(id, parent, name);
+  } else {
+    id = it->second.first;
+  }
+  return std::make_pair(id, inserted);
 }
 
-CRef Symtab::intern_str(std::string_view str) {
-  return intern_data(str.data(), 1, str.size());
+bool Symtab::add_meta(uint32_t symid, uint32_t metaid) {
+  if (get_meta_index(symid, metaid) != ID_undefined) {
+    return false;
+  }
+  _symbols[symid].metas.emplace_back(metaid);
+  return true;
 }
 
-uint32_t Symtab::id(uint32_t parent, CRef name) const noexcept {
-  if (parent == ID_undefined && !name) {
-    return ID_root;
+uint32_t
+Symtab::get_meta_index(uint32_t symid, uint32_t metaid) const noexcept {
+  auto const &metas = _symbols[symid].metas;
+  for (uint32_t i = 0; i < metas.size(); ++i) {
+    if (metas[i] == metaid) {
+      return i;
+    }
+  }
+  return ID_undefined;
+}
+
+void *Symtab::add_attr(uint32_t symid, uint32_t attrid) {
+  if (get_own_attr(symid, attrid)) {
+    return nullptr;
   }
 
-  auto *sm = this->get_attr<ScopeMap>(parent, ID_ScopeMap);
-  if (!sm) {
-    return ID_undefined;
+  size_t align = 0;
+  size_t size;
+  void (*init)(void*) = nullptr;
+  enum_attrs(attrid, [&](uint32_t id, void *attr) -> bool {
+    if (id == ID_MemInfo32) {
+      auto &mi = *static_cast<MemInfo32*>(attr);
+      align = mi.align();
+      size = mi.size();
+      if (init) return false;
+    } else if (id == ID_MemInfo64) {
+      auto &mi = *static_cast<MemInfo64*>(attr);
+      align = static_cast<size_t>(mi.align());
+      size = static_cast<size_t>(mi.size());
+      if (init) return false;
+    } else if (id == ID_init) {
+      init = *reinterpret_cast<void(**)(void*)>(attr);
+      if (align) return false;
+    }
+    return true;
+  });
+
+  if (align == 0) {
+    return nullptr;
   }
-  auto it = sm->find(name);
-  if (it == sm->end()) {
-    return ID_undefined;
+  void *mem = lava_arena_alloc(&_arena, align, size);
+  if (init) {
+    init(mem);
   }
-  return it->second.first;
+  _symbols[symid].attrs.emplace_back(attrid, mem);
+  return mem;
 }
 
-uint32_t Symtab::id(uint32_t parent, std::string_view name) const noexcept {
-  return id(parent, find_str(name));
-}
-
-uint32_t Symtab::parent(uint32_t id) const noexcept {
-  return _symbol_data[id].parent;
-}
-
-uint32_t Symtab::mksym(uint32_t parent, CRef name) {
-  auto id = static_cast<uint32_t>(_symbol_data.size());
-  auto sm = get_attr<ScopeMap>(parent, ID_ScopeMap);
-  if (sm == nullptr) {
-    return ID_undefined;
+uint32_t
+Symtab::get_own_attr_index(uint32_t symid, uint32_t attrid) const noexcept {
+  auto const &attrs = _symbols[symid].attrs;
+  for (uint32_t i = 0; i < attrs.size(); ++i) {
+    if (attrs[i].first == attrid) {
+      return i;
+    }
   }
-  uint32_t childnum = static_cast<uint32_t>(sm->size());
-  _symbol_data.emplace_back(SymbolData{id, parent, name});
-  sm->emplace(name, std::make_pair(id, childnum));
-  return id;
+  return ID_undefined;
 }
 
-void *Symtab::get_attr(uint32_t id, uint32_t attr_id) noexcept {
-  auto &sym = _symbol_data[id];
-  for (auto &a : sym.attrs) {
-    if (a.first == attr_id) return a.second;
+void *Symtab::get_own_attr(uint32_t symid, uint32_t attrid) noexcept {
+  auto &sym = _symbols[symid];
+  for (auto const &attr : sym.attrs) {
+    if (attr.first == attrid) {
+      return attr.second;
+    }
   }
   return nullptr;
 }
 
-std::pair<void *, bool>
-Symtab::get_or_put_attr(uint32_t id, uint32_t attr_id) {
-  if (void *p = get_attr(id, attr_id)) return {p, false};
-  size_t align = 0, size;
-  for (auto &a : _symbol_data[attr_id].attrs) {
-    if (a.first == ID_MemInfo32) {
-      align = static_cast<MemInfo32*>(a.second)->align();
-      size = static_cast<MemInfo32*>(a.second)->size;
-    } else if (a.first == ID_MemInfo64) {
-      align = static_cast<MemInfo64*>(a.second)->align();
-      size = static_cast<MemInfo64*>(a.second)->size;
+std::pair<uint32_t, void *>
+Symtab::get_rec_attr(uint32_t symid, uint32_t attrid) noexcept {
+  if (auto a = get_own_attr(symid, attrid)) {
+    return std::pair<uint32_t, void*>{symid, a};
+  }
+  for (auto metaid : _symbols[symid].metas) {
+    if (auto pair = get_rec_attr(metaid, attrid); pair.second) {
+      return pair;
     }
   }
-  if (!align) return {nullptr, false};
-  void *data = lava_arena_alloc(&_arena, align, size);
-  if (!data) return {nullptr, false};
-  _symbol_data[id].attrs.emplace_back(attr_id, data);
-  return {data, true};
+  return std::pair<uint32_t, void*>{ID_undefined, nullptr};
+}
+
+uint32_t Symtab::get_parent(uint32_t symid) const noexcept {
+  return _symbols[symid].parent;
+}
+
+std::pair<uint32_t, uint32_t>
+Symtab::get_own_child_index(uint32_t parent, InternRef name) const noexcept {
+  auto *map = get_own_attr<ScopeMap>(parent, ID_ScopeMap);
+  if (!map) {
+    return std::pair<uint32_t, uint32_t>{ID_undefined, ID_undefined};
+  }
+  auto it = map->find(name);
+  if (it == map->end()) {
+    return std::pair<uint32_t, uint32_t>{ID_undefined, ID_undefined};
+  }
+  return it->second;
+}
+
+std::tuple<uint32_t, uint32_t, uint32_t>
+Symtab::get_rec_child(uint32_t parent, InternRef name) const noexcept {
+  auto [ownerid, map] = get_rec_attr<ScopeMap>(parent, ID_ScopeMap);
+  if (!map) {
+    return {ID_undefined, ID_undefined, ID_undefined};
+  }
+  auto it = map->find(name);
+  if (it == map->end()) {
+    return {ownerid, ID_undefined, ID_undefined};
+  }
+  return {ownerid, it->second.first, it->second.second};
 }

@@ -61,6 +61,7 @@ void *lava_arena_alloc(lava_arena *arena, size_t align, size_t size);
 #include <new>
 #include <limits>
 #include <type_traits>
+#include <utility>
 
 namespace lava::data {
 
@@ -100,6 +101,17 @@ struct arena_allocator {
   }
 
   void deallocate(T *, size_t) {}
+
+  template<class U>
+  void construct(U *ptr) noexcept(std::is_nothrow_default_constructible_v<U>) {
+    ::new(static_cast<void*>(ptr)) U;
+  }
+
+  template<class U, class... Args>
+  void construct(U *ptr, Args &&...args)
+    noexcept(std::is_nothrow_constructible_v<U, Args...>) {
+    ::new(static_cast<void*>(ptr)) U(std::forward<Args>(args)...);
+  }
 
 private:
   lava_arena *_arena;
