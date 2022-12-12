@@ -4,6 +4,8 @@
 
 using namespace lava::sym;
 
+// Ctor/Dtor {{{
+
 Symtab::Symtab()
   : _symbols{lava::data::arena_allocator<Symbol>{&_arena}}
 {
@@ -14,6 +16,181 @@ Symtab::Symtab()
 Symtab::~Symtab() {
   lava_arena_fini(&_arena);
 }
+
+// }}}
+
+// Interning {{{
+
+InternRef Symtab::find_interned(const void *p, size_t size) const noexcept {
+  std::string_view sv{static_cast<const char*>(p), size};
+  auto it = _intern_data.find(sv);
+  if (it == _intern_data.end()) {
+    return InternRef{};
+  }
+  return InternRef{it->size(), it->data()};
+}
+
+InternRef Symtab::intern(const void *p, size_t align, size_t size) {
+  std::string_view sv{static_cast<const char*>(p), size};
+  auto [it, inserted] = _intern_data.insert(sv);
+  if (inserted) {
+    char *pc = static_cast<char*>(
+      lava_arena_alloc(&_arena, align, sv.size()));
+    memcpy(pc, p, size);
+    const_cast<std::string_view&>(*it) = std::string_view{pc, size};
+    return InternRef{size, pc};
+  }
+  return InternRef{it->size(), it->data()};
+}
+
+// }}}
+
+// Adding symbols {{{
+
+std::pair<uint32_t, bool>
+Symtab::add_symbol(uint32_t parent, InternRef name) {
+  auto *map = get_own_attr<ScopeMap>(parent, ID_ScopeMap);
+  if (!map) {
+    return std::make_pair(ID_undefined, false);
+  }
+  auto id = static_cast<uint32_t>(_symbols.size());
+  auto index = static_cast<uint32_t>(map->size());
+  auto [it, inserted] = map->emplace(name, std::make_pair(id, index));
+  if (inserted) {
+    _symbols.emplace_back(id, parent, name);
+  } else {
+    id = it->second.first;
+  }
+  return std::make_pair(id, inserted);
+}
+
+bool Symtab::add_meta(uint32_t symid, uint32_t metaid) {
+  if (get_meta_index(symid, metaid) != ID_undefined) {
+    return false;
+  }
+  _symbols[symid].metas.emplace_back(metaid);
+  return true;
+}
+
+void *Symtab::add_attr(uint32_t symid, uint32_t attrid) {
+  if (get_own_attr(symid, attrid)) {
+    return nullptr;
+  }
+
+  size_t align = 0;
+  size_t size;
+  void (*init)(void*) = nullptr;
+  enum_attrs(attrid, [&](uint32_t id, void *attr) -> bool {
+    if (id == ID_MemInfo32) {
+      auto &mi = *static_cast<MemInfo32*>(attr);
+      align = mi.align();
+      size = mi.size();
+      if (init) return false;
+    } else if (id == ID_MemInfo64) {
+      auto &mi = *static_cast<MemInfo64*>(attr);
+      align = static_cast<size_t>(mi.align());
+      size = static_cast<size_t>(mi.size());
+      if (init) return false;
+    } else if (id == ID_init) {
+      init = *reinterpret_cast<void(**)(void*)>(attr);
+      if (align) return false;
+    }
+    return true;
+  });
+
+  if (align == 0) {
+    return nullptr;
+  }
+  void *mem = lava_arena_alloc(&_arena, align, size);
+  if (init) {
+    init(mem);
+  }
+  _symbols[symid].attrs.emplace_back(attrid, mem);
+  return mem;
+}
+
+// }}}
+
+// Lookup {{{
+
+uint32_t
+Symtab::get_meta_index(uint32_t symid, uint32_t metaid) const noexcept {
+  auto const &metas = _symbols[symid].metas;
+  for (uint32_t i = 0; i < metas.size(); ++i) {
+    if (metas[i] == metaid) {
+      return i;
+    }
+  }
+  return ID_undefined;
+}
+
+uint32_t
+Symtab::get_own_attr_index(uint32_t symid, uint32_t attrid) const noexcept {
+  auto const &attrs = _symbols[symid].attrs;
+  for (uint32_t i = 0; i < attrs.size(); ++i) {
+    if (attrs[i].first == attrid) {
+      return i;
+    }
+  }
+  return ID_undefined;
+}
+
+void *Symtab::get_own_attr(uint32_t symid, uint32_t attrid) noexcept {
+  auto &sym = _symbols[symid];
+  for (auto const &attr : sym.attrs) {
+    if (attr.first == attrid) {
+      return attr.second;
+    }
+  }
+  return nullptr;
+}
+
+std::pair<uint32_t, void *>
+Symtab::get_rec_attr(uint32_t symid, uint32_t attrid) noexcept {
+  if (auto a = get_own_attr(symid, attrid)) {
+    return std::pair<uint32_t, void*>{symid, a};
+  }
+  for (auto metaid : _symbols[symid].metas) {
+    if (auto pair = get_rec_attr(metaid, attrid); pair.second) {
+      return pair;
+    }
+  }
+  return std::pair<uint32_t, void*>{ID_undefined, nullptr};
+}
+
+uint32_t Symtab::get_parent(uint32_t symid) const noexcept {
+  return _symbols[symid].parent;
+}
+
+std::pair<uint32_t, uint32_t>
+Symtab::get_own_child_index(uint32_t parent, InternRef name) const noexcept {
+  auto *map = get_own_attr<ScopeMap>(parent, ID_ScopeMap);
+  if (!map) {
+    return std::pair<uint32_t, uint32_t>{ID_undefined, ID_undefined};
+  }
+  auto it = map->find(name);
+  if (it == map->end()) {
+    return std::pair<uint32_t, uint32_t>{ID_undefined, ID_undefined};
+  }
+  return it->second;
+}
+
+std::tuple<uint32_t, uint32_t, uint32_t>
+Symtab::get_rec_child(uint32_t parent, InternRef name) const noexcept {
+  auto [ownerid, map] = get_rec_attr<ScopeMap>(parent, ID_ScopeMap);
+  if (!map) {
+    return {ID_undefined, ID_undefined, ID_undefined};
+  }
+  auto it = map->find(name);
+  if (it == map->end()) {
+    return {ownerid, ID_undefined, ID_undefined};
+  }
+  return {ownerid, it->second.first, it->second.second};
+}
+
+// }}}
+
+// Initial symbols {{{
 
 void Symtab::add_initial_symbols() {
   constexpr uint32_t align_native = sizeof(void*) == 8 ? 3 : 2;
@@ -150,161 +327,4 @@ void Symtab::add_initial_symbols() {
   root_scopemap->emplace(std::make_pair(s_fini.name, std::make_pair(ID_fini, 11)));
 }
 
-InternRef Symtab::find_interned(const void *p, size_t size) const noexcept {
-  std::string_view sv{static_cast<const char*>(p), size};
-  auto it = _intern_data.find(sv);
-  if (it == _intern_data.end()) {
-    return InternRef{};
-  }
-  return InternRef{it->size(), it->data()};
-}
-
-InternRef Symtab::intern(const void *p, size_t align, size_t size) {
-  std::string_view sv{static_cast<const char*>(p), size};
-  auto [it, inserted] = _intern_data.insert(sv);
-  if (inserted) {
-    char *pc = static_cast<char*>(
-      lava_arena_alloc(&_arena, align, sv.size()));
-    memcpy(pc, p, size);
-    const_cast<std::string_view&>(*it) = std::string_view{pc, size};
-    return InternRef{size, pc};
-  }
-  return InternRef{it->size(), it->data()};
-}
-
-std::pair<uint32_t, bool>
-Symtab::add_symbol(uint32_t parent, InternRef name) {
-  auto *map = get_own_attr<ScopeMap>(parent, ID_ScopeMap);
-  if (!map) {
-    return std::make_pair(ID_undefined, false);
-  }
-  auto id = static_cast<uint32_t>(_symbols.size());
-  auto index = static_cast<uint32_t>(map->size());
-  auto [it, inserted] = map->emplace(name, std::make_pair(id, index));
-  if (inserted) {
-    _symbols.emplace_back(id, parent, name);
-  } else {
-    id = it->second.first;
-  }
-  return std::make_pair(id, inserted);
-}
-
-bool Symtab::add_meta(uint32_t symid, uint32_t metaid) {
-  if (get_meta_index(symid, metaid) != ID_undefined) {
-    return false;
-  }
-  _symbols[symid].metas.emplace_back(metaid);
-  return true;
-}
-
-uint32_t
-Symtab::get_meta_index(uint32_t symid, uint32_t metaid) const noexcept {
-  auto const &metas = _symbols[symid].metas;
-  for (uint32_t i = 0; i < metas.size(); ++i) {
-    if (metas[i] == metaid) {
-      return i;
-    }
-  }
-  return ID_undefined;
-}
-
-void *Symtab::add_attr(uint32_t symid, uint32_t attrid) {
-  if (get_own_attr(symid, attrid)) {
-    return nullptr;
-  }
-
-  size_t align = 0;
-  size_t size;
-  void (*init)(void*) = nullptr;
-  enum_attrs(attrid, [&](uint32_t id, void *attr) -> bool {
-    if (id == ID_MemInfo32) {
-      auto &mi = *static_cast<MemInfo32*>(attr);
-      align = mi.align();
-      size = mi.size();
-      if (init) return false;
-    } else if (id == ID_MemInfo64) {
-      auto &mi = *static_cast<MemInfo64*>(attr);
-      align = static_cast<size_t>(mi.align());
-      size = static_cast<size_t>(mi.size());
-      if (init) return false;
-    } else if (id == ID_init) {
-      init = *reinterpret_cast<void(**)(void*)>(attr);
-      if (align) return false;
-    }
-    return true;
-  });
-
-  if (align == 0) {
-    return nullptr;
-  }
-  void *mem = lava_arena_alloc(&_arena, align, size);
-  if (init) {
-    init(mem);
-  }
-  _symbols[symid].attrs.emplace_back(attrid, mem);
-  return mem;
-}
-
-uint32_t
-Symtab::get_own_attr_index(uint32_t symid, uint32_t attrid) const noexcept {
-  auto const &attrs = _symbols[symid].attrs;
-  for (uint32_t i = 0; i < attrs.size(); ++i) {
-    if (attrs[i].first == attrid) {
-      return i;
-    }
-  }
-  return ID_undefined;
-}
-
-void *Symtab::get_own_attr(uint32_t symid, uint32_t attrid) noexcept {
-  auto &sym = _symbols[symid];
-  for (auto const &attr : sym.attrs) {
-    if (attr.first == attrid) {
-      return attr.second;
-    }
-  }
-  return nullptr;
-}
-
-std::pair<uint32_t, void *>
-Symtab::get_rec_attr(uint32_t symid, uint32_t attrid) noexcept {
-  if (auto a = get_own_attr(symid, attrid)) {
-    return std::pair<uint32_t, void*>{symid, a};
-  }
-  for (auto metaid : _symbols[symid].metas) {
-    if (auto pair = get_rec_attr(metaid, attrid); pair.second) {
-      return pair;
-    }
-  }
-  return std::pair<uint32_t, void*>{ID_undefined, nullptr};
-}
-
-uint32_t Symtab::get_parent(uint32_t symid) const noexcept {
-  return _symbols[symid].parent;
-}
-
-std::pair<uint32_t, uint32_t>
-Symtab::get_own_child_index(uint32_t parent, InternRef name) const noexcept {
-  auto *map = get_own_attr<ScopeMap>(parent, ID_ScopeMap);
-  if (!map) {
-    return std::pair<uint32_t, uint32_t>{ID_undefined, ID_undefined};
-  }
-  auto it = map->find(name);
-  if (it == map->end()) {
-    return std::pair<uint32_t, uint32_t>{ID_undefined, ID_undefined};
-  }
-  return it->second;
-}
-
-std::tuple<uint32_t, uint32_t, uint32_t>
-Symtab::get_rec_child(uint32_t parent, InternRef name) const noexcept {
-  auto [ownerid, map] = get_rec_attr<ScopeMap>(parent, ID_ScopeMap);
-  if (!map) {
-    return {ID_undefined, ID_undefined, ID_undefined};
-  }
-  auto it = map->find(name);
-  if (it == map->end()) {
-    return {ownerid, ID_undefined, ID_undefined};
-  }
-  return {ownerid, it->second.first, it->second.second};
-}
+// }}}

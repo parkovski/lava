@@ -17,8 +17,6 @@ struct Symtab {
   Symtab();
   ~Symtab();
 
-  void add_initial_symbols();
-
   // Find an interned data block.
   InternRef find_interned(const void *p, size_t size) const noexcept;
 
@@ -34,6 +32,12 @@ struct Symtab {
   InternRef intern(std::string_view str)
   { return intern(str.data(), 1, str.size()); }
 
+  Symbol &operator[](uint32_t id) noexcept
+  { return _symbols[id]; }
+
+  const Symbol &operator[](uint32_t id) const noexcept
+  { return _symbols[id]; }
+
   /// Insert a new symbol under `parent` with a unique name. `parent` must have
   /// a `ScopeMap` attribute.
   /// @returns A pair containing the ID of the new symbol, or `ID_undefined` if
@@ -44,14 +48,15 @@ struct Symtab {
   std::pair<uint32_t, bool> add_symbol(uint32_t parent, std::string_view name)
   { return add_symbol(parent, intern(name)); }
 
-  Symbol &operator[](uint32_t id) noexcept
-  { return _symbols[id]; }
-
-  const Symbol &operator[](uint32_t id) const noexcept
-  { return _symbols[id]; }
-
   // Add a symbol to the meta list for `symid`.
   bool add_meta(uint32_t symid, uint32_t metaid);
+
+  // Add an instance to a symbol's attribute list.
+  void *add_attr(uint32_t symid, uint32_t attrid);
+
+  template<class T>
+  T *add_attr(uint32_t symid, uint32_t attrid)
+  { return static_cast<T*>(add_attr(symid, attrid)); }
 
   // Gets the number of metasymbols defined for `symid`.
   uint32_t get_meta_count(uint32_t symid) const noexcept
@@ -63,13 +68,6 @@ struct Symtab {
 
   // Finds the index of `metaid` in `symid`, or `ID_undefined` if not present.
   uint32_t get_meta_index(uint32_t symid, uint32_t metaid) const noexcept;
-
-  // Add an instance to a symbol's attribute list.
-  void *add_attr(uint32_t symid, uint32_t attrid);
-
-  template<class T>
-  T *add_attr(uint32_t symid, uint32_t attrid)
-  { return static_cast<T*>(add_attr(symid, attrid)); }
 
   uint32_t get_own_attr_count(uint32_t symid) const noexcept
   { return static_cast<uint32_t>(_symbols[symid].attrs.size()); }
@@ -93,6 +91,38 @@ struct Symtab {
   template<class T>
   const T *get_own_attr(uint32_t symid, uint32_t attrid) const noexcept
   { return const_cast<Symtab*>(this)->get_own_attr<T>(symid, attrid); }
+
+  template<class F>
+  std::enable_if_t<
+    std::is_invocable_r_v<bool, F, uint32_t, void*>,
+    bool
+  >
+  enum_own_attrs(uint32_t symid, const F &f)
+  noexcept(std::is_nothrow_invocable_r_v<bool, F, uint32_t, void*>) {
+    auto &sym = _symbols[symid];
+    for (auto &a : sym.attrs) {
+      if (!f(a.first, a.second)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  template<class F>
+  std::enable_if_t<
+    std::is_invocable_r_v<bool, F, uint32_t, const void*>,
+    bool
+  >
+  enum_own_attrs(uint32_t symid, const F &f) const
+  noexcept(std::is_nothrow_invocable_r_v<bool, F, uint32_t, const void*>) {
+    auto const &sym = _symbols[symid];
+    for (auto const &a : sym.attrs) {
+      if (!f(a.first, a.second)) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   /// Looks for an attribute in the symbol's attribute list, and if not found,
   /// searches the symbols in the meta list.
@@ -130,7 +160,8 @@ struct Symtab {
     std::is_invocable_r_v<bool, F, uint32_t, void*>,
     bool
   >
-  enum_attrs(uint32_t symid, const F &f) {
+  enum_attrs(uint32_t symid, const F &f)
+  noexcept(std::is_nothrow_invocable_r_v<bool, F, uint32_t, void*>) {
     auto &sym = _symbols[symid];
     for (auto &a : sym.attrs) {
       if (!f(a.first, a.second)) return false;
@@ -150,7 +181,8 @@ struct Symtab {
     std::is_invocable_r_v<bool, F, uint32_t, const void*>,
     bool
   >
-  enum_attrs(uint32_t symid, const F &f) const {
+  enum_attrs(uint32_t symid, const F &f) const
+  noexcept(std::is_nothrow_invocable_r_v<bool, F, uint32_t, const void*>) {
     auto const &sym = _symbols[symid];
     for (auto const &a : sym.attrs) {
       if (!f(a.first, a.second)) return false;
@@ -198,6 +230,8 @@ struct Symtab {
   { return get_rec_child(parent, find_interned(name)); }
 
 private:
+  void add_initial_symbols();
+
   lava_arena _arena;
   std::vector<Symbol, lava::data::arena_allocator<Symbol>> _symbols;
   std::unordered_set<std::string_view> _intern_data;
