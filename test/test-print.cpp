@@ -1,5 +1,6 @@
 #include "lava/syn/lexer.h"
 #include "lava/syn/parser.h"
+#include "lava/syn/parser-ir.h"
 #include "lava/syn/printer.h"
 #include <fmt/format.h>
 
@@ -86,6 +87,14 @@ int main(int argc, char *argv[]) {
     syn::Parser parser{src};
     syn::PrinterXml printer{src};
     print_parse(parser, printer);
+  } else if (argv[1] == "ir"sv) {
+    syn::IRParser parser{src};
+    try {
+      parser();
+    } catch (syn::ParseError &e) {
+      fmt::print(stderr, "{}:{}: error: {}", e.where().line, e.where().column,
+                 e.what());
+    }
   } else {
     fmt::print(stderr, "Unknown mode '{}'.", argv[1]);
     return 1;
