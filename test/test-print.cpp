@@ -67,12 +67,17 @@ static void print_parse(syn::Parser &parser, syn::Visitor &printer) {
 
 int main(int argc, char *argv[]) {
   if (argc != 3) {
-    fmt::print(stderr, "Usage: test-print [mode] [file].");
+    fmt::print(stderr, "Usage: test-print [mode] [file].\n");
+    fmt::print(stderr, "Modes: exact, lex, parse, lisp, xml, ir.\n");
     return 1;
   }
   std::filesystem::path path{argv[2]};
   src::SourceFile src{path};
-  if (argv[1] == "lex"sv) {
+  if (argv[1] == "exact"sv) {
+    syn::Parser parser{src};
+    syn::Printer printer{src};
+    print_parse(parser, printer);
+  } else if (argv[1] == "lex"sv) {
     syn::Lexer lexer{src};
     print_lex(lexer, src);
   } else if (argv[1] == "parse"sv) {
@@ -92,11 +97,11 @@ int main(int argc, char *argv[]) {
     try {
       parser();
     } catch (syn::ParseError &e) {
-      fmt::print(stderr, "{}:{}: error: {}", e.where().line, e.where().column,
-                 e.what());
+      fmt::print(stderr, "{}:{}: error: {}\n", e.where().line,
+                 e.where().column, e.what());
     }
   } else {
-    fmt::print(stderr, "Unknown mode '{}'.", argv[1]);
+    fmt::print(stderr, "Unknown mode '{}'.\n", argv[1]);
     return 1;
   }
   return 0;
