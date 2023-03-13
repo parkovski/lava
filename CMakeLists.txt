@@ -45,14 +45,6 @@ set(Lava_CONTRIB_INCLUDE_DIRS
   $<INSTALL_INTERFACE:include/lava/contrib>
 )
 
-if(MSVC)
-  # C4706 - assignment within conditional.
-  add_compile_options(/W4 /wd4706)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-else()
-  add_compile_options(-Wall -pedantic)
-endif()
-
 configure_file(config.h.in config.h @ONLY)
 install(FILES config.h DESTINATION "${CMAKE_SOURCE_DIR}/include/lava")
 

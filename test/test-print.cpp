@@ -2,6 +2,7 @@
 #include "lava/syn/parser.h"
 #include "lava/syn/parser-ir.h"
 #include "lava/syn/printer.h"
+#include "lava/sym/symtab.h"
 #include <fmt/format.h>
 
 using namespace lava;
@@ -73,27 +74,28 @@ int main(int argc, char *argv[]) {
   }
   std::filesystem::path path{argv[2]};
   src::SourceFile src{path};
+  sym::Symtab symtab;
   if (argv[1] == "exact"sv) {
-    syn::Parser parser{src};
+    syn::Parser parser{src, symtab};
     syn::Printer printer{src};
     print_parse(parser, printer);
   } else if (argv[1] == "lex"sv) {
     syn::Lexer lexer{src};
     print_lex(lexer, src);
   } else if (argv[1] == "parse"sv) {
-    syn::Parser parser{src};
+    syn::Parser parser{src, symtab};
     syn::Printer printer{src};
     print_parse(parser, printer);
   } else if (argv[1] == "lisp"sv) {
-    syn::Parser parser{src};
+    syn::Parser parser{src, symtab};
     syn::PrinterLisp printer{src};
     print_parse(parser, printer);
   } else if (argv[1] == "xml"sv) {
-    syn::Parser parser{src};
+    syn::Parser parser{src, symtab};
     syn::PrinterXml printer{src};
     print_parse(parser, printer);
   } else if (argv[1] == "ir"sv) {
-    syn::IRParser parser{src};
+    syn::IRParser parser{src, symtab};
     try {
       parser();
     } catch (syn::ParseError &e) {

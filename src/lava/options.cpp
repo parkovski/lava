@@ -26,6 +26,7 @@ private:
   int apply_option(CliOpt opt, std::string_view value) noexcept;
 
   int invalid_option() noexcept;
+  int invalid_option(std::string_view reason) noexcept;
   int duplicate_option() noexcept;
   int expected_option(std::string_view what) noexcept;
   int expected_value(std::string_view option,
@@ -45,7 +46,7 @@ private:
 
 int OptionsParser::apply_short(char arg, bool more, int &argi)
                               noexcept {
-  CliOpt opt = CliOpt::_count_;
+  CliOpt opt;
   std::string_view value{};
   switch (arg) {
   default:
@@ -84,7 +85,7 @@ int OptionsParser::apply_short(char arg, bool more, int &argi)
 
 int OptionsParser::apply_long(std::string_view arg, std::string_view value)
 noexcept {
-  CliOpt opt = CliOpt::_count_;
+  CliOpt opt;
 
   if (arg == "help"sv) {
     opt = CliOpt::Help;
@@ -98,9 +99,11 @@ noexcept {
     if (!value_long(value)) {
       return expected_option("expression"sv);
     }
-  } else if (arg == "--interactive"sv) {
+  } else if (arg == "interactive"sv) {
     opt = CliOpt::Interactive;
-  } else if (arg == "--edit") {
+  } else if (arg == "lsp"sv) {
+    opt = CliOpt::LSPServer;
+  } else if (arg == "edit"sv) {
     opt = CliOpt::Edit;
   } else {
     return invalid_option();
@@ -145,10 +148,23 @@ int OptionsParser::apply_option(CliOpt opt, std::string_view value) noexcept {
     break;
 
   case CliOpt::Interactive:
+    if (_opts->startup_mode != StartupModeAutomatic) {
+      return invalid_option("Ambiguous/duplicate startup mode");
+    }
     _opts->startup_mode = StartupModeInteractive;
     break;
 
+  case CliOpt::LSPServer:
+    if (_opts->startup_mode != StartupModeAutomatic) {
+      return invalid_option("Ambiguous/duplicate startup mode");
+    }
+    _opts->startup_mode = StartupModeLSPServer;
+    break;
+
   case CliOpt::Edit:
+    if (_opts->startup_mode != StartupModeAutomatic) {
+      return invalid_option("Ambiguous/duplicate startup mode");
+    }
     _opts->startup_mode = StartupModeEditText;
     break;
   }
@@ -158,6 +174,11 @@ int OptionsParser::apply_option(CliOpt opt, std::string_view value) noexcept {
 
 int OptionsParser::invalid_option() noexcept {
   fmt::print(stderr, "Invalid option '{}'.", (*this)[argn]);
+  return 1;
+}
+
+int OptionsParser::invalid_option(std::string_view reason) noexcept {
+  fmt::print(stderr, "Invalid option '{}': {}.", (*this)[argn], reason);
   return 1;
 }
 
@@ -205,7 +226,7 @@ Options::Options() noexcept
   : wants_help{0}
   , wants_stdin{0}
   , wants_color{OptAuto}
-  , startup_mode{StartupModeInteractive}
+  , startup_mode{StartupModeAutomatic}
 {}
 
 std::variant<Options, int>
@@ -214,6 +235,16 @@ Options::from_args(int argc, const char *const *argv) noexcept {
   auto err = OptionsParser{opts, argc, argv}();
   if (err) {
     return err;
+  }
+  if (opts.startup_mode == StartupModeAutomatic) {
+    if (opts.wants_stdin) {
+      opts.startup_mode = term::isTTYInput()
+        ? StartupModeInteractive : StartupModeBatch;
+    } else if (!opts.eval_source.empty() || !opts.sources.empty()) {
+      opts.startup_mode = StartupModeBatch;
+    } else {
+      opts.startup_mode = StartupModeInteractive;
+    }
   }
   return opts;
 }

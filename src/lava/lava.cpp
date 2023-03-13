@@ -3,40 +3,8 @@
 #include "options.h"
 #include <fmt/format.h>
 
+using namespace lava;
 using namespace lava::cli;
-
-#if 0
-static int sourceMain(const char *filename) {
-  if (std::ifstream file{filename, std::ios::binary | std::ios::ate}) {
-    auto size = file.tellg();
-    std::string text(size, '\0');
-    file.seekg(0);
-    if (!file.read(text.data(), size)) {
-      fmt::print(stderr, "Could not read `{}`.\n", filename);
-      return 1;
-    }
-    return lava::eval(text);
-  }
-
-  fmt::print(stderr, "Could not open `{}`.\n", filename);
-  return 1;
-}
-
-static int commandMain(int argc, const char *const argv[]) {
-  if (argc == 0) {
-    fmt::print(stderr, "Nothing to evaluate\n");
-    return 1;
-  }
-
-  std::string program{argv[0]};
-  for (int i = 1; i < argc; ++i) {
-    program.push_back(' ');
-    program.append(argv[i]);
-  }
-
-  return lava::eval(program);
-}
-#endif
 
 static void print_help(bool islong) {
   (void)islong;
@@ -54,6 +22,7 @@ Options:
   -i, --interactive Interactive mode; default if no files are specified and
                     stdin is a tty. Necessary if specifying other scripts to
                     load on the command line.
+  --lsp             Run in language server mode.
   -E, --edit        Basic text editor mode.
 )==="
   );
@@ -77,20 +46,47 @@ static int u8main(int argc, char **argv)
     return 0;
   }
 
-  switch (opts.startup_mode) {
-  case StartupModeInteractive:
+  if (opts.startup_mode == StartupModeEditText) {
+    if (opts.wants_stdin) {
+      fmt::print(stderr, "Can't edit stdin.\n");
+      return 1;
+    }
+    fmt::print(stderr, "Text editor TODO.\n");
+    return 2;
+  }
 
-  case StartupModeCliEval:
-    break;
+  if (opts.startup_mode == StartupModeLSPServer) {
+    if (opts.wants_stdin) {
+      fmt::print(stderr, "LSP mode and read from stdin can't be combined.\n");
+      return 1;
+    }
+    if (!opts.eval_source.empty()) {
+      fmt::print(stderr, "LSP mode and CLI eval can't be combined.\n");
+      return 1;
+    }
+    if (!opts.sources.empty()) {
+      fmt::print(stderr, "LSP mode can't be provided with source files.\n");
+      return 1;
+    }
+    fmt::print(stderr, "LSP server TODO.\n");
+    return 2;
+  }
 
-  case StartupModeMainFile:
-    break;
+  if (!opts.eval_source.empty()) {
+    fmt::print("TODO: Command line eval\n");
+  }
 
-  case StartupModeEditText:
-    break;
+  for (auto &source : opts.sources) {
+    auto absolute_path = std::filesystem::absolute(source);
+    auto path_str = absolute_path.string();
+    fmt::print("TODO: Add source {}\n", path_str);
+  }
 
-  default:
-    LAVA_UNREACHABLE();
+  if (opts.startup_mode == StartupModeInteractive) {
+    fmt::print("TODO: Interactive mode\n");
+  } else {
+    assert(opts.startup_mode == StartupModeBatch);
+    fmt::print("TODO: Process files\n");
   }
 
   return 0;
@@ -110,7 +106,7 @@ int wmain() {
   char **argv = new char*[argc];
   LAVA_SCOPE_EXIT {
     for (int i = 0; i < argc; ++i) {
-      delete [] argv[i];
+      if (argv[i]) delete [] argv[i];
     }
     delete [] argv;
   };

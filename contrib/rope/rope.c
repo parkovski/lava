@@ -187,12 +187,6 @@ size_t rope_wchar_count(rope *r) {
 #define MIN(x,y) ((x) > (y) ? (y) : (x))
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
 
-#ifdef _WIN32
-inline static long random() {
-  return rand();
-}
-#endif
-
 static uint8_t random_height() {
   // This function is horribly inefficient. I'm throwing away heaps of entropy, and
   // the mod could be replaced by some clever shifting.
@@ -204,7 +198,7 @@ static uint8_t random_height() {
 
   // The root node's height is the height of the largest node + 1, so the largest
   // node can only have ROPE_MAX_HEIGHT - 1.
-  while(height < (ROPE_MAX_HEIGHT - 1) && (random() % 100) < ROPE_BIAS) {
+  while(height < (ROPE_MAX_HEIGHT - 1) && (rand() % 100) < ROPE_BIAS) {
     height++;
   }
 
