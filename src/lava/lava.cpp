@@ -23,7 +23,6 @@ Options:
                     stdin is a tty. Necessary if specifying other scripts to
                     load on the command line.
   --lsp             Run in language server mode.
-  -E, --edit        Basic text editor mode.
 )==="
   );
 }
@@ -44,15 +43,6 @@ static int u8main(int argc, char **argv)
   if (opts.wants_help) {
     print_help(false);
     return 0;
-  }
-
-  if (opts.startup_mode == StartupModeEditText) {
-    if (opts.wants_stdin) {
-      fmt::print(stderr, "Can't edit stdin.\n");
-      return 1;
-    }
-    fmt::print(stderr, "Text editor TODO.\n");
-    return 2;
   }
 
   if (opts.startup_mode == StartupModeLSPServer) {
@@ -97,7 +87,6 @@ static int u8main(int argc, char **argv)
 #include <Windows.h>
 int wmain() {
   int argc;
-  wchar_t *args = GetCommandLineW();
   wchar_t **argvw = CommandLineToArgvW(GetCommandLineW(), &argc);
   if (!argvw) {
     return GetLastError();

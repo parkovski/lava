@@ -31,9 +31,6 @@ enum StartupMode : unsigned {
 
   // Run as a language server.
   StartupModeLSPServer,
-
-  // Run the builtin text editor.
-  StartupModeEditText,
 };
 
 enum class CliOpt : unsigned {
@@ -43,7 +40,6 @@ enum class CliOpt : unsigned {
   Eval,
   Interactive,
   LSPServer,
-  Edit,
 };
 
 // Driver program options.
@@ -60,7 +56,7 @@ struct Options {
   uint32_t    wants_help   : 1; // Did we see `-h`?
   uint32_t    wants_stdin  : 1; // Did we see `-`?
   OptBool     wants_color  : 2; // `true`/`false`/`auto`.
-  StartupMode startup_mode : 3; // Where does execution start?
+  StartupMode startup_mode : 2; // Where does execution start?
 
 private:
   explicit Options() noexcept;
