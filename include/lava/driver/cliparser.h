@@ -1,9 +1,9 @@
-#ifndef LAVA_CLIPARSER_H_
-#define LAVA_CLIPARSER_H_
+#ifndef LAVA_DRIVER_CLIPARSER_H_
+#define LAVA_DRIVER_CLIPARSER_H_
 
 #include <string_view>
 
-namespace lava::cli {
+namespace lava::driver {
 
 struct CliParser {
   /// Construct a `CliParser` from `argc` and `argv`.
@@ -87,6 +87,6 @@ private:
   const char *const *_argv;
 };
 
-} // namespace lava::cli
+} // namespace lava::driver
 
-#endif // LAVA_CLIPARSER_H_
+#endif // LAVA_DRIVER_CLIPARSER_H_

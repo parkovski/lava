@@ -1,12 +1,12 @@
-#ifndef LAVA_OPTIONS_H_
-#define LAVA_OPTIONS_H_
+#ifndef LAVA_DRIVER_OPTIONS_H_
+#define LAVA_DRIVER_OPTIONS_H_
 
 #include <vector>
 #include <string>
 #include <filesystem>
 #include <variant>
 
-namespace lava::cli {
+namespace lava::driver {
 
 // Option bool (actually 4-value). The values are picked specifically to fit
 // into 2 bits and sign extend correctly.
@@ -62,6 +62,6 @@ private:
   explicit Options() noexcept;
 };
 
-} // namespace lava::cli
+} // namespace lava::driver
 
-#endif // LAVA_OPTIONS_H_
+#endif // LAVA_DRIVER_OPTIONS_H_

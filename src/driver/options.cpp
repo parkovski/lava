@@ -1,5 +1,5 @@
-#include "options.h"
-#include "cliparser.h"
+#include "lava/driver/options.h"
+#include "lava/driver/cliparser.h"
 #include "lava/term/terminal.h"
 #include <fmt/format.h>
 
@@ -7,7 +7,7 @@
 
 using namespace std::string_view_literals;
 
-namespace lava::cli {
+namespace lava::driver {
 
 struct OptionsParser : CliParser {
   explicit OptionsParser(Options &opts, int argc, const char *const *argv)
@@ -67,10 +67,6 @@ int OptionsParser::apply_short(char arg, bool more, int &argi)
     }
     break;
 
-  case 'E':
-    opt = CliOpt::Edit;
-    break;
-
   case 'h':
     opt = CliOpt::Help;
     break;
@@ -103,8 +99,6 @@ noexcept {
     opt = CliOpt::Interactive;
   } else if (arg == "lsp"sv) {
     opt = CliOpt::LSPServer;
-  } else if (arg == "edit"sv) {
-    opt = CliOpt::Edit;
   } else {
     return invalid_option();
   }
@@ -159,13 +153,6 @@ int OptionsParser::apply_option(CliOpt opt, std::string_view value) noexcept {
       return invalid_option("Ambiguous/duplicate startup mode");
     }
     _opts->startup_mode = StartupModeLSPServer;
-    break;
-
-  case CliOpt::Edit:
-    if (_opts->startup_mode != StartupModeAutomatic) {
-      return invalid_option("Ambiguous/duplicate startup mode");
-    }
-    _opts->startup_mode = StartupModeEditText;
     break;
   }
 
@@ -249,4 +236,4 @@ Options::from_args(int argc, const char *const *argv) noexcept {
   return opts;
 }
 
-} // namespace lava::cli
+} // namespace lava::driver

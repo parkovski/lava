@@ -7,5 +7,5 @@ else()
 endif()
 
 add_subdirectory(data)
-add_subdirectory(lava)
+add_subdirectory(driver)
 add_subdirectory(term)

@@ -1,8 +1,8 @@
-#include "cliparser.h"
+#include "lava/driver/cliparser.h"
 #include <cassert>
 #include <limits>
 
-using namespace lava::cli;
+using namespace lava::driver;
 
 int CliParser::operator()() noexcept {
   this->argn = 1;

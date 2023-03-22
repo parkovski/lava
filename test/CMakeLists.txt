@@ -1,7 +1,7 @@
 add_executable(test
   arena.cpp
   cliparser.cpp
-  ../src/lava/cliparser.cpp
+  ../src/driver/cliparser.cpp
   intervaltree.cpp
   rope.cpp
   slidingindex.cpp

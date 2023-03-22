@@ -1,10 +1,10 @@
 #include "lava/lava.h"
-#include "cliparser.h"
-#include "options.h"
+#include "lava/driver/cliparser.h"
+#include "lava/driver/options.h"
 #include <fmt/format.h>
 
 using namespace lava;
-using namespace lava::cli;
+using namespace lava::driver;
 
 static void print_help(bool islong) {
   (void)islong;
