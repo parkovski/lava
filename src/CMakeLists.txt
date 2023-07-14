@@ -8,4 +8,5 @@ endif()
 
 add_subdirectory(data)
 add_subdirectory(driver)
+add_subdirectory(syn)
 add_subdirectory(term)
