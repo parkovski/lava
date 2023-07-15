@@ -4,6 +4,8 @@
 
 using namespace lava::syn;
 
+static const unsigned CallPrec = 17;
+
 Parser::Parser(Lexer &lexer) noexcept
   : lexer{&lexer}
 {
@@ -47,8 +49,9 @@ std::unique_ptr<Expr> Parser::parse_expr(unsigned prec, int flags) {
       Token op = token;
       next();
       expr = std::make_unique<PostfixExpr>(op, std::move(expr));
-    } else if (token.what == TkLeftParen
-            || token.what == TkLeftSquareBracket) {
+    } else if ((token.what == TkLeftParen
+             || token.what == TkLeftSquareBracket)
+            && CallPrec >= prec) {
       expr = parse_invoke_expr(std::move(expr));
     } else {
       break;

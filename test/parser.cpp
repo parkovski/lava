@@ -64,6 +64,34 @@ TEST_CASE("Parser parens", "[syntax]") {
   REQUIRE(binary->right->kind == Expr::Ident);
 }
 
+TEST_CASE("Call without args", "[syntax]") {
+  SourceDoc doc{
+    .name = "test",
+    .content = "foo()",
+  };
+  Lexer lexer{doc};
+  Parser parser{lexer};
+  auto expr = parser.parse_expr();
+  REQUIRE(expr->kind == Expr::Invoke);
+  auto invoke = static_cast<InvokeExpr*>(expr.get());
+  REQUIRE(invoke->left->kind == Expr::Ident);
+  REQUIRE(invoke->args.size() == 0);
+};
+
+TEST_CASE("Member call", "[syntax]") {
+  SourceDoc doc{
+    .name = "test",
+    .content = "foo.bar()",
+  };
+  Lexer lexer{doc};
+  Parser parser{lexer};
+  auto expr = parser.parse_expr();
+  REQUIRE(expr->kind == Expr::Invoke);
+  auto invoke = static_cast<InvokeExpr*>(expr.get());
+  REQUIRE(invoke->left->kind == Expr::Binary);
+  REQUIRE(invoke->args.size() == 0);
+}
+
 TEST_CASE("Parser call expression", "[syntax]") {
   SourceDoc doc{
     .name = "test",
@@ -94,4 +122,23 @@ TEST_CASE("Call expression trailing comma", "[syntax]") {
   auto invoke = static_cast<InvokeExpr*>(expr.get());
   REQUIRE(invoke->args[0].expr->kind == Expr::Ident);
   REQUIRE(invoke->args[0].delimiter.has_value());
+}
+
+TEST_CASE("Comma inside args", "[syntax]") {
+  SourceDoc doc{
+    .name = "test",
+    .content = "foo((bar, baz))",
+  };
+  Lexer lexer{doc};
+  Parser parser{lexer};
+  auto expr = parser.parse_expr();
+  REQUIRE(expr->kind == Expr::Invoke);
+  auto invoke = static_cast<InvokeExpr*>(expr.get());
+  REQUIRE(invoke->left->kind == Expr::Ident);
+  REQUIRE(invoke->args.size() == 1);
+  REQUIRE(invoke->args[0].expr->kind == Expr::Paren);
+  auto paren = static_cast<ParenExpr*>(invoke->args[0].expr.get());
+  REQUIRE(paren->expr->kind == Expr::Binary);
+  auto binary = static_cast<BinaryExpr*>(paren->expr.get());
+  REQUIRE(binary->op.what == TkComma);
 }

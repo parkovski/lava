@@ -135,6 +135,20 @@ void Lexer::lex_number(Token &token) {
     if (c1 >= '0' && c1 <= '9') {
       lex_decimal_part(token);
       return;
+    } else if (c1 == '.') {
+      nextch();
+      nextch();
+      if (getch() == '.') {
+        nextch();
+        token.what = TkDotDotDot;
+      } else {
+        token.what = TkDotDot;
+      }
+      return;
+    } else {
+      nextch();
+      token.what = TkDot;
+      return;
     }
   }
 
