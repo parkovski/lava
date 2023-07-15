@@ -56,6 +56,8 @@ enum {
   TkStarStar,
   TkStarStarEq,
   TkStarEq,
+  TkLeftParen,
+  TkRightParen,
   TkMinus,
   TkMinusMinus,
   TkMinusEq,
@@ -102,6 +104,11 @@ struct Token {
   SourceLoc start;
   SourceLoc end;
   int what;
+
+  std::string_view text() {
+    return std::string_view(doc->content)
+      .substr(start.offset, end.offset - start.offset);
+  }
 };
 
 struct Lexer {
@@ -112,6 +119,8 @@ private:
 
 public:
   explicit Lexer(const SourceDoc &doc) noexcept;
+
+  const SourceDoc &get_doc() { return *doc; }
 
   Token lex();
 

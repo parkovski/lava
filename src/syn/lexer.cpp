@@ -314,6 +314,16 @@ void Lexer::lex_symbol_or_invalid(Token &token) {
     }
     break;
 
+  case '(':
+    nextch();
+    token.what = TkLeftParen;
+    break;
+
+  case ')':
+    nextch();
+    token.what = TkRightParen;
+    break;
+
   case '-':
     nextch();
     {

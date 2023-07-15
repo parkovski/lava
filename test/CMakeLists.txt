@@ -4,6 +4,7 @@ add_executable(test
   ../src/driver/cliparser.cpp
   intervaltree.cpp
   lexer.cpp
+  parser.cpp
   rope.cpp
   slidingindex.cpp
   terminal.cpp
