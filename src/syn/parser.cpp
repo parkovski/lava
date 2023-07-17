@@ -1,10 +1,16 @@
 #include "lava/syn/parser.h"
 #include <cstdio>
 #include <charconv>
+#include <cassert>
 
 using namespace lava::syn;
 
 static const unsigned CallPrec = 17;
+
+#define ERROR(err) \
+  fprintf(stderr, "%s:%d:%d: error: %s\n", \
+          token.doc->name.c_str(), \
+          token.start.line, token.start.column, err)
 
 Parser::Parser(Lexer &lexer) noexcept
   : lexer{&lexer}
@@ -12,15 +18,203 @@ Parser::Parser(Lexer &lexer) noexcept
   next();
 }
 
-std::unique_ptr<Expr> Parser::parse_expr(unsigned prec, int flags) {
+void Parser::next() {
+  do {
+    token = lexer->lex();
+  } while (token.what == TkWhitespace
+        || token.what == TkLineComment
+        || token.what == TkBlockComment);
+}
+
+Token Parser::take() {
+  Token t = token;
+  next();
+  return t;
+}
+
+std::unique_ptr<Item> Parser::parse_item() {
+  switch (token.what) {
+  case TkFun:
+    return parse_fun_item();
+
+  case TkIdent:
+    return parse_var_item();
+
+  default:
+    return nullptr;
+  }
+}
+
+std::unique_ptr<VarDeclItem> Parser::parse_var_item() {
+  assert(token.what == TkIdent);
+  auto type = parse_expr();
+
+  VarDeclsWithDelimiter decls;
+  while (true) {
+    auto decl = parse_var_decl();
+    if (decl.has_value()) {
+      if (token.what == TkComma) {
+        decls.emplace_back(VarDeclWithDelimiter{*std::move(decl), take()});
+      } else {
+        decls.emplace_back(VarDeclWithDelimiter{*std::move(decl)});
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+  if (decls.empty()) {
+    ERROR("missing variable name");
+  }
+
+  Token semi = token;
+  if (token.what != TkSemi) {
+    ERROR("missing ';' after var decl");
+  } else {
+    next();
+  }
+
+  return std::make_unique<VarDeclItem>(
+    std::move(type), std::move(decls), semi);
+}
+
+std::optional<VarDecl> Parser::parse_var_decl() {
+  if (token.what != TkIdent) {
+    return std::nullopt;
+  }
+  Token name = take();
+
+  if (token.what == TkEq) {
+    auto init = parse_var_init();
+    if (!init) {
+      ERROR("expected initializer expression");
+      return std::nullopt;
+    }
+    return VarDecl{name, *std::move(init)};
+  } else {
+    return VarDecl{name};
+  }
+}
+
+std::optional<VarInit> Parser::parse_var_init() {
+  assert(token.what == TkEq);
+  Token eq = take();
+
+  auto expr = parse_expr(PF_NoComma);
+  if (!expr) {
+    ERROR("missing expr");
+    return std::nullopt;
+  }
+  return VarInit{eq, std::move(expr)};
+}
+
+std::unique_ptr<FunItemBase> Parser::parse_fun_item() {
+  assert(token.what == TkFun);
+  Token fun = take();
+
+  if (token.what != TkIdent) {
+    ERROR("missing fun name");
+    return nullptr;
+  }
+  Token name = take();
+
+  auto args = parse_arg_list();
+  if (!args) {
+    ERROR("missing args");
+    return nullptr;
+  }
+
+  if (token.what == TkSemi) {
+    return std::make_unique<FunDeclItem>(fun, name, *std::move(args), take());
+  } else if (token.what == TkLeftBrace) {
+    auto body = parse_fun_body();
+    if (!body) {
+      ERROR("missing fun body");
+      return nullptr;
+    }
+  }
+  return nullptr;
+}
+
+std::optional<ArgList> Parser::parse_arg_list() {
+  if (token.what != TkLeftParen) {
+    return std::nullopt;
+  }
+  Token lparen = take();
+
+  ArgDeclsWithDelimiter args;
+  while (true) {
+    auto arg = parse_arg_decl();
+    if (!arg) {
+      break;
+    }
+    if (token.what == TkComma) {
+      args.emplace_back(ArgDeclWithDelimiter{*std::move(arg), take()});
+    } else {
+      args.emplace_back(ArgDeclWithDelimiter{*std::move(arg)});
+      break;
+    }
+  }
+
+  if (token.what != TkRightParen) {
+    ERROR("missing ')'");
+    return std::nullopt;
+  }
+  return ArgList{lparen, take(), std::move(args)};
+}
+
+std::optional<ArgDecl> Parser::parse_arg_decl() {
+  if (token.what != TkIdent) {
+    return std::nullopt;
+  }
+  auto type = parse_expr();
+
+  if (token.what != TkIdent) {
+    ERROR("missing var name");
+    return std::nullopt;
+  }
+  Token name = take();
+
+  if (token.what == TkEq) {
+    auto init = parse_var_init();
+    return ArgDecl{std::move(type), name, *std::move(init)};
+  } else {
+    return ArgDecl{std::move(type), name};
+  }
+}
+
+std::optional<ScopeExpr> Parser::parse_fun_body() {
+  assert(token.what == TkLeftBrace);
+  Token lbrace = take();
+
+  ExprsWithDelimiter exprs;
+  while (true) {
+    auto expr = parse_expr();
+    if (!expr) {
+      break;
+    }
+    if (token.what != TkSemi) {
+      ERROR("missing ';'");
+      return std::nullopt;
+    }
+    exprs.emplace_back(ExprWithDelimiter{std::move(expr), take()});
+  }
+
+  if (token.what != TkRightBrace) {
+    ERROR("missing '}'");
+    return std::nullopt;
+  }
+  return ScopeExpr{lbrace, take(), std::move(exprs)};
+}
+
+std::unique_ptr<Expr> Parser::parse_expr(int flags, unsigned prec) {
   std::unique_ptr<Expr> expr;
 
   if (auto prefix_prec = get_prefix_prec(token.what, flags); prefix_prec > 0) {
-    Token op = token;
-    next();
-    auto right = parse_expr(prefix_prec, flags);
+    Token op = take();
+    auto right = parse_expr(flags, prefix_prec);
     if (!right) {
-      fprintf(stderr, "no expression after prefix op\n");
+      ERROR("no expression after prefix op");
       return nullptr;
     }
     expr = std::make_unique<PrefixExpr>(op, std::move(right));
@@ -34,9 +228,8 @@ std::unique_ptr<Expr> Parser::parse_expr(unsigned prec, int flags) {
   while (true) {
     auto infix_prec = get_infix_prec(token.what, flags);
     if (infix_prec >= prec) {
-      Token op = token;
-      next();
-      auto right = parse_expr(infix_prec, flags);
+      Token op = take();
+      auto right = parse_expr(flags, infix_prec);
       if (right) {
         expr = std::make_unique<BinaryExpr>(
           op, std::move(expr), std::move(right));
@@ -46,8 +239,7 @@ std::unique_ptr<Expr> Parser::parse_expr(unsigned prec, int flags) {
         break;
       }
     } else if (get_postfix_prec(token.what, flags) >= prec) {
-      Token op = token;
-      next();
+      Token op = take();
       expr = std::make_unique<PostfixExpr>(op, std::move(expr));
     } else if ((token.what == TkLeftParen
              || token.what == TkLeftSquareBracket)
@@ -61,43 +253,30 @@ std::unique_ptr<Expr> Parser::parse_expr(unsigned prec, int flags) {
   return expr;
 }
 
-void Parser::next() {
-  do {
-    token = lexer->lex();
-  } while (token.what == TkWhitespace
-        || token.what == TkLineComment
-        || token.what == TkBlockComment);
-}
-
 std::unique_ptr<InvokeExpr>
 Parser::parse_invoke_expr(std::unique_ptr<Expr> left) {
-  Token lbracket = token;
-  next();
+  Token lbracket = take();
 
-  ExprWithDelimiter arg;
-  std::vector<ExprWithDelimiter> args;
+  ExprsWithDelimiter args;
   while (true) {
-    arg.expr = parse_expr(1, PF_NoComma);
-    if (!arg.expr) {
+    auto expr = parse_expr(PF_NoComma);
+    if (!expr) {
       break;
     }
     if (token.what == TkComma) {
-      arg.delimiter = token;
-      next();
-      args.emplace_back(std::move(arg));
+      args.emplace_back(ExprWithDelimiter{std::move(expr), take()});
     } else {
-      arg.delimiter = std::nullopt;
-      args.emplace_back(std::move(arg));
+      args.emplace_back(ExprWithDelimiter{std::move(expr)});
       break;
     }
   }
 
   Token rbracket = token;
   if (lbracket.what == TkLeftParen && rbracket.what != TkRightParen) {
-    fprintf(stderr, "missing ')'\n");
+    ERROR("missing ')'");
   } else if (lbracket.what == TkLeftSquareBracket
           && rbracket.what != TkRightSquareBracket) {
-    fprintf(stderr, "missing ']'\n");
+    ERROR("missing ']'");
   } else {
     next();
   }
@@ -194,15 +373,13 @@ std::unique_ptr<Expr> Parser::parse_primary() {
 
   case TkLeftParen:
     {
-      Token lparen = token;
-      next();
+      Token lparen = take();
       auto inner = parse_expr();
       if (token.what != TkRightParen) {
-        fprintf(stderr, "missing right paren\n");
+        ERROR("missing right paren");
         return expr;
       }
-      Token rparen = token;
-      next();
+      Token rparen = take();
       expr = std::make_unique<ParenExpr>(lparen, rparen, std::move(inner));
     }
     break;

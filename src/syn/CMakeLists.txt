@@ -1,5 +1,6 @@
 set(SOURCES
   lexer.cpp
+  nodes.cpp
   parser.cpp
 )
 

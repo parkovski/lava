@@ -97,6 +97,10 @@ enum {
   TkSlash,
   TkSlashEq,
   TkQuestion,
+
+  TkFun,
+  TkIf,
+  TkElse,
 };
 
 struct Token {
@@ -105,7 +109,7 @@ struct Token {
   SourceLoc end;
   int what;
 
-  std::string_view text() {
+  std::string_view text() const {
     return std::string_view(doc->content)
       .substr(start.offset, end.offset - start.offset);
   }
@@ -127,6 +131,8 @@ public:
 private:
   int getch(unsigned lookahead = 0) const;
   void nextch();
+
+  static int get_keyword(std::string_view word);
 
   void lex_whitespace(Token &token);
   void lex_line_comment(Token &token);

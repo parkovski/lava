@@ -3,7 +3,7 @@
 
 using namespace lava::syn;
 
-TEST_CASE("Lexer", "[syntax]") {
+TEST_CASE("Lexer", "[syntax][lexer]") {
   SourceDoc doc;
   doc.name = "test";
   doc.content = "abc +=\n123";

@@ -37,10 +37,14 @@ Token Lexer::lex() {
     lex_string(token);
   } else if ((lower >= 'a' && lower <= 'z') || lower == '_') {
     lex_ident(token);
+    token.end = loc;
+    token.what = get_keyword(token.text());
+    return token;
   } else {
     lex_symbol_or_invalid(token);
   }
 
+  token.end = loc;
   return token;
 }
 
@@ -59,6 +63,30 @@ void Lexer::nextch() {
     ++loc.column;
   }
   ++loc.offset;
+}
+
+int Lexer::get_keyword(std::string_view word) {
+  switch (word[0]) {
+  case 'e':
+    if (word.substr(1) == "lse") {
+      return TkElse;
+    }
+    break;
+
+  case 'f':
+    if (word.substr(1) == "un") {
+      return TkFun;
+    }
+    break;
+
+  case 'i':
+    if (word.substr(1) == "f") {
+      return TkIf;
+    }
+    break;
+  }
+
+  return TkIdent;
 }
 
 void Lexer::lex_whitespace(Token &token) {
@@ -241,7 +269,8 @@ void Lexer::lex_string(Token &token) {
 }
 
 void Lexer::lex_ident(Token &token) {
-  token.what = TkIdent;
+  // Assigned in keyword handling.
+  // token.what = TkIdent;
   nextch();
   while (true) {
     int c = getch();
