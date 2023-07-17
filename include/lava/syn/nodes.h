@@ -1,7 +1,7 @@
 #ifndef LAVA_SYN_NODES_H_
 #define LAVA_SYN_NODES_H_
 
-#include "lexer.h"
+#include "token.h"
 #include <vector>
 #include <memory>
 #include <optional>

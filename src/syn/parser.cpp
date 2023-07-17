@@ -1,4 +1,5 @@
 #include "lava/syn/parser.h"
+#include "lava/syn/lexer.h"
 #include <cstdio>
 #include <charconv>
 #include <cassert>
@@ -47,7 +48,7 @@ std::unique_ptr<Item> Parser::parse_item() {
 
 std::unique_ptr<VarDeclItem> Parser::parse_var_item() {
   assert(token.what == TkIdent);
-  auto type = parse_expr();
+  auto type = parse_expr(PF_NoComma);
 
   VarDeclsWithDelimiter decls;
   while (true) {
@@ -127,7 +128,7 @@ std::unique_ptr<FunItemBase> Parser::parse_fun_item() {
   if (token.what == TkSemi) {
     return std::make_unique<FunDeclItem>(fun, name, *std::move(args), take());
   } else if (token.what == TkLeftBrace) {
-    auto body = parse_fun_body();
+    auto body = parse_scope_expr();
     if (!body) {
       ERROR("missing fun body");
       return nullptr;
@@ -167,7 +168,7 @@ std::optional<ArgDecl> Parser::parse_arg_decl() {
   if (token.what != TkIdent) {
     return std::nullopt;
   }
-  auto type = parse_expr();
+  auto type = parse_expr(PF_NoComma);
 
   if (token.what != TkIdent) {
     ERROR("missing var name");
@@ -181,30 +182,6 @@ std::optional<ArgDecl> Parser::parse_arg_decl() {
   } else {
     return ArgDecl{std::move(type), name};
   }
-}
-
-std::optional<ScopeExpr> Parser::parse_fun_body() {
-  assert(token.what == TkLeftBrace);
-  Token lbrace = take();
-
-  ExprsWithDelimiter exprs;
-  while (true) {
-    auto expr = parse_expr();
-    if (!expr) {
-      break;
-    }
-    if (token.what != TkSemi) {
-      ERROR("missing ';'");
-      return std::nullopt;
-    }
-    exprs.emplace_back(ExprWithDelimiter{std::move(expr), take()});
-  }
-
-  if (token.what != TkRightBrace) {
-    ERROR("missing '}'");
-    return std::nullopt;
-  }
-  return ScopeExpr{lbrace, take(), std::move(exprs)};
 }
 
 std::unique_ptr<Expr> Parser::parse_expr(int flags, unsigned prec) {
@@ -229,7 +206,8 @@ std::unique_ptr<Expr> Parser::parse_expr(int flags, unsigned prec) {
     auto infix_prec = get_infix_prec(token.what, flags);
     if (infix_prec >= prec) {
       Token op = take();
-      auto right = parse_expr(flags, infix_prec);
+      unsigned ltr_offset = is_rtl_operator(token.what) ? 0 : 1;
+      auto right = parse_expr(flags, infix_prec + ltr_offset);
       if (right) {
         expr = std::make_unique<BinaryExpr>(
           op, std::move(expr), std::move(right));
@@ -251,6 +229,30 @@ std::unique_ptr<Expr> Parser::parse_expr(int flags, unsigned prec) {
   }
 
   return expr;
+}
+
+std::optional<ScopeExpr> Parser::parse_scope_expr() {
+  assert(token.what == TkLeftBrace);
+  Token lbrace = take();
+
+  ExprsWithDelimiter exprs;
+  while (true) {
+    auto expr = parse_expr();
+    if (!expr) {
+      break;
+    }
+    if (token.what != TkSemi) {
+      ERROR("missing ';'");
+      return std::nullopt;
+    }
+    exprs.emplace_back(ExprWithDelimiter{std::move(expr), take()});
+  }
+
+  if (token.what != TkRightBrace) {
+    ERROR("missing '}'");
+    return std::nullopt;
+  }
+  return ScopeExpr{lbrace, take(), std::move(exprs)};
 }
 
 std::unique_ptr<InvokeExpr>
@@ -509,5 +511,29 @@ unsigned Parser::get_postfix_prec(int op, int flags) {
   case TkExcl:
   case TkQuestion:
     return 17;
+  }
+}
+
+bool Parser::is_rtl_operator(int op) {
+  switch (op) {
+  default:
+    return false;
+
+  case TkPercentEq:
+  case TkHatEq:
+  case TkAndEq:
+  case TkStarEq:
+  case TkStarStar:
+  case TkStarStarEq:
+  case TkMinusEq:
+  case TkPlusEq:
+  case TkEq:
+  case TkOrEq:
+  case TkLessLessEq:
+  case TkLessMinusLessEq:
+  case TkGreaterGreaterEq:
+  case TkGreaterMinusGreaterEq:
+  case TkSlashEq:
+    return true;
   }
 }

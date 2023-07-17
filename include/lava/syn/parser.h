@@ -1,11 +1,8 @@
 #ifndef LAVA_SYN_PARSER_H_
 #define LAVA_SYN_PARSER_H_
 
-#include "lexer.h"
 #include "nodes.h"
-#include <memory>
-#include <vector>
-#include <optional>
+#include "lexer.h"
 
 namespace lava::syn {
 
@@ -35,10 +32,9 @@ public:
   std::unique_ptr<FunItemBase> parse_fun_item();
   std::optional<ArgList> parse_arg_list();
   std::optional<ArgDecl> parse_arg_decl();
-  std::optional<ScopeExpr> parse_fun_body();
 
   std::unique_ptr<Expr> parse_expr(int flags = 0, unsigned prec = 1);
-
+  std::optional<ScopeExpr> parse_scope_expr();
   std::unique_ptr<InvokeExpr> parse_invoke_expr(std::unique_ptr<Expr> left);
   std::unique_ptr<Expr> parse_primary();
 
@@ -46,6 +42,7 @@ private:
   static unsigned get_prefix_prec(int op, int flags);
   static unsigned get_infix_prec(int op, int flags);
   static unsigned get_postfix_prec(int op, int flags);
+  static bool is_rtl_operator(int op);
 };
 
 } // namespace lava::syn
