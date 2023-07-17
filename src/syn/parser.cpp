@@ -206,7 +206,7 @@ std::unique_ptr<Expr> Parser::parse_expr(int flags, unsigned prec) {
     auto infix_prec = get_infix_prec(token.what, flags);
     if (infix_prec >= prec) {
       Token op = take();
-      unsigned ltr_offset = is_rtl_operator(token.what) ? 0 : 1;
+      unsigned ltr_offset = is_rtl_operator(op.what) ? 0 : 1;
       auto right = parse_expr(flags, infix_prec + ltr_offset);
       if (right) {
         expr = std::make_unique<BinaryExpr>(
@@ -433,6 +433,7 @@ unsigned Parser::get_infix_prec(int op, int flags) {
   case TkStarStarEq:
   case TkMinusEq:
   case TkPlusEq:
+  case TkEq:
   case TkOrEq:
   case TkLessLessEq:
   case TkLessMinusLessEq:

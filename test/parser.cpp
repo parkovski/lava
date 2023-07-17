@@ -38,6 +38,24 @@ TEST_CASE("Parser simple precedence", "[syntax][parser][expr]") {
   REQUIRE(binary->right()->expr_kind() == ExprKind::Ident);
 }
 
+TEST_CASE("RTL assignment", "[syntax][parser][expr]") {
+  INIT_PARSER("a = b = c + 1");
+
+  auto expr = parser.parse_expr();
+  REQUIRE(expr->expr_kind() == ExprKind::Binary);
+  auto binary = static_cast<const BinaryExpr*>(expr.get());
+  REQUIRE(binary->left()->expr_kind() == ExprKind::Ident);
+  REQUIRE(static_cast<const IdentExpr*>(binary->left())->value() == "a");
+  REQUIRE(binary->right()->expr_kind() == ExprKind::Binary);
+  binary = static_cast<const BinaryExpr*>(binary->right());
+  REQUIRE(binary->left()->expr_kind() == ExprKind::Ident);
+  REQUIRE(static_cast<const IdentExpr*>(binary->left())->value() == "b");
+  REQUIRE(binary->right()->expr_kind() == ExprKind::Binary);
+  binary = static_cast<const BinaryExpr*>(binary->right());
+  REQUIRE(binary->left()->expr_kind() == ExprKind::Ident);
+  REQUIRE(binary->right()->expr_kind() == ExprKind::Literal);
+}
+
 TEST_CASE("Parser parens", "[syntax][parser][expr]") {
   INIT_PARSER("(a)*(b+c)");
 
