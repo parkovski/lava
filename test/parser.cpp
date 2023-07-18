@@ -153,3 +153,13 @@ TEST_CASE("Fun decl", "[syntax][parser][item]") {
   auto fundecl = static_cast<FunDeclItem*>(item.get());
   REQUIRE(fundecl->args().size() == 2);
 }
+
+TEST_CASE("Fun def", "[syntax][parser][item]") {
+  INIT_PARSER("fun foo() { print('hello'); }");
+
+  auto item = parser.parse_fun_item();
+  REQUIRE(item->item_kind() == ItemKind::FunDef);
+  auto fundef = static_cast<FunDefItem*>(item.get());
+  auto &body = fundef->body();
+  REQUIRE(body.exprs()[0].value->expr_kind() == ExprKind::Invoke);
+}

@@ -430,6 +430,8 @@ public:
 
   SourceLoc end() const override;
   ItemKind item_kind() const override;
+
+  const ScopeExpr &body() const { return _body; }
 };
 
 } // namespace lava::syn

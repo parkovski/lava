@@ -133,6 +133,8 @@ std::unique_ptr<FunItemBase> Parser::parse_fun_item() {
       ERROR("missing fun body");
       return nullptr;
     }
+    return std::make_unique<FunDefItem>(fun, name, *std::move(args),
+                                        *std::move(body));
   }
   return nullptr;
 }

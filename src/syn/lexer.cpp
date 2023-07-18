@@ -264,6 +264,9 @@ void Lexer::lex_string(Token &token) {
     } else if (c == close) {
       nextch();
       return;
+    } else {
+      nextch();
+      c = getch();
     }
   }
 }
