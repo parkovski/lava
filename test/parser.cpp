@@ -171,3 +171,11 @@ TEST_CASE("Empty items", "[syntax][parser][item]") {
   item = parser.parse_item();
   REQUIRE(item->item_kind() == ItemKind::Empty);
 }
+
+TEST_CASE("Fun return", "[syntax][parser][item]") {
+  INIT_PARSER("fun foo() -> lava.string;");
+  auto item = parser.parse_item();
+  REQUIRE(item->item_kind() == ItemKind::FunDecl);
+  auto fundecl = static_cast<FunDeclItem*>(item.get());
+  REQUIRE(fundecl->return_type() != nullptr);
+}

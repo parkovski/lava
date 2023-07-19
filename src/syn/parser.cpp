@@ -147,16 +147,28 @@ std::unique_ptr<FunItemBase> Parser::parse_fun_item() {
     return nullptr;
   }
 
+  std::optional<ReturnSpec> ret;
+  if (token.what == TkMinusRightArrow) {
+    auto arrow = take();
+    auto type = parse_expr(PF_NoComma);
+    if (!type) {
+      ERROR("missing return type");
+      return nullptr;
+    }
+    ret = ReturnSpec{arrow, std::move(type)};
+  }
+
   if (token.what == TkSemi) {
-    return std::make_unique<FunDeclItem>(fun, name, *std::move(args), take());
+    return std::make_unique<FunDeclItem>(
+      fun, name, *std::move(args), std::move(ret), take());
   } else if (token.what == TkLeftBrace) {
     auto body = parse_scope_expr();
     if (!body) {
       ERROR("missing fun body");
       return nullptr;
     }
-    return std::make_unique<FunDefItem>(fun, name, *std::move(args),
-                                        *std::move(body));
+    return std::make_unique<FunDefItem>(
+      fun, name, *std::move(args), std::move(ret), *std::move(body));
   } else {
     ERROR("expected ';' or '{' after fun");
     return nullptr;

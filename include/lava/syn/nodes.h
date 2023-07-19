@@ -418,24 +418,42 @@ public:
   const ArgDeclsWithDelimiter &args() const { return _args; }
 };
 
+struct ReturnSpec {
+private:
+  Token _arrow;
+  std::unique_ptr<Expr> _type;
+
+public:
+  explicit ReturnSpec(Token arrow, std::unique_ptr<Expr> type)
+    : _arrow{arrow}
+    , _type{std::move(type)}
+  {}
+
+  const Expr *type() const { return _type.get(); }
+};
+
 struct FunItemBase : Item {
 private:
   Token _fun;
   Token _name;
   ArgList _args;
+  std::optional<ReturnSpec> _return;
 
 public:
-  explicit FunItemBase(Token fun, Token name, ArgList args)
-    noexcept
+  explicit FunItemBase(Token fun, Token name, ArgList args,
+                       std::optional<ReturnSpec> ret) noexcept
     : _fun{fun}
     , _name{name}
     , _args{std::move(args)}
+    , _return{std::move(ret)}
   {}
 
   SourceLoc start() const override;
 
   std::string_view name() const { return _name.text(); }
   const ArgDeclsWithDelimiter &args() const { return _args.args(); }
+  const Expr *return_type() const
+  { return _return ? _return->type() : nullptr; }
 };
 
 struct FunDeclItem final : FunItemBase {
@@ -443,9 +461,9 @@ private:
   Token _semi;
 
 public:
-  explicit FunDeclItem(Token fun, Token name, ArgList args, Token semi)
-    noexcept
-    : FunItemBase{fun, name, std::move(args)}
+  explicit FunDeclItem(Token fun, Token name, ArgList args,
+                       std::optional<ReturnSpec> ret, Token semi) noexcept
+    : FunItemBase{fun, name, std::move(args), std::move(ret)}
     , _semi{semi}
   {}
 
@@ -458,9 +476,10 @@ private:
   ScopeExpr _body;
 
 public:
-  explicit FunDefItem(Token fun, Token name, ArgList args, ScopeExpr body)
+  explicit FunDefItem(Token fun, Token name, ArgList args,
+                      std::optional<ReturnSpec> ret, ScopeExpr body)
     noexcept
-    : FunItemBase{fun, name, std::move(args)}
+    : FunItemBase{fun, name, std::move(args), std::move(ret)}
     , _body{std::move(body)}
   {}
 
