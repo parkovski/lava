@@ -14,7 +14,6 @@ enum class NodeKind {
   Item,
 };
 
-struct Document;
 struct Node {
 public:
   virtual NodeKind node_kind() const = 0;
@@ -22,14 +21,21 @@ public:
   virtual SourceLoc end() const = 0;
 };
 
+struct Item;
 struct Document final : Node {
 private:
-  std::vector<std::unique_ptr<Node>> _nodes;
+  std::vector<std::unique_ptr<Item>> _items;
 
 public:
+  explicit Document(std::vector<std::unique_ptr<Item>> items) noexcept
+    : _items{std::move(items)}
+  {}
+
   NodeKind node_kind() const override;
   SourceLoc start() const override;
   SourceLoc end() const override;
+
+  const std::vector<std::unique_ptr<Item>> &items() const { return _items; }
 };
 
 enum class ExprKind {
@@ -268,6 +274,8 @@ public:
 };
 
 enum class ItemKind {
+  Empty,
+  Expr,
   VarDecl,
   FunDecl,
   FunDef,
@@ -278,6 +286,34 @@ public:
   NodeKind node_kind() const override;
 
   virtual ItemKind item_kind() const = 0;
+};
+
+struct EmptyItem : Item {
+  Token _semi;
+
+public:
+  explicit EmptyItem(Token semi) noexcept
+    : _semi{semi}
+  {}
+
+  SourceLoc start() const override;
+  SourceLoc end() const override;
+  ItemKind item_kind() const override;
+};
+
+struct ExprItem : Item {
+  std::unique_ptr<Expr> _expr;
+  Token _semi;
+
+public:
+  explicit ExprItem(std::unique_ptr<Expr> expr, Token semi) noexcept
+    : _expr{std::move(expr)}
+    , _semi{semi}
+  {}
+
+  SourceLoc start() const override;
+  SourceLoc end() const override;
+  ItemKind item_kind() const override;
 };
 
 struct VarInit {

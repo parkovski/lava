@@ -7,17 +7,17 @@ NodeKind Document::node_kind() const {
 }
 
 SourceLoc Document::start() const {
-  if (_nodes.empty()) {
+  if (_items.empty()) {
     return {};
   }
-  return _nodes.front()->start();
+  return _items.front()->start();
 }
 
 SourceLoc Document::end() const {
-  if (_nodes.empty()) {
+  if (_items.empty()) {
     return {};
   }
-  return _nodes.back()->end();
+  return _items.back()->end();
 }
 
 // ------------------------------------------------------------------------- //
@@ -146,6 +146,33 @@ NodeKind Item::node_kind() const {
 
 // ------------------------------------------------------------------------- //
 
+SourceLoc EmptyItem::start() const {
+  return _semi.start;
+}
+
+SourceLoc EmptyItem::end() const {
+  return _semi.end;
+}
+
+ItemKind EmptyItem::item_kind() const {
+  return ItemKind::Empty;
+}
+
+// ------------------------------------------------------------------------- //
+
+SourceLoc ExprItem::start() const {
+  return _expr->start();
+}
+
+SourceLoc ExprItem::end() const {
+  return _semi.end;
+}
+
+ItemKind ExprItem::item_kind() const {
+  return ItemKind::Expr;
+}
+
+// ------------------------------------------------------------------------- //
 
 SourceLoc VarDeclItem::start() const {
   return _type->start();

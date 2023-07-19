@@ -23,9 +23,11 @@ private:
   Token take();
 
 public:
+  std::unique_ptr<Document> parse_document();
+
   std::unique_ptr<Item> parse_item();
 
-  std::unique_ptr<VarDeclItem> parse_var_item();
+  std::unique_ptr<VarDeclItem> parse_var_item(std::unique_ptr<Expr> type);
   std::optional<VarDecl> parse_var_decl();
   std::optional<VarInit> parse_var_init();
 

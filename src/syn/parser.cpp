@@ -33,23 +33,46 @@ Token Parser::take() {
   return t;
 }
 
+std::unique_ptr<Document> Parser::parse_document() {
+  std::vector<std::unique_ptr<Item>> items;
+
+  while (token.what != TkEof) {
+    auto item = parse_item();
+    if (!item) {
+      return nullptr;
+    }
+    items.emplace_back(std::move(item));
+  }
+
+  return std::make_unique<Document>(std::move(items));
+}
+
 std::unique_ptr<Item> Parser::parse_item() {
   switch (token.what) {
   case TkFun:
     return parse_fun_item();
 
-  case TkIdent:
-    return parse_var_item();
+  case TkSemi:
+    return std::make_unique<EmptyItem>(take());
 
   default:
-    return nullptr;
+    {
+      auto expr = parse_expr();
+      if (!expr) {
+        return nullptr;
+      }
+      if (token.what == TkSemi) {
+        auto stmt = std::make_unique<ExprItem>(std::move(expr), take());
+        return stmt;
+      } else {
+        return parse_var_item(std::move(expr));
+      }
+    }
   }
 }
 
-std::unique_ptr<VarDeclItem> Parser::parse_var_item() {
-  assert(token.what == TkIdent);
-  auto type = parse_expr(PF_NoComma);
-
+std::unique_ptr<VarDeclItem>
+Parser::parse_var_item(std::unique_ptr<Expr> type) {
   VarDeclsWithDelimiter decls;
   while (true) {
     auto decl = parse_var_decl();
@@ -66,17 +89,16 @@ std::unique_ptr<VarDeclItem> Parser::parse_var_item() {
   }
   if (decls.empty()) {
     ERROR("missing variable name");
+    return nullptr;
   }
 
-  Token semi = token;
   if (token.what != TkSemi) {
     ERROR("missing ';' after var decl");
+    return nullptr;
   } else {
-    next();
+    return std::make_unique<VarDeclItem>(
+      std::move(type), std::move(decls), take());
   }
-
-  return std::make_unique<VarDeclItem>(
-    std::move(type), std::move(decls), semi);
 }
 
 std::optional<VarDecl> Parser::parse_var_decl() {
@@ -135,8 +157,10 @@ std::unique_ptr<FunItemBase> Parser::parse_fun_item() {
     }
     return std::make_unique<FunDefItem>(fun, name, *std::move(args),
                                         *std::move(body));
+  } else {
+    ERROR("expected ';' or '{' after fun");
+    return nullptr;
   }
-  return nullptr;
 }
 
 std::optional<ArgList> Parser::parse_arg_list() {
@@ -180,6 +204,9 @@ std::optional<ArgDecl> Parser::parse_arg_decl() {
 
   if (token.what == TkEq) {
     auto init = parse_var_init();
+    if (!init) {
+      return std::nullopt;
+    }
     return ArgDecl{std::move(type), name, *std::move(init)};
   } else {
     return ArgDecl{std::move(type), name};
@@ -275,22 +302,24 @@ Parser::parse_invoke_expr(std::unique_ptr<Expr> left) {
     }
   }
 
-  Token rbracket = token;
-  if (lbracket.what == TkLeftParen && rbracket.what != TkRightParen) {
+  if (lbracket.what == TkLeftParen && token.what != TkRightParen) {
     ERROR("missing ')'");
+    return nullptr;
   } else if (lbracket.what == TkLeftSquareBracket
-          && rbracket.what != TkRightSquareBracket) {
+          && token.what != TkRightSquareBracket) {
     ERROR("missing ']'");
+    return nullptr;
+  } else if (lbracket.what == TkLess && token.what != TkGreater) {
+    ERROR("missing '>'");
+    return nullptr;
   } else {
-    next();
+    return std::make_unique<InvokeExpr>(
+      std::move(left),
+      lbracket,
+      take(),
+      std::move(args)
+    );
   }
-
-  return std::make_unique<InvokeExpr>(
-    std::move(left),
-    lbracket,
-    rbracket,
-    std::move(args)
-  );
 }
 
 std::unique_ptr<Expr> Parser::parse_primary() {
@@ -366,13 +395,14 @@ std::unique_ptr<Expr> Parser::parse_primary() {
     break;
 
   case TkStringLiteral:
-    expr = std::make_unique<LiteralExpr>(token, token.text());
-    next();
+    {
+      auto text = token.text();
+      expr = std::make_unique<LiteralExpr>(take(), text);
+    }
     break;
 
   case TkIdent:
-    expr = std::make_unique<IdentExpr>(token);
-    next();
+    expr = std::make_unique<IdentExpr>(take());
     break;
 
   case TkLeftParen:
@@ -381,10 +411,9 @@ std::unique_ptr<Expr> Parser::parse_primary() {
       auto inner = parse_expr();
       if (token.what != TkRightParen) {
         ERROR("missing right paren");
-        return expr;
+        return nullptr;
       }
-      Token rparen = take();
-      expr = std::make_unique<ParenExpr>(lparen, rparen, std::move(inner));
+      expr = std::make_unique<ParenExpr>(lparen, take(), std::move(inner));
     }
     break;
   }

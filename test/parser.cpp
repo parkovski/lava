@@ -163,3 +163,11 @@ TEST_CASE("Fun def", "[syntax][parser][item]") {
   auto &body = fundef->body();
   REQUIRE(body.exprs()[0].value->expr_kind() == ExprKind::Invoke);
 }
+
+TEST_CASE("Empty items", "[syntax][parser][item]") {
+  INIT_PARSER(";;");
+  auto item = parser.parse_item();
+  REQUIRE(item->item_kind() == ItemKind::Empty);
+  item = parser.parse_item();
+  REQUIRE(item->item_kind() == ItemKind::Empty);
+}
