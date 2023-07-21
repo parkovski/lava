@@ -2,6 +2,7 @@ set(SOURCES
   lexer.cpp
   nodes.cpp
   parser.cpp
+  types.cpp
 )
 
 add_library(lava-syn STATIC ${SOURCES})

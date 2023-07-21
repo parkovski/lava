@@ -314,6 +314,8 @@ public:
   SourceLoc start() const override;
   SourceLoc end() const override;
   ItemKind item_kind() const override;
+
+  const Expr *expr() const { return _expr.get(); }
 };
 
 struct VarInit {
