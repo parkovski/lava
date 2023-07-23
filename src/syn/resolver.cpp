@@ -2,109 +2,109 @@
 
 using namespace lava::syn;
 
-void Resolver::resolve(const Document &doc) {
+void Resolver::resolve_document(const Document &doc) {
   for (auto const &item : doc.items()) {
-    resolve(*item.get());
+    resolve_item(*item.get());
   }
 }
 
 // ------------------------------------------------------------------------- //
 
-void Resolver::resolve(const Item &item) {
+void Resolver::resolve_item(const Item &item) {
   switch (item.item_kind()) {
   case ItemKind::Empty:
     break;
 
   case ItemKind::Expr:
-    resolve(static_cast<const ExprItem&>(item));
+    resolve_item(static_cast<const ExprItem&>(item));
     break;
 
   case ItemKind::VarDecl:
-    resolve(static_cast<const VarDeclItem&>(item));
+    resolve_item(static_cast<const VarDeclItem&>(item));
     break;
 
   case ItemKind::FunDecl:
-    resolve(static_cast<const FunDeclItem&>(item));
+    resolve_item(static_cast<const FunDeclItem&>(item));
     break;
 
   case ItemKind::FunDef:
-    resolve(static_cast<const FunDefItem&>(item));
+    resolve_item(static_cast<const FunDefItem&>(item));
     break;
   }
 }
 
-void Resolver::resolve(const ExprItem &item) {
+void Resolver::resolve_item(const ExprItem &item) {
 }
 
-void Resolver::resolve(const VarDeclItem &item) {
+void Resolver::resolve_item(const VarDeclItem &item) {
 }
 
-void Resolver::resolve(const FunDeclItem &item) {
+void Resolver::resolve_item(const FunDeclItem &item) {
 }
 
-void Resolver::resolve(const FunDefItem &item) {
+void Resolver::resolve_item(const FunDefItem &item) {
 }
 
 // ------------------------------------------------------------------------- //
 
-void Resolver::resolve(const Expr &expr) {
+void Resolver::resolve_expr(const Expr &expr) {
   switch (expr.expr_kind()) {
   case ExprKind::Literal:
-    resolve(static_cast<const LiteralExpr&>(expr));
+    resolve_expr(static_cast<const LiteralExpr&>(expr));
     break;
 
   case ExprKind::Ident:
-    resolve(static_cast<const IdentExpr&>(expr));
+    resolve_expr(static_cast<const IdentExpr&>(expr));
     break;
 
   case ExprKind::Prefix:
-    resolve(static_cast<const PrefixExpr&>(expr));
+    resolve_expr(static_cast<const PrefixExpr&>(expr));
     break;
 
   case ExprKind::Postfix:
-    resolve(static_cast<const PostfixExpr&>(expr));
+    resolve_expr(static_cast<const PostfixExpr&>(expr));
     break;
 
   case ExprKind::Binary:
-    resolve(static_cast<const BinaryExpr&>(expr));
+    resolve_expr(static_cast<const BinaryExpr&>(expr));
     break;
 
   case ExprKind::Paren:
-    resolve(static_cast<const ParenExpr&>(expr));
+    resolve_expr(static_cast<const ParenExpr&>(expr));
     break;
 
   case ExprKind::Invoke:
-    resolve(static_cast<const InvokeExpr&>(expr));
+    resolve_expr(static_cast<const InvokeExpr&>(expr));
     break;
 
   case ExprKind::Scope:
-    resolve(static_cast<const ScopeExpr&>(expr));
+    resolve_expr(static_cast<const ScopeExpr&>(expr));
     break;
   }
 }
 
-void Resolver::resolve(const LiteralExpr &expr) {
+void Resolver::resolve_expr(const LiteralExpr &expr) {
 }
 
-void Resolver::resolve(const IdentExpr &expr) {
+void Resolver::resolve_expr(const IdentExpr &expr) {
 }
 
-void Resolver::resolve(const PrefixExpr &expr) {
+void Resolver::resolve_expr(const PrefixExpr &expr) {
 }
 
-void Resolver::resolve(const PostfixExpr &expr) {
+void Resolver::resolve_expr(const PostfixExpr &expr) {
 }
 
-void Resolver::resolve(const BinaryExpr &expr) {
+void Resolver::resolve_expr(const BinaryExpr &expr) {
 }
 
-void Resolver::resolve(const ParenExpr &expr) {
+void Resolver::resolve_expr(const ParenExpr &expr) {
 }
 
-void Resolver::resolve(const InvokeExpr &expr) {
+void Resolver::resolve_expr(const InvokeExpr &expr) {
 }
 
-void Resolver::resolve(const ScopeExpr &expr) {
+void Resolver::resolve_expr(const ScopeExpr &expr) {
 }
 
 // ------------------------------------------------------------------------- //

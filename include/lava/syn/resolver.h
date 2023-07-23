@@ -17,23 +17,23 @@ public:
     , _scope{&symtab.global_scope()}
   {}
 
-  void resolve(const Document &doc);
+  void resolve_document(const Document &doc);
 
-  void resolve(const Item &item);
-  void resolve(const ExprItem &item);
-  void resolve(const VarDeclItem &item);
-  void resolve(const FunDeclItem &item);
-  void resolve(const FunDefItem &item);
+  void resolve_item(const Item &item);
+  void resolve_item(const ExprItem &item);
+  void resolve_item(const VarDeclItem &item);
+  void resolve_item(const FunDeclItem &item);
+  void resolve_item(const FunDefItem &item);
 
-  void resolve(const Expr &expr);
-  void resolve(const LiteralExpr &expr);
-  void resolve(const IdentExpr &expr);
-  void resolve(const PrefixExpr &expr);
-  void resolve(const PostfixExpr &expr);
-  void resolve(const BinaryExpr &expr);
-  void resolve(const ParenExpr &expr);
-  void resolve(const InvokeExpr &expr);
-  void resolve(const ScopeExpr &expr);
+  void resolve_expr(const Expr &expr);
+  void resolve_expr(const LiteralExpr &expr);
+  void resolve_expr(const IdentExpr &expr);
+  void resolve_expr(const PrefixExpr &expr);
+  void resolve_expr(const PostfixExpr &expr);
+  void resolve_expr(const BinaryExpr &expr);
+  void resolve_expr(const ParenExpr &expr);
+  void resolve_expr(const InvokeExpr &expr);
+  void resolve_expr(const ScopeExpr &expr);
 
   Type *resolve_type(Scope *scope, const Expr &expr);
   Type *resolve_type(Scope *scope, const IdentExpr &expr);
