@@ -6,6 +6,10 @@ using namespace lava::syn;
 
 Type::~Type() {}
 
+SymbolKind Type::symbol_kind() const {
+  return SymbolKind::Type;
+}
+
 bool Type::operator==(const Type &other) const {
   if (this == &other) {
     return true;

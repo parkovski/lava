@@ -3,12 +3,32 @@
 
 using namespace lava::syn;
 
+Symbol::~Symbol() {}
+
 Variable::~Variable() {}
+
+SymbolKind Variable::symbol_kind() const {
+  return SymbolKind::Variable;
+}
 
 // ------------------------------------------------------------------------- //
 
+Scope::~Scope() {}
+
+SymbolKind Scope::symbol_kind() const {
+  return SymbolKind::Scope;
+}
+
+Symbol *Scope::get_symbol(std::string_view name) {
+  auto it = _symbols.find(name);
+  if (it == _symbols.end()) {
+    return nullptr;
+  }
+  return it->second;
+}
+
 std::pair<Variable*, bool> Scope::add_variable(std::unique_ptr<Variable> var) {
-  auto [it, inserted] = _var_names.emplace(var->name, _vars.size());
+  auto [it, inserted] = _var_names.emplace(var->name(), _vars.size());
   if (inserted) {
     _vars.emplace_back(std::move(var));
     return std::make_pair(_vars.back().get(), true);
@@ -28,9 +48,9 @@ Variable *Scope::get_variable(std::string_view name) {
 }
 
 std::pair<Type *, bool> Scope::add_named_type(Type *type) {
-  assert(!type->get_name().empty());
+  assert(!type->name().empty());
   [[maybe_unused]] auto [it, inserted] =
-    _type_names.emplace(type->get_name(), type);
+    _type_names.emplace(type->name(), type);
   if (inserted) {
     return std::make_pair(type, true);
   } else {
@@ -69,6 +89,14 @@ Scope *Scope::get_scope(std::string_view name) {
     return nullptr;
   }
   return _scopes[it->second].get();
+}
+
+// ------------------------------------------------------------------------- //
+
+Function::~Function() {}
+
+SymbolKind Function::symbol_kind() const {
+  return SymbolKind::Function;
 }
 
 // ------------------------------------------------------------------------- //

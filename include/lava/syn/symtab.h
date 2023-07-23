@@ -7,6 +7,7 @@
 #include <string_view>
 #include <memory>
 #include <boost/container/small_vector.hpp>
+#include "symbol.h"
 #include "types.h"
 
 namespace lava::syn {
@@ -36,19 +37,31 @@ struct Instruction {
   boost::container::small_vector<size_t, 3> args;
 };
 
-struct Variable {
+struct Variable : Symbol {
+private:
+  Type *_type;
+  // std::vector<Instruction> _init;
+
+public:
+  explicit Variable(Type *type, std::string name) noexcept
+    : Symbol{std::move(name)}
+    , _type{type}
+  {}
+
   virtual ~Variable();
 
-  std::string name;
-  Type *type;
+  Type *type() { return _type; }
+  const Type *type() const { return _type; }
+  SymbolKind symbol_kind() const override;
 };
 
 struct SymbolTable;
-struct Scope {
+struct Scope : Symbol {
 private:
   SymbolTable *_symtab;
   Scope *_parent;
-  std::string _name;
+
+  std::unordered_map<std::string_view, Symbol*> _symbols;
 
   std::vector<std::unique_ptr<Variable>> _vars;
   std::unordered_map<std::string_view, size_t> _var_names;
@@ -58,19 +71,23 @@ private:
   std::vector<std::unique_ptr<Scope>> _scopes;
   std::unordered_map<std::string_view, size_t> _scope_names;
 
-  explicit Scope(Scope *parent, std::string name = "") noexcept
-    : _symtab{parent->_symtab}
+  explicit Scope(Scope *parent, std::string name = {}) noexcept
+    : Symbol{std::move(name)}
+    , _symtab{parent->_symtab}
     , _parent{parent}
-    , _name{std::move(name)}
   {}
 
 public:
   // Constructor for global scope only.
   explicit Scope(SymbolTable *symtab) noexcept
-    : _symtab{symtab}
+    : Symbol{{}}
+    , _symtab{symtab}
     , _parent{nullptr}
-    , _name{}
   {}
+
+  virtual ~Scope();
+
+  SymbolKind symbol_kind() const override;
 
   SymbolTable &symbol_table() { return *_symtab; }
   const SymbolTable &symbol_table() const { return *_symtab; }
@@ -78,7 +95,7 @@ public:
   Scope *parent() { return _parent; }
   const Scope *parent() const { return _parent; }
 
-  std::string_view name() const { return _name; }
+  Symbol *get_symbol(std::string_view name);
 
   std::pair<Variable*, bool> add_variable(std::unique_ptr<Variable> var);
   size_t variable_count() const { return _vars.size(); }
@@ -108,6 +125,9 @@ public:
 
 struct Function : Variable {
   Scope arg_scope;
+
+  virtual ~Function();
+  SymbolKind symbol_kind() const override;
 };
 
 struct SymbolTable {

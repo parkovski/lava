@@ -37,5 +37,5 @@ TEST_CASE("Type resolution", "[resolver]") {
     ->add_named_type(type);
   type = resolver.resolve_type(&symtab.global_scope(), *expr);
   REQUIRE(type != nullptr);
-  REQUIRE(type->get_name() == "Data");
+  REQUIRE(type->name() == "Data");
 }

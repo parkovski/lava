@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <string>
 #include <string_view>
+#include "symbol.h"
 
 namespace lava::syn {
 
@@ -21,24 +22,21 @@ enum class TypeKind {
   Struct,
 };
 
-struct Type {
-private:
-  std::string _name;
-
+struct Type : Symbol {
 public:
   explicit Type() noexcept
-    : _name{}
+    : Symbol{{}}
   {}
 
   explicit Type(std::string name) noexcept
-    : _name{std::move(name)}
+    : Symbol{std::move(name)}
   {}
 
   virtual ~Type() = 0;
+  SymbolKind symbol_kind() const override;
   virtual TypeKind type_kind() const = 0;
   virtual size_t hash() const = 0;
   bool operator==(const Type &other) const;
-  std::string_view get_name() const { return _name; }
 };
 
 struct NeverType final : Type {
@@ -116,8 +114,8 @@ struct PointerType final : DataType {
 };
 
 struct FunType final : Type {
-  std::vector<Type*> args;
   Type *ret;
+  std::vector<Type*> args;
 
   TypeKind type_kind() const override;
   size_t hash() const override;
