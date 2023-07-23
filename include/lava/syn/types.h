@@ -129,7 +129,7 @@ struct Field {
   Type *type;
 };
 
-struct StructType final : Type {
+struct StructType final : DataType {
   std::vector<Field> fields;
   std::unordered_map<std::string_view, size_t> field_names;
 

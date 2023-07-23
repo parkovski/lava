@@ -5,8 +5,10 @@ add_executable(test
   intervaltree.cpp
   lexer.cpp
   parser.cpp
+  resolver.cpp
   rope.cpp
   slidingindex.cpp
+  # symtab.cpp
   terminal.cpp
 )
 target_link_libraries(test PRIVATE

@@ -2,6 +2,8 @@ set(SOURCES
   lexer.cpp
   nodes.cpp
   parser.cpp
+  resolver.cpp
+  symtab.cpp
   types.cpp
 )
 
