@@ -32,10 +32,9 @@ TEST_CASE("Scope resolution failure", "[resolver]") {
 TEST_CASE("Type resolution", "[resolver]") {
   INIT_RESOLVER("foo.bar.Data");
 
-  Type *type = new DataType{"Data", 1, 1};
   symtab.global_scope().add_scope("foo")->add_scope("bar")
-    ->add_named_type(type);
-  type = resolver.resolve_type(&symtab.global_scope(), *expr);
+    ->add_symbol<DataType>("Data", 1, 1);
+  auto type = resolver.resolve_type(&symtab.global_scope(), *expr);
   REQUIRE(type != nullptr);
   REQUIRE(type->name() == "Data");
 }

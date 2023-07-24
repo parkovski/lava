@@ -123,7 +123,11 @@ Type *Resolver::resolve_type(Scope *scope, const Expr &expr) {
 }
 
 Type *Resolver::resolve_type(Scope *scope, const IdentExpr &expr) {
-  return scope->get_type(expr.value());
+  auto symbol = scope->get_symbol(expr.value());
+  if (symbol && symbol->symbol_kind() == SymbolKind::Type) {
+    return static_cast<Type*>(symbol);
+  }
+  return nullptr;
 }
 
 Type *Resolver::resolve_type(Scope *scope, const BinaryExpr &expr) {
@@ -153,7 +157,11 @@ Scope *Resolver::resolve_scope(Scope *scope, const Expr &expr) {
 }
 
 Scope *Resolver::resolve_scope(Scope *scope, const IdentExpr &expr) {
-  return scope->get_scope(expr.value());
+  auto symbol = scope->get_symbol(expr.value());
+  if (symbol && symbol->symbol_kind() == SymbolKind::Scope) {
+    return static_cast<Scope*>(symbol);
+  }
+  return nullptr;
 }
 
 Scope *Resolver::resolve_scope(Scope *scope, const BinaryExpr &expr) {

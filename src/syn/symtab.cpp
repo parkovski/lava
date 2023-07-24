@@ -5,6 +5,8 @@ using namespace lava::syn;
 
 Symbol::~Symbol() {}
 
+// ------------------------------------------------------------------------- //
+
 Variable::~Variable() {}
 
 SymbolKind Variable::symbol_kind() const {
@@ -19,76 +21,36 @@ SymbolKind Scope::symbol_kind() const {
   return SymbolKind::Scope;
 }
 
-Symbol *Scope::get_symbol(std::string_view name) {
-  auto it = _symbols.find(name);
-  if (it == _symbols.end()) {
-    return nullptr;
-  }
-  return it->second;
-}
-
-std::pair<Variable*, bool> Scope::add_variable(std::unique_ptr<Variable> var) {
-  auto [it, inserted] = _var_names.emplace(var->name(), _vars.size());
+std::pair<Symbol*, bool> Scope::add_symbol(std::unique_ptr<Symbol> symbol) {
+  auto [it, inserted] = _symbols.emplace(symbol->name(), std::move(symbol));
   if (inserted) {
-    _vars.emplace_back(std::move(var));
-    return std::make_pair(_vars.back().get(), true);
-  }
-  return std::make_pair(_vars[it->second].get(), false);
-}
-
-Variable *Scope::get_variable(std::string_view name) {
-  auto it = _var_names.find(name);
-  if (it == _var_names.end()) {
-    if (_parent) {
-      return _parent->get_variable(name);
+    if (it->second->symbol_kind() == SymbolKind::Variable) {
+      _vars.emplace_back(static_cast<Variable*>(it->second.get()));
     }
-    return nullptr;
+    return std::make_pair(it->second.get(), true);
   }
-  return _vars[it->second].get();
-}
-
-std::pair<Type *, bool> Scope::add_named_type(Type *type) {
-  assert(!type->name().empty());
-  [[maybe_unused]] auto [it, inserted] =
-    _type_names.emplace(type->name(), type);
-  if (inserted) {
-    return std::make_pair(type, true);
-  } else {
-    return std::make_pair(it->second, false);
-  }
-}
-
-Type *Scope::get_type(std::string_view name) {
-  auto it = _type_names.find(name);
-  if (it == _type_names.end()) {
-    if (_parent) {
-      return _parent->get_type(name);
-    }
-    return nullptr;
-  }
-  return it->second;
+  return std::make_pair(it->second.get(), false);
 }
 
 Scope *Scope::add_scope(std::string name) {
-  if (!name.empty()) {
-    if (get_scope(name) != nullptr) {
-      return nullptr;
-    }
+  auto it = _symbols.find(name);
+  if (it == _symbols.end()) {
+    auto scope = std::unique_ptr<Scope>{new Scope(this, std::move(name))};
+    return static_cast<Scope*>(
+      _symbols.emplace(scope->name(), std::move(scope)).first->second.get());
   }
-  auto *scope = _scopes.emplace_back(
-    std::unique_ptr<Scope>{new Scope{this, std::move(name)}}).get();
-  if (!scope->name().empty()) {
-    _scope_names.emplace(scope->name(), _scopes.size() - 1);
-  }
-  return scope;
+  return nullptr;
 }
 
-Scope *Scope::get_scope(std::string_view name) {
-  auto it = _scope_names.find(name);
-  if (it == _scope_names.end()) {
+Symbol *Scope::get_symbol(std::string_view name) {
+  auto it = _symbols.find(name);
+  if (it == _symbols.end()) {
+    if (_parent) {
+      return _parent->get_symbol(name);
+    }
     return nullptr;
   }
-  return _scopes[it->second].get();
+  return it->second.get();
 }
 
 // ------------------------------------------------------------------------- //
@@ -102,9 +64,8 @@ SymbolKind Function::symbol_kind() const {
 // ------------------------------------------------------------------------- //
 
 void SymbolTable::add_named_type(Type *type) {
-  [[maybe_unused]] auto inserted = _global.add_named_type(type).second;
-  assert(inserted);
-  inserted = _types.emplace(type).second;
+  [[maybe_unused]] auto inserted =
+    _global.add_symbol(std::unique_ptr<Symbol>{type}).second;
   assert(inserted);
 }
 
@@ -133,23 +94,16 @@ SymbolTable::SymbolTable()
 }
 
 SymbolTable::~SymbolTable() {
-  for (auto *type : _types) {
+  for (auto *type : _unnamed_types) {
     delete type;
   }
 }
 
-void SymbolTable::add_type(Type *type) {
-  [[maybe_unused]] bool inserted = _types.insert(type).second;
-  assert(inserted);
-}
-
-Type *SymbolTable::find_canonical_type(Type *type) {
-  auto it = _types.find(type);
-  if (it == _types.end()) {
-    add_type(type);
-    return type;
+Type *SymbolTable::find_unnamed_type(std::unique_ptr<Type> type) {
+  auto it = _unnamed_types.find(type.get());
+  if (it == _unnamed_types.end()) {
+    return *_unnamed_types.emplace(type.release()).first;
   } else {
-    delete type;
     return *it;
   }
 }
