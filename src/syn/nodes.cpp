@@ -1,4 +1,6 @@
+#include "lava/lava.h"
 #include "lava/syn/nodes.h"
+#include "lava/syn/token.h"
 
 using namespace lava::syn;
 
@@ -122,6 +124,19 @@ SourceLoc InvokeExpr::end() const {
 
 ExprKind InvokeExpr::expr_kind() const {
   return ExprKind::Invoke;
+}
+
+auto InvokeExpr::bracket_kind() const -> BracketKind {
+  switch (_lparen.what) {
+  case TkLeftParen:
+    return Paren;
+  case TkLeftSquareBracket:
+    return Square;
+  case TkLess:
+    return Angle;
+  default:
+    LAVA_UNREACHABLE();
+  }
 }
 
 // ------------------------------------------------------------------------- //

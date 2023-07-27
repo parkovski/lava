@@ -33,6 +33,10 @@ std::pair<Symbol*, bool> Scope::add_symbol(std::unique_ptr<Symbol> symbol) {
 }
 
 Scope *Scope::add_scope(std::string name) {
+  if (name.empty()) {
+    return _unnamed_scopes
+      .emplace_back(std::unique_ptr<Scope>{new Scope{this}}).get();
+  }
   auto it = _symbols.find(name);
   if (it == _symbols.end()) {
     auto scope = std::unique_ptr<Scope>{new Scope(this, std::move(name))};
@@ -48,6 +52,14 @@ Symbol *Scope::get_symbol(std::string_view name) {
     if (_parent) {
       return _parent->get_symbol(name);
     }
+    return nullptr;
+  }
+  return it->second.get();
+}
+
+Symbol *Scope::get_symbol_nonrec(std::string_view name) {
+  auto it = _symbols.find(name);
+  if (it == _symbols.end()) {
     return nullptr;
   }
   return it->second.get();

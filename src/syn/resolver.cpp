@@ -1,3 +1,4 @@
+#include "lava/lava.h"
 #include "lava/syn/resolver.h"
 
 using namespace lava::syn;
@@ -84,27 +85,227 @@ void Resolver::resolve_expr(const Expr &expr) {
 }
 
 void Resolver::resolve_expr(const LiteralExpr &expr) {
+  switch (expr.type()) {
+  case LiteralType::Int:
+    break;
+
+  case LiteralType::Float:
+    break;
+
+  case LiteralType::Double:
+    break;
+
+  case LiteralType::String:
+    break;
+  }
 }
 
 void Resolver::resolve_expr(const IdentExpr &expr) {
 }
 
 void Resolver::resolve_expr(const PrefixExpr &expr) {
+  switch (expr.op()) {
+  case TkComma:
+    break;
+
+  case TkDotDot:
+    break;
+
+  case TkTilde:
+    break;
+
+  case TkExcl:
+    break;
+
+  case TkMinus:
+    break;
+
+  case TkPlus:
+    break;
+
+  case TkStar:
+    break;
+
+  case TkStarStar:
+    break;
+
+  case TkAnd:
+    break;
+
+  case TkMinusMinus:
+    break;
+
+  case TkPlusPlus:
+    break;
+
+  case TkDot:
+    break;
+
+  default:
+    LAVA_UNREACHABLE();
+  }
 }
 
 void Resolver::resolve_expr(const PostfixExpr &expr) {
+  switch (expr.op()) {
+  case TkComma:
+    break;
+
+  case TkDotDot:
+    break;
+
+  case TkMinusMinus:
+    break;
+
+  case TkPlusPlus:
+    break;
+
+  case TkExcl:
+    break;
+
+  case TkQuestion:
+    break;
+
+  default:
+    LAVA_UNREACHABLE();
+  }
 }
 
 void Resolver::resolve_expr(const BinaryExpr &expr) {
+  switch (expr.op()) {
+  case TkPercentEq:
+    break;
+
+  case TkHatEq:
+    break;
+
+  case TkAndEq:
+    break;
+
+  case TkStarEq:
+    break;
+
+  case TkStarStarEq:
+    break;
+
+  case TkMinusEq:
+    break;
+
+  case TkPlusEq:
+    break;
+
+  case TkEq:
+    break;
+
+  case TkOrEq:
+    break;
+
+  case TkLessLessEq:
+    break;
+
+  case TkLessMinusLessEq:
+    break;
+
+  case TkGreaterGreaterEq:
+    break;
+
+  case TkGreaterMinusGreaterEq:
+    break;
+
+  case TkSlashEq:
+    break;
+
+  case TkComma:
+    break;
+
+  case TkDotDot:
+    break;
+
+  case TkOrOr:
+    break;
+
+  case TkAndAnd:
+    break;
+
+  case TkEqEq:
+    break;
+
+  case TkExclEq:
+    break;
+
+  case TkAnd:
+    break;
+
+  case TkHat:
+    break;
+
+  case TkOr:
+    break;
+
+  case TkLess:
+    break;
+
+  case TkLessEq:
+    break;
+
+  case TkGreater:
+    break;
+
+  case TkGreaterEq:
+    break;
+
+  case TkLessLess:
+    break;
+
+  case TkLessMinusLess:
+    break;
+
+  case TkGreaterGreater:
+    break;
+
+  case TkGreaterMinusGreater:
+    break;
+
+  case TkMinus:
+    break;
+
+  case TkPlus:
+    break;
+
+  case TkPercent:
+    break;
+
+  case TkStar:
+    break;
+
+  case TkSlash:
+    break;
+
+  case TkStarStar:
+    break;
+
+  case TkDot:
+    break;
+
+  default:
+    LAVA_UNREACHABLE();
+  }
 }
 
 void Resolver::resolve_expr(const ParenExpr &expr) {
+  resolve_expr(*expr.expr());
 }
 
 void Resolver::resolve_expr(const InvokeExpr &expr) {
 }
 
 void Resolver::resolve_expr(const ScopeExpr &expr) {
+  auto prev_scope = _scope;
+  _scope = _scope->add_scope();
+  for (auto const &e : expr.exprs()) {
+    resolve_expr(*e.value);
+  }
+  _scope = prev_scope;
 }
 
 // ------------------------------------------------------------------------- //

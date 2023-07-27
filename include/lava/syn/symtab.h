@@ -6,9 +6,9 @@
 #include <string>
 #include <string_view>
 #include <memory>
-#include <boost/container/small_vector.hpp>
 #include "symbol.h"
 #include "types.h"
+#include "instr.h"
 
 namespace lava::syn {
 
@@ -25,17 +25,6 @@ namespace detail {
     }
   };
 }
-
-enum class Op {
-  Assign,
-  Call,
-  Scope,
-};
-
-struct Instruction {
-  Op op;
-  boost::container::small_vector<size_t, 3> args;
-};
 
 struct Variable : Symbol {
 private:
@@ -63,6 +52,7 @@ private:
 
   std::unordered_map<std::string_view, std::unique_ptr<Symbol>> _symbols;
   std::vector<Variable*> _vars;
+  std::vector<std::unique_ptr<Scope>> _unnamed_scopes;
 
   explicit Scope(Scope *parent, std::string name = {}) noexcept
     : Symbol{std::move(name)}
@@ -100,12 +90,19 @@ public:
     it = _symbols.emplace(symbol->name(), std::move(symbol)).first;
     return static_cast<T*>(it->second.get());
   }
-  Scope *add_scope(std::string name);
+  // Always succeeds if name is empty, otherwise returns null if a symbol with
+  // the given name already exists.
+  Scope *add_scope(std::string name = {});
   // Searches parent scopes recursively.
   Symbol *get_symbol(std::string_view name);
   // Searches parent scopes recursively.
   const Symbol *get_symbol(std::string_view name) const
   { return const_cast<Scope*>(this)->get_symbol(name); }
+  // Does not search parent scopes.
+  Symbol *get_symbol_nonrec(std::string_view name);
+  // Does not search parent scopes.
+  const Symbol *get_symbol_nonrec(std::string_view name) const
+  { return const_cast<Scope*>(this)->get_symbol_nonrec(name); }
 
   size_t variable_count() const { return _vars.size(); }
   Variable *get_variable(size_t n) { return _vars[n]; }

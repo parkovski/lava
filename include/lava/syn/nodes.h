@@ -141,8 +141,8 @@ public:
   SourceLoc end() const override;
   ExprKind expr_kind() const override;
 
-  int op() { return _op.what; }
-  Expr *expr() { return _expr.get(); }
+  int op() const { return _op.what; }
+  const Expr *expr() const { return _expr.get(); }
 };
 
 struct PostfixExpr final : Expr {
@@ -236,6 +236,12 @@ private:
   ExprsWithDelimiter _args;
 
 public:
+  enum BracketKind {
+    Paren,
+    Square,
+    Angle,
+  };
+
   explicit InvokeExpr(std::unique_ptr<Expr> expr, Token lparen, Token rparen,
                       ExprsWithDelimiter args) noexcept
     : _expr{std::move(expr)}
@@ -250,6 +256,7 @@ public:
 
   const Expr *expr() const { return _expr.get(); }
   const ExprsWithDelimiter &args() const { return _args; }
+  BracketKind bracket_kind() const;
 };
 
 struct ScopeExpr final : Expr {
@@ -289,6 +296,7 @@ public:
 };
 
 struct EmptyItem : Item {
+private:
   Token _semi;
 
 public:
@@ -302,6 +310,7 @@ public:
 };
 
 struct ExprItem : Item {
+private:
   std::unique_ptr<Expr> _expr;
   Token _semi;
 
