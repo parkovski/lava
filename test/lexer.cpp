@@ -1,10 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
-#include "lava/syn/lexer.h"
+#include "lava/lang/lexer.h"
 
-using namespace lava::syn;
+using namespace lava::lang;
 
 #define INIT_LEXER(Content) \
-  SourceDoc doc{ .name = "test", .content = Content }; \
+  SourceDoc doc{ "test", Content }; \
   Lexer lexer{doc}
 
 TEST_CASE("Lexer", "[syntax][lexer]") {
@@ -12,7 +12,7 @@ TEST_CASE("Lexer", "[syntax][lexer]") {
 
   Token token = lexer.lex();
   REQUIRE(token.what == TkIdent);
-  REQUIRE(token.start.line == 1);
+  REQUIRE(token.line() == 1);
 
   token = lexer.lex();
   REQUIRE(token.what == TkWhitespace);
@@ -25,7 +25,7 @@ TEST_CASE("Lexer", "[syntax][lexer]") {
 
   token = lexer.lex();
   REQUIRE(token.what == TkIntLiteral);
-  REQUIRE(token.start.line == 2);
+  REQUIRE(token.line() == 2);
 
   token = lexer.lex();
   REQUIRE(token.what == TkEof);

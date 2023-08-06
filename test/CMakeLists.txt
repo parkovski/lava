@@ -14,6 +14,7 @@ add_executable(test
 target_link_libraries(test PRIVATE
   Catch2::Catch2WithMain
   lava-data
+  lava-lang
   lava-syn
   lava-term
   rope
