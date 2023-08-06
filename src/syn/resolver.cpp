@@ -35,9 +35,17 @@ void Resolver::resolve_item(const Item &item) {
 }
 
 void Resolver::resolve_item(const ExprItem &item) {
+  resolve_expr(*item.expr());
 }
 
 void Resolver::resolve_item(const VarDeclItem &item) {
+  auto type = resolve_type(_scope, *item.type());
+  if (!type) {
+    return;
+  }
+  // for (auto const &decl : item.decls()) {
+  //   _scope->add_symbol<Variable>(decl.value.name(), type);
+  // }
 }
 
 void Resolver::resolve_item(const FunDeclItem &item) {
@@ -85,19 +93,28 @@ void Resolver::resolve_expr(const Expr &expr) {
 }
 
 void Resolver::resolve_expr(const LiteralExpr &expr) {
+#if 0
+  auto &instr = _scope->push_instr();
+  instr.op = Op::Const;
+
   switch (expr.type()) {
   case LiteralType::Int:
+    instr.args.push_back((uint32_t)expr.int_value());
     break;
 
   case LiteralType::Float:
+    instr.args.push_back(expr.float_value());
     break;
 
   case LiteralType::Double:
+    instr.args.push_back(expr.double_value());
     break;
 
   case LiteralType::String:
+    instr.args.push_back(expr.string_value());
     break;
   }
+#endif
 }
 
 void Resolver::resolve_expr(const IdentExpr &expr) {
@@ -300,12 +317,14 @@ void Resolver::resolve_expr(const InvokeExpr &expr) {
 }
 
 void Resolver::resolve_expr(const ScopeExpr &expr) {
+#if 0
   auto prev_scope = _scope;
   _scope = _scope->add_scope();
   for (auto const &e : expr.exprs()) {
     resolve_expr(*e.value);
   }
   _scope = prev_scope;
+#endif
 }
 
 // ------------------------------------------------------------------------- //
@@ -324,10 +343,12 @@ Type *Resolver::resolve_type(Scope *scope, const Expr &expr) {
 }
 
 Type *Resolver::resolve_type(Scope *scope, const IdentExpr &expr) {
+#if 0
   auto symbol = scope->get_symbol(expr.value());
   if (symbol && symbol->symbol_kind() == SymbolKind::Type) {
     return static_cast<Type*>(symbol);
   }
+#endif
   return nullptr;
 }
 
@@ -358,10 +379,12 @@ Scope *Resolver::resolve_scope(Scope *scope, const Expr &expr) {
 }
 
 Scope *Resolver::resolve_scope(Scope *scope, const IdentExpr &expr) {
+#if 0
   auto symbol = scope->get_symbol(expr.value());
   if (symbol && symbol->symbol_kind() == SymbolKind::Scope) {
     return static_cast<Scope*>(symbol);
   }
+#endif
   return nullptr;
 }
 

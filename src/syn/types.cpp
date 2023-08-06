@@ -1,6 +1,7 @@
 #include "lava/lava.h"
 #include "lava/syn/types.h"
 #include <boost/container_hash/hash.hpp>
+#include <cassert>
 
 using namespace lava::syn;
 
@@ -26,8 +27,6 @@ bool Type::operator==(const Type &other) const {
     return CMP(NeverType);
   case TypeKind::Void:
     return CMP(VoidType);
-  case TypeKind::Data:
-    return CMP(DataType);
   case TypeKind::Int:
     return CMP(IntType);
   case TypeKind::Float:
@@ -36,8 +35,8 @@ bool Type::operator==(const Type &other) const {
     return CMP(VectorType);
   case TypeKind::Pointer:
     return CMP(PointerType);
-  case TypeKind::Fun:
-    return CMP(FunType);
+  case TypeKind::Function:
+    return CMP(FunctionType);
   case TypeKind::Struct:
     return CMP(StructType);
   default:
@@ -47,6 +46,14 @@ bool Type::operator==(const Type &other) const {
 }
 
 // ------------------------------------------------------------------------- //
+
+size_t NeverType::size() const {
+  return 0;
+}
+
+size_t NeverType::align() const {
+  return 0;
+}
 
 TypeKind NeverType::type_kind() const {
   return TypeKind::Never;
@@ -62,6 +69,14 @@ bool NeverType::operator==(const NeverType &other) const {
 
 // ------------------------------------------------------------------------- //
 
+size_t VoidType::size() const {
+  return 0;
+}
+
+size_t VoidType::align() const {
+  return 0;
+}
+
 TypeKind VoidType::type_kind() const {
   return TypeKind::Void;
 }
@@ -76,95 +91,129 @@ bool VoidType::operator==(const VoidType &other) const {
 
 // ------------------------------------------------------------------------- //
 
-TypeKind DataType::type_kind() const {
-  return TypeKind::Data;
+size_t IntType::size() const {
+  return _size;
 }
 
-size_t DataType::hash() const {
-  size_t seed;
-  boost::hash_combine(seed, size);
-  boost::hash_combine(seed, align);
-  return seed;
+size_t IntType::align() const {
+  return _size;
 }
-
-bool DataType::operator==(const DataType &other) const {
-  return size == other.size && align == other.align;
-}
-
-// ------------------------------------------------------------------------- //
 
 TypeKind IntType::type_kind() const {
   return TypeKind::Int;
 }
 
 size_t IntType::hash() const {
-  size_t seed{DataType::hash()};
-  boost::hash_combine(seed, is_signed);
+  size_t seed = 0;
+  boost::hash_combine(seed, _size);
+  boost::hash_combine(seed, _is_signed);
   return seed;
 }
 
 bool IntType::operator==(const IntType &other) const {
-  return DataType::operator==(other) && is_signed == other.is_signed;
+  return _size == other._size && _is_signed == other._is_signed;
 }
 
 // ------------------------------------------------------------------------- //
+
+size_t FloatType::size() const {
+  return _size;
+}
+
+size_t FloatType::align() const {
+  return _size;
+}
 
 TypeKind FloatType::type_kind() const {
   return TypeKind::Float;
 }
 
+size_t FloatType::hash() const {
+  return std::hash<size_t>{}(_size);
+}
+
 bool FloatType::operator==(const FloatType &other) const {
-  return DataType::operator==(other);
+  return _size == other._size;
 }
 
 // ------------------------------------------------------------------------- //
+
+size_t VectorType::size() const {
+  return _size;
+}
+
+size_t VectorType::align() const {
+  return _size;
+}
 
 TypeKind VectorType::type_kind() const {
   return TypeKind::Vector;
 }
 
+size_t VectorType::hash() const {
+  return std::hash<size_t>{}(_size);
+}
+
 bool VectorType::operator==(const VectorType &other) const {
-  return DataType::operator==(other);
+  return _size == other._size;
 }
 
 // ------------------------------------------------------------------------- //
+
+size_t PointerType::size() const {
+  return sizeof(void*);
+}
+
+size_t PointerType::align() const {
+  return alignof(void*);
+}
 
 TypeKind PointerType::type_kind() const {
   return TypeKind::Pointer;
 }
 
 size_t PointerType::hash() const {
-  return pointee->hash();
+  size_t seed = 0x1f2e3d4c;
+  boost::hash_combine(seed, _pointee->hash());
+  return seed;
 }
 
 bool PointerType::operator==(const PointerType &other) const {
-  return pointee->operator==(*other.pointee);
+  return _pointee->operator==(*other._pointee);
 }
 
 // ------------------------------------------------------------------------- //
 
-TypeKind FunType::type_kind() const {
-  return TypeKind::Fun;
+size_t FunctionType::size() const {
+  return 0;
 }
 
-size_t FunType::hash() const {
+size_t FunctionType::align() const {
+  return 0;
+}
+
+TypeKind FunctionType::type_kind() const {
+  return TypeKind::Function;
+}
+
+size_t FunctionType::hash() const {
   size_t seed = 0;
-  boost::hash_combine(seed, ret->hash());
-  for (auto const *arg : args) {
+  boost::hash_combine(seed, _return_type->hash());
+  for (auto const *arg : _arg_types) {
     boost::hash_combine(seed, arg->hash());
   }
   return seed;
 }
 
-bool FunType::operator==(const FunType &other) const {
-  if (*ret != *other.ret) {
+bool FunctionType::operator==(const FunctionType &other) const {
+  if (*_return_type != *other._return_type) {
     return false;
   }
-  if (args.size() != other.args.size()) {
+  if (_arg_types.size() != other._arg_types.size()) {
     return false;
   }
-  for (unsigned i = 0; i < args.size(); ++i) {
-    if (*args[i] != *other.args[i]) {
+  for (unsigned i = 0; i < _arg_types.size(); ++i) {
+    if (*_arg_types[i] != *other._arg_types[i]) {
       return false;
     }
   }
@@ -173,6 +222,34 @@ bool FunType::operator==(const FunType &other) const {
 }
 
 // ------------------------------------------------------------------------- //
+
+StructType::StructType(std::string name, std::vector<StructField> fields)
+  : Type{std::move(name)}
+  , _fields{std::move(fields)}
+  , _size{0}
+  , _align{1}
+{
+  for (size_t i = 0; i < _fields.size(); ++i) {
+    auto const &field = _fields[i];
+    [[maybe_unused]] auto inserted =
+      _field_names.emplace(field.name, i).second;
+    assert(inserted && "Duplicate field name");
+    auto align = field.type->align();
+    if (align > _align) {
+      _align = align;
+    }
+    _size = (_size + align - 1) & -align;
+    _size += field.type->size();
+  }
+}
+
+size_t StructType::size() const {
+  return _size;
+}
+
+size_t StructType::align() const {
+  return _align;
+}
 
 TypeKind StructType::type_kind() const {
   return TypeKind::Struct;

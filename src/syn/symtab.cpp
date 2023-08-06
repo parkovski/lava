@@ -7,115 +7,61 @@ Symbol::~Symbol() {}
 
 // ------------------------------------------------------------------------- //
 
-Variable::~Variable() {}
+Namespace::~Namespace() {}
 
-SymbolKind Variable::symbol_kind() const {
-  return SymbolKind::Variable;
+SymbolKind Namespace::symbol_kind() const {
+  return SymbolKind::Namespace;
 }
 
 // ------------------------------------------------------------------------- //
 
-Scope::~Scope() {}
-
-SymbolKind Scope::symbol_kind() const {
-  return SymbolKind::Scope;
-}
-
-std::pair<Symbol*, bool> Scope::add_symbol(std::unique_ptr<Symbol> symbol) {
-  auto [it, inserted] = _symbols.emplace(symbol->name(), std::move(symbol));
-  if (inserted) {
-    if (it->second->symbol_kind() == SymbolKind::Variable) {
-      _vars.emplace_back(static_cast<Variable*>(it->second.get()));
-    }
-    return std::make_pair(it->second.get(), true);
+std::string FunctionType::make_name(Type *return_type,
+                                    const std::vector<Type*> &arg_types) {
+  std::string name{"fun("};
+  if (!arg_types.empty()) {
+    name.append(arg_types[0]->name());
   }
-  return std::make_pair(it->second.get(), false);
-}
-
-Scope *Scope::add_scope(std::string name) {
-  if (name.empty()) {
-    return _unnamed_scopes
-      .emplace_back(std::unique_ptr<Scope>{new Scope{this}}).get();
+  for (size_t i = 1; i < arg_types.size(); ++i) {
+    name.append(", ").append(arg_types[i]->name());
   }
-  auto it = _symbols.find(name);
-  if (it == _symbols.end()) {
-    auto scope = std::unique_ptr<Scope>{new Scope(this, std::move(name))};
-    return static_cast<Scope*>(
-      _symbols.emplace(scope->name(), std::move(scope)).first->second.get());
-  }
-  return nullptr;
-}
-
-Symbol *Scope::get_symbol(std::string_view name) {
-  auto it = _symbols.find(name);
-  if (it == _symbols.end()) {
-    if (_parent) {
-      return _parent->get_symbol(name);
-    }
-    return nullptr;
-  }
-  return it->second.get();
-}
-
-Symbol *Scope::get_symbol_nonrec(std::string_view name) {
-  auto it = _symbols.find(name);
-  if (it == _symbols.end()) {
-    return nullptr;
-  }
-  return it->second.get();
+  name.append(") -> ");
+  name.append(return_type->name());
+  return name;
 }
 
 // ------------------------------------------------------------------------- //
-
-Function::~Function() {}
-
-SymbolKind Function::symbol_kind() const {
-  return SymbolKind::Function;
-}
-
-// ------------------------------------------------------------------------- //
-
-void SymbolTable::add_named_type(Type *type) {
-  [[maybe_unused]] auto inserted =
-    _global.add_symbol(std::unique_ptr<Symbol>{type}).second;
-  assert(inserted);
-}
 
 void SymbolTable::enter_initial_types() {
-  add_named_type(new NeverType);
+  _global.add_named_symbol<NeverType>();
 
-  add_named_type(new VoidType);
+  _global.add_named_symbol<VoidType>();
 
-  add_named_type(new IntType{"uint8", 8, false});
-  add_named_type(new IntType{"int8", 8, true});
-  add_named_type(new IntType{"uint16", 16, false});
-  add_named_type(new IntType{"int16", 16, true});
-  add_named_type(new IntType{"uint32", 32, false});
-  add_named_type(new IntType{"int32", 32, true});
-  add_named_type(new IntType{"uint64", 64, false});
-  add_named_type(new IntType{"int64", 64, true});
+  _global.add_symbol<IntType>("uint8", 8, false);
+  _global.add_symbol<IntType>("int8", 8, true);
+  _global.add_symbol<IntType>("uint16", 16, false);
+  _global.add_symbol<IntType>("int16", 16, true);
+  _global.add_symbol<IntType>("uint32", 32, false);
+  _global.add_symbol<IntType>("int32", 32, true);
+  _global.add_symbol<IntType>("uint64", 64, false);
+  _global.add_symbol<IntType>("int64", 64, true);
 
-  add_named_type(new FloatType{"float32", 32});
-  add_named_type(new FloatType{"float64", 64});
+  _global.add_symbol<FloatType>("float32", 32);
+  _global.add_symbol<FloatType>("float64", 64);
 }
 
 SymbolTable::SymbolTable()
-  : _global{this}
+  : _global{}
 {
   enter_initial_types();
 }
 
-SymbolTable::~SymbolTable() {
-  for (auto *type : _unnamed_types) {
-    delete type;
-  }
-}
+SymbolTable::~SymbolTable() {}
 
 Type *SymbolTable::find_unnamed_type(std::unique_ptr<Type> type) {
-  auto it = _unnamed_types.find(type.get());
+  auto it = _unnamed_types.find(type);
   if (it == _unnamed_types.end()) {
-    return *_unnamed_types.emplace(type.release()).first;
+    return _unnamed_types.emplace(std::move(type)).first->get();
   } else {
-    return *it;
+    return it->get();
   }
 }

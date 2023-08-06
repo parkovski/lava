@@ -14,7 +14,7 @@ private:
 public:
   explicit Resolver(SymbolTable &symtab) noexcept
     : _symtab{symtab}
-    , _scope{&symtab.global_scope()}
+    , _scope{nullptr}
   {}
 
   void resolve_document(const Document &doc);
