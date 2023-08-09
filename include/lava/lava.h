@@ -20,4 +20,7 @@
 # define LAVA_UNREACHABLE() (void)0
 #endif
 
+#define LAVA_ALIGN_CEIL(Size, Align) (((Size) + (Align) - 1) & -(Align))
+#define LAVA_ALIGN_FLOOR(Size, Align) ((Size) & -(Align))
+
 #endif /* LAVA_H_ */
