@@ -1,5 +1,6 @@
 set(SOURCES
   lexer.cpp
+  syntax.cpp
 )
 
 add_library(lava-lang STATIC ${SOURCES})

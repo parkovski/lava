@@ -10,8 +10,8 @@ Lexer::Lexer(SourceDoc &doc) noexcept
 
 Token Lexer::lex() {
   Token token;
-  token.doc = _doc;
-  token.loc = (uint32_t)(_doc->locs_count() - 1);
+  token.loc.doc_id = _doc->id();
+  token.loc.loc_id = (uint32_t)(_doc->locs_count() - 1);
 
   int c = getch();
   if (c == -1) {
@@ -38,7 +38,7 @@ Token Lexer::lex() {
     lex_string(token);
   } else if ((lower >= 'a' && lower <= 'z') || lower == '_') {
     lex_ident(token);
-    token.what = get_keyword(token.text());
+    token.what = get_keyword(_doc->text(token.loc.loc_id));
     _doc->push_loc(_loc);
     return token;
   } else {

@@ -9,6 +9,7 @@ add_executable(test
   rope.cpp
   slidingindex.cpp
   symtab.cpp
+  syntax.cpp
   terminal.cpp
 )
 target_link_libraries(test PRIVATE

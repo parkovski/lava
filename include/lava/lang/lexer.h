@@ -2,6 +2,7 @@
 #define LAVA_LANG_LEXER_H_
 
 #include "token.h"
+#include "sourcedoc.h"
 
 namespace lava::lang {
 
