@@ -1,10 +1,24 @@
-#ifndef LAVA_SYN_PARSER_H_
-#define LAVA_SYN_PARSER_H_
+#ifndef LAVA_LANG_PARSER_H_
+#define LAVA_LANG_PARSER_H_
 
 #include "nodes.h"
 #include "lexer.h"
+#include <stdexcept>
 
-namespace lava::syn {
+namespace lava::lang {
+
+struct ParseError : std::runtime_error {
+private:
+  SourceLoc _loc;
+
+public:
+  ParseError(SourceLoc loc, std::string what)
+    : runtime_error(std::move(what))
+    , _loc{loc}
+  {}
+
+  SourceLoc where() const { return _loc; }
+};
 
 struct Parser {
 private:
@@ -35,6 +49,8 @@ public:
   std::optional<ArgList> parse_arg_list();
   std::optional<ArgDecl> parse_arg_decl();
 
+  std::unique_ptr<StructDefItem> parse_struct_or_union();
+
   std::unique_ptr<Expr> parse_expr(int flags = 0, unsigned prec = 1);
   std::optional<ScopeExpr> parse_scope_expr();
   std::unique_ptr<InvokeExpr> parse_invoke_expr(std::unique_ptr<Expr> left);
@@ -47,6 +63,6 @@ private:
   static bool is_rtl_operator(int op);
 };
 
-} // namespace lava::syn
+} // namespace lava::lang
 
-#endif // LAVA_SYN_PARSER_H_
+#endif // LAVA_LANG_PARSER_H_

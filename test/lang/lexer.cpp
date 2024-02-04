@@ -4,8 +4,7 @@
 using namespace lava::lang;
 
 #define INIT_LEXER(Content) \
-  SourceDoc doc{ 0, "test" }; \
-  doc.set_content(Content); \
+  SourceDoc doc{ "test", Content }; \
   Lexer lexer{doc}
 
 TEST_CASE("Lexer", "[syntax][lexer]") {
@@ -13,7 +12,8 @@ TEST_CASE("Lexer", "[syntax][lexer]") {
 
   Token token = lexer.lex();
   REQUIRE(token.what == TkIdent);
-  REQUIRE(doc.line(token.loc.loc_id) == 1);
+  REQUIRE(token.start.line == 1);
+  //REQUIRE(doc.line(token.loc.loc_id) == 1);
 
   token = lexer.lex();
   REQUIRE(token.what == TkWhitespace);
@@ -26,7 +26,8 @@ TEST_CASE("Lexer", "[syntax][lexer]") {
 
   token = lexer.lex();
   REQUIRE(token.what == TkIntLiteral);
-  REQUIRE(doc.line(token.loc.loc_id) == 2);
+  REQUIRE(token.start.line == 2);
+  //REQUIRE(doc.line(token.loc.loc_id) == 2);
 
   token = lexer.lex();
   REQUIRE(token.what == TkEof);

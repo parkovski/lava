@@ -1,12 +1,12 @@
-#ifndef LAVA_SYN_NODES_H_
-#define LAVA_SYN_NODES_H_
+#ifndef LAVA_LANG_NODES_H_
+#define LAVA_LANG_NODES_H_
 
 #include "token.h"
 #include <vector>
 #include <memory>
 #include <optional>
 
-namespace lava::syn {
+namespace lava::lang {
 
 enum class NodeKind {
   Document,
@@ -16,6 +16,7 @@ enum class NodeKind {
 
 struct Node {
 public:
+  virtual ~Node() = 0;
   virtual NodeKind node_kind() const = 0;
   virtual SourceLoc start() const = 0;
   virtual SourceLoc end() const = 0;
@@ -30,6 +31,11 @@ public:
   explicit Document(std::vector<std::unique_ptr<Item>> items) noexcept
     : _items{std::move(items)}
   {}
+
+  Document(Document&&) = default;
+  Document &operator=(Document&&) = default;
+
+  ~Document();
 
   NodeKind node_kind() const override;
   SourceLoc start() const override;
@@ -97,11 +103,18 @@ public:
     , _value{.s = s}
   {}
 
+  LiteralExpr(const LiteralExpr&) = default;
+  LiteralExpr &operator=(const LiteralExpr&) = default;
+
+  ~LiteralExpr();
+
   LiteralType type() const { return _type; }
 
   SourceLoc start() const override;
   SourceLoc end() const override;
   ExprKind expr_kind() const override;
+
+  const Token &token() const { return _token; }
 
   uint64_t int_value() const { return _value.u; }
   float float_value() const { return _value.f; }
@@ -117,6 +130,11 @@ public:
   explicit IdentExpr(Token token) noexcept
     : _token{token}
   {}
+
+  IdentExpr(const IdentExpr&) = default;
+  IdentExpr &operator=(const IdentExpr &) = default;
+
+  ~IdentExpr();
 
   SourceLoc start() const override;
   SourceLoc end() const override;
@@ -137,6 +155,11 @@ public:
     , _expr{std::move(expr)}
   {}
 
+  PrefixExpr(PrefixExpr&&) = default;
+  PrefixExpr &operator=(PrefixExpr&&) = default;
+
+  ~PrefixExpr();
+
   SourceLoc start() const override;
   SourceLoc end() const override;
   ExprKind expr_kind() const override;
@@ -156,6 +179,11 @@ public:
     : _op{op}
     , _expr{std::move(expr)}
   {}
+
+  PostfixExpr(PostfixExpr&&) = default;
+  PostfixExpr &operator=(PostfixExpr&&) = default;
+
+  ~PostfixExpr();
 
   SourceLoc start() const override;
   SourceLoc end() const override;
@@ -178,6 +206,11 @@ public:
     , _left{std::move(left)}
     , _right{std::move(right)}
   {}
+
+  BinaryExpr(BinaryExpr&&) = default;
+  BinaryExpr &operator=(BinaryExpr&&) = default;
+
+  ~BinaryExpr();
 
   SourceLoc start() const override;
   SourceLoc end() const override;
@@ -202,6 +235,11 @@ public:
     , _expr{std::move(expr)}
   {}
 
+  ParenExpr(ParenExpr&&) = default;
+  ParenExpr &operator=(ParenExpr&&) = default;
+
+  ~ParenExpr();
+
   SourceLoc start() const override;
   SourceLoc end() const override;
   ExprKind expr_kind() const override;
@@ -223,6 +261,9 @@ struct WithDelimiter {
     : value{std::forward<T>(value)}
     , delimiter{delimiter}
   {}
+
+  WithDelimiter(WithDelimiter&&) = default;
+  WithDelimiter &operator=(WithDelimiter&&) = default;
 };
 
 using ExprWithDelimiter = WithDelimiter<std::unique_ptr<Expr>>;
@@ -250,6 +291,11 @@ public:
     , _args{std::move(args)}
   {}
 
+  InvokeExpr(InvokeExpr&&) = default;
+  InvokeExpr &operator=(InvokeExpr&&) = default;
+
+  ~InvokeExpr();
+
   SourceLoc start() const override;
   SourceLoc end() const override;
   ExprKind expr_kind() const override;
@@ -273,6 +319,11 @@ public:
     , _exprs{std::move(exprs)}
   {}
 
+  ScopeExpr(ScopeExpr&&) = default;
+  ScopeExpr &operator=(ScopeExpr&&) = default;
+
+  ~ScopeExpr();
+
   SourceLoc start() const override;
   SourceLoc end() const override;
   ExprKind expr_kind() const override;
@@ -286,6 +337,7 @@ enum class ItemKind {
   VarDecl,
   FunDecl,
   FunDef,
+  StructDef,
 };
 
 struct Item : Node {
@@ -304,6 +356,11 @@ public:
     : _semi{semi}
   {}
 
+  EmptyItem(const EmptyItem&) = default;
+  EmptyItem &operator=(const EmptyItem&) = default;
+
+  ~EmptyItem();
+
   SourceLoc start() const override;
   SourceLoc end() const override;
   ItemKind item_kind() const override;
@@ -319,6 +376,11 @@ public:
     : _expr{std::move(expr)}
     , _semi{semi}
   {}
+
+  ExprItem(ExprItem&&) = default;
+  ExprItem &operator=(ExprItem&&) = default;
+
+  ~ExprItem();
 
   SourceLoc start() const override;
   SourceLoc end() const override;
@@ -338,6 +400,9 @@ public:
     , _expr{std::move(expr)}
   {}
 
+  VarInit(VarInit&&) = default;
+  VarInit &operator=(VarInit&&) = default;
+
   const Expr *expr() const { return _expr.get(); }
 };
 
@@ -356,6 +421,9 @@ public:
     : _name{name}
     , _init{std::move(init)}
   {}
+
+  VarDecl(VarDecl&&) = default;
+  VarDecl &operator=(VarDecl&&) = default;
 
   std::string_view name() const { return _name.text(); }
   const std::optional<VarInit> &init() const { return _init; }
@@ -377,6 +445,11 @@ public:
     , _decls{std::move(decls)}
     , _semi{semi}
   {}
+
+  VarDeclItem(VarDeclItem&&) = default;
+  VarDeclItem &operator=(VarDeclItem&&) = default;
+
+  ~VarDeclItem();
 
   SourceLoc start() const override;
   SourceLoc end() const override;
@@ -404,6 +477,9 @@ public:
     , _init{std::move(init)}
   {}
 
+  ArgDecl(ArgDecl&&) = default;
+  ArgDecl &operator=(ArgDecl&&) = default;
+
   const Expr *type() const { return _type.get(); }
   std::string_view name() const { return _name.text(); }
   const std::optional<VarInit> &init() const { return _init; }
@@ -425,6 +501,9 @@ public:
     , _rparen{rparen}
     , _args{std::move(args)}
   {}
+
+  ArgList(ArgList&&) = default;
+  ArgList &operator=(ArgList&&) = default;
 
   const ArgDeclsWithDelimiter &args() const { return _args; }
 };
@@ -459,6 +538,11 @@ public:
     , _return{std::move(ret)}
   {}
 
+  FunItemBase(FunItemBase&&) = default;
+  FunItemBase &operator=(FunItemBase&&) = default;
+
+  ~FunItemBase();
+
   SourceLoc start() const override;
 
   std::string_view name() const { return _name.text(); }
@@ -478,6 +562,11 @@ public:
     , _semi{semi}
   {}
 
+  FunDeclItem(FunDeclItem&&) = default;
+  FunDeclItem &operator=(FunDeclItem&&) = default;
+
+  ~FunDeclItem();
+
   SourceLoc end() const override;
   ItemKind item_kind() const override;
 };
@@ -494,12 +583,53 @@ public:
     , _body{std::move(body)}
   {}
 
+  FunDefItem(FunDefItem&&) = default;
+  FunDefItem &operator=(FunDefItem&&) = default;
+
+  ~FunDefItem();
+
   SourceLoc end() const override;
   ItemKind item_kind() const override;
 
   const ScopeExpr &body() const { return _body; }
 };
 
-} // namespace lava::syn
+struct StructDefItem final : Item {
+private:
+  Token _struct_or_union;
+  Token _name;
+  Token _lbrace;
+  Token _rbrace;
+  std::vector<VarDeclItem> _vars;
 
-#endif // LAVA_SYN_NODES_H_
+public:
+  explicit StructDefItem(Token struct_or_union, Token name, Token lbrace,
+                         Token rbrace, std::vector<VarDeclItem> vars)
+    noexcept
+    : _struct_or_union{struct_or_union}
+    , _name{name}
+    , _lbrace{lbrace}
+    , _rbrace{rbrace}
+    , _vars{std::move(vars)}
+  {}
+
+  StructDefItem(StructDefItem&&) = default;
+  StructDefItem &operator=(StructDefItem&&) = default;
+
+  ~StructDefItem();
+
+  SourceLoc start() const override;
+  SourceLoc end() const override;
+  ItemKind item_kind() const override;
+
+  bool is_union() const {
+    return _struct_or_union.what == TkUnion;
+  }
+
+  std::string_view name() const { return _name.text(); }
+  const std::vector<VarDeclItem> &vars() const { return _vars; }
+};
+
+} // namespace lava::lang
+
+#endif // LAVA_LANG_NODES_H_

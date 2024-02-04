@@ -2,20 +2,19 @@
 
 using namespace lava::lang;
 
-Lexer::Lexer(SourceDoc &doc) noexcept
-  : _doc{&doc}
-  , _text{doc.content()}
-  , _loc{}
+Lexer::Lexer(const SourceDoc &doc) noexcept
+  : doc{&doc}
+  , text{doc.content}
+  , loc{}
 {}
 
 Token Lexer::lex() {
   Token token;
-  token.loc.doc_id = _doc->id();
-  token.loc.loc_id = (uint32_t)(_doc->locs_count() - 1);
-
+  token.doc = doc;
+  token.start = loc;
   int c = getch();
   if (c == -1) {
-    _doc->push_loc(_loc);
+    token.end = loc;
     token.what = TkEof;
     return token;
   }
@@ -38,35 +37,121 @@ Token Lexer::lex() {
     lex_string(token);
   } else if ((lower >= 'a' && lower <= 'z') || lower == '_') {
     lex_ident(token);
-    token.what = get_keyword(_doc->text(token.loc.loc_id));
-    _doc->push_loc(_loc);
+    token.end = loc;
+    token.what = get_keyword(token.text());
     return token;
   } else {
     lex_symbol_or_invalid(token);
   }
 
-  _doc->push_loc(_loc);
+  token.end = loc;
   return token;
 }
 
 int Lexer::getch(unsigned lookahead) const {
-  if (_loc.offset + lookahead >= _text.length()) {
+  if (loc.offset + lookahead >= text.length()) {
     return -1;
   }
-  return _text[_loc.offset + lookahead];
+  return text[loc.offset + lookahead];
 }
 
 void Lexer::nextch() {
-  if (_text[_loc.offset] == '\n') {
-    _loc.column = 1;
-    ++_loc.line;
+  if (text[loc.offset] == '\n') {
+    loc.column = 1;
+    ++loc.line;
   } else {
-    ++_loc.column;
+    ++loc.column;
   }
-  ++_loc.offset;
+  ++loc.offset;
 }
 
 int Lexer::get_keyword(std::string_view word) {
+  switch (word[0]) {
+  case 'b':
+    if (word == "break") {
+      return TkBreak;
+    }
+    break;
+
+  case 'c':
+    if (word == "case") {
+      return TkCase;
+    }
+    if (word == "continue") {
+      return TkContinue;
+    }
+    break;
+
+  case 'e':
+    if (word == "else") {
+      return TkElse;
+    }
+    if (word == "enum") {
+      return TkEnum;
+    }
+    break;
+
+  case 'f':
+    if (word == "fun") {
+      return TkFun;
+    }
+    if (word == "for") {
+      return TkFor;
+    }
+    break;
+
+  case 'i':
+    if (word == "if") {
+      return TkIf;
+    }
+    if (word == "in") {
+      return TkIn;
+    }
+    break;
+
+  case 'l':
+    if (word == "loop") {
+      return TkLoop;
+    }
+    break;
+
+  case 'm':
+    if (word == "mut") {
+      return TkMut;
+    }
+    break;
+
+  case 'r':
+    if (word == "return") {
+      return TkReturn;
+    }
+    if (word == "ref") {
+      return TkRef;
+    }
+    break;
+
+  case 's':
+    if (word == "switch") {
+      return TkSwitch;
+    }
+    if (word == "struct") {
+      return TkStruct;
+    }
+    break;
+
+  case 'u':
+    if (word == "union") {
+      return TkUnion;
+    }
+    break;
+
+  case 'w':
+    if (word == "while") {
+      return TkWhile;
+    }
+    break;
+  }
+
   return TkIdent;
 }
 
@@ -310,7 +395,12 @@ void Lexer::lex_symbol_or_invalid(Token &token) {
       int c = getch();
       if (c == '&') {
         nextch();
-        token.what = TkAndAnd;
+        if (getch() == '=') {
+          nextch();
+          token.what = TkAndAndEq;
+        } else {
+          token.what = TkAndAnd;
+        }
       } else if (c == '=') {
         nextch();
         token.what = TkAndEq;
@@ -408,7 +498,12 @@ void Lexer::lex_symbol_or_invalid(Token &token) {
       int c = getch();
       if (c == '|') {
         nextch();
-        token.what = TkOrOr;
+        if (getch() == '=') {
+          nextch();
+          token.what = TkOrOrEq;
+        } else {
+          token.what = TkOrOr;
+        }
       } else if (c == '=') {
         nextch();
         token.what = TkOrEq;

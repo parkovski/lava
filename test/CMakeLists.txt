@@ -1,25 +1,35 @@
 add_executable(test
-  arena.cpp
-  cliparser.cpp
+  data/arena.cpp
+  data/intervaltree.cpp
+  data/rope.cpp
+  data/slidingindex.cpp
+
+  driver/cliparser.cpp
   ../src/driver/cliparser.cpp
-  intervaltree.cpp
-  lexer.cpp
-  parser.cpp
-  # resolver.cpp
-  rope.cpp
-  slidingindex.cpp
-  symtab.cpp
-  syntax.cpp
-  terminal.cpp
+
+  lang/firstpass.cpp
+  lang/lexer.cpp
+  lang/parser.cpp
+  lang/symbol.cpp
+
+  term/terminal.cpp
 )
 target_link_libraries(test PRIVATE
   Catch2::Catch2WithMain
   lava-data
   lava-lang
-  lava-syn
   lava-term
   rope
 )
+
+add_executable(print-tokens print-tokens.cpp)
+target_link_libraries(print-tokens lava-lang fmt::fmt)
+
+add_executable(print-syntax print-syntax.cpp)
+target_link_libraries(print-syntax lava-lang fmt::fmt)
+
+add_executable(print-ops print-ops.cpp)
+target_link_libraries(print-ops lava-lang fmt::fmt)
 
 include(CTest)
 include(Catch)

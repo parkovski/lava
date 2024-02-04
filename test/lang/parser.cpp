@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
-#include "lava/syn/parser.h"
+#include "lava/lang/parser.h"
 
-using namespace lava::syn;
+using namespace lava::lang;
 
 #define INIT_PARSER(Content) \
   SourceDoc doc{ .name = "test", .content = Content }; \

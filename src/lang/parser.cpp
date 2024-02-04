@@ -1,10 +1,10 @@
-#include "lava/syn/parser.h"
-#include "lava/syn/lexer.h"
+#include "lava/lang/parser.h"
+#include "lava/lang/lexer.h"
 #include <cstdio>
 #include <charconv>
 #include <cassert>
 
-using namespace lava::syn;
+using namespace lava::lang;
 
 static const unsigned CallPrec = 17;
 
@@ -51,6 +51,10 @@ std::unique_ptr<Item> Parser::parse_item() {
   switch (token.what) {
   case TkFun:
     return parse_fun_item();
+
+  case TkStruct:
+  case TkUnion:
+    return parse_struct_or_union();
 
   case TkSemi:
     return std::make_unique<EmptyItem>(take());
@@ -223,6 +227,42 @@ std::optional<ArgDecl> Parser::parse_arg_decl() {
   } else {
     return ArgDecl{std::move(type), name};
   }
+}
+
+std::unique_ptr<StructDefItem> Parser::parse_struct_or_union() {
+  auto struct_or_union = take();
+  if (token.what != TkIdent) {
+    ERROR("missing struct/union name");
+    return nullptr;
+  }
+  Token name = take();
+
+  if (token.what != TkLeftBrace) {
+    ERROR("expected '{' after struct/union name");
+    return nullptr;
+  }
+  Token lbrace = take();
+
+  std::vector<VarDeclItem> vars;
+  while (token.what != TkRightBrace) {
+    auto type = parse_expr();
+    if (!type) {
+      return nullptr;
+    }
+    auto var = parse_var_item(std::move(type));
+    if (!var) {
+      return nullptr;
+    }
+    vars.emplace_back(std::move(*var));
+  }
+
+  return std::make_unique<StructDefItem>(
+    struct_or_union,
+    name,
+    lbrace,
+    take(),
+    std::move(vars)
+  );
 }
 
 std::unique_ptr<Expr> Parser::parse_expr(int flags, unsigned prec) {
@@ -437,6 +477,9 @@ unsigned Parser::get_prefix_prec(int op, int flags) {
   switch (op) {
   default:
     return 0;
+
+  case TkReturn:
+    return 1;
 
   case TkComma:
     return (flags & PF_NoComma) ? 0 : 2;

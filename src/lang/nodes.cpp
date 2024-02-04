@@ -1,8 +1,16 @@
 #include "lava/lava.h"
-#include "lava/syn/nodes.h"
-#include "lava/syn/token.h"
+#include "lava/lang/nodes.h"
+#include "lava/lang/token.h"
 
-using namespace lava::syn;
+using namespace lava::lang;
+
+// ------------------------------------------------------------------------- //
+
+Node::~Node() {}
+
+// ------------------------------------------------------------------------- //
+
+Document::~Document() {}
 
 NodeKind Document::node_kind() const {
   return NodeKind::Document;
@@ -30,6 +38,8 @@ NodeKind Expr::node_kind() const {
 
 // ------------------------------------------------------------------------- //
 
+LiteralExpr::~LiteralExpr() {}
+
 SourceLoc LiteralExpr::start() const {
   return _token.start;
 }
@@ -43,6 +53,8 @@ ExprKind LiteralExpr::expr_kind() const {
 }
 
 // ------------------------------------------------------------------------- //
+
+IdentExpr::~IdentExpr() {}
 
 SourceLoc IdentExpr::start() const {
   return _token.start;
@@ -58,6 +70,8 @@ ExprKind IdentExpr::expr_kind() const {
 
 // ------------------------------------------------------------------------- //
 
+PrefixExpr::~PrefixExpr() {}
+
 SourceLoc PrefixExpr::start() const {
   return _op.start;
 }
@@ -71,6 +85,8 @@ ExprKind PrefixExpr::expr_kind() const {
 }
 
 // ------------------------------------------------------------------------- //
+
+PostfixExpr::~PostfixExpr() {}
 
 SourceLoc PostfixExpr::start() const {
   return _expr->start();
@@ -86,6 +102,8 @@ ExprKind PostfixExpr::expr_kind() const {
 
 // ------------------------------------------------------------------------- //
 
+BinaryExpr::~BinaryExpr() {}
+
 SourceLoc BinaryExpr::start() const {
   return _left->start();
 }
@@ -100,6 +118,8 @@ ExprKind BinaryExpr::expr_kind() const {
 
 // ------------------------------------------------------------------------- //
 
+ParenExpr::~ParenExpr() {}
+
 SourceLoc ParenExpr::start() const {
   return _left.start;
 }
@@ -113,6 +133,8 @@ ExprKind ParenExpr::expr_kind() const {
 }
 
 // ------------------------------------------------------------------------- //
+
+InvokeExpr::~InvokeExpr() {}
 
 SourceLoc InvokeExpr::start() const {
   return _expr->start();
@@ -141,6 +163,8 @@ auto InvokeExpr::bracket_kind() const -> BracketKind {
 
 // ------------------------------------------------------------------------- //
 
+ScopeExpr::~ScopeExpr() {}
+
 SourceLoc ScopeExpr::start() const {
   return _lbrace.start;
 }
@@ -161,6 +185,8 @@ NodeKind Item::node_kind() const {
 
 // ------------------------------------------------------------------------- //
 
+EmptyItem::~EmptyItem() {}
+
 SourceLoc EmptyItem::start() const {
   return _semi.start;
 }
@@ -174,6 +200,8 @@ ItemKind EmptyItem::item_kind() const {
 }
 
 // ------------------------------------------------------------------------- //
+
+ExprItem::~ExprItem() {}
 
 SourceLoc ExprItem::start() const {
   return _expr->start();
@@ -189,6 +217,8 @@ ItemKind ExprItem::item_kind() const {
 
 // ------------------------------------------------------------------------- //
 
+VarDeclItem::~VarDeclItem() {}
+
 SourceLoc VarDeclItem::start() const {
   return _type->start();
 }
@@ -203,11 +233,15 @@ ItemKind VarDeclItem::item_kind() const {
 
 // ------------------------------------------------------------------------- //
 
+FunItemBase::~FunItemBase() {}
+
 SourceLoc FunItemBase::start() const {
   return _fun.start;
 }
 
 // ------------------------------------------------------------------------- //
+
+FunDeclItem::~FunDeclItem() {}
 
 SourceLoc FunDeclItem::end() const {
   return _semi.end;
@@ -219,10 +253,28 @@ ItemKind FunDeclItem::item_kind() const {
 
 // ------------------------------------------------------------------------- //
 
+FunDefItem::~FunDefItem() {}
+
 SourceLoc FunDefItem::end() const {
   return _body.end();
 }
 
 ItemKind FunDefItem::item_kind() const {
   return ItemKind::FunDef;
+}
+
+// ------------------------------------------------------------------------- //
+
+StructDefItem::~StructDefItem() {}
+
+SourceLoc StructDefItem::start() const {
+  return _struct_or_union.start;
+}
+
+SourceLoc StructDefItem::end() const {
+  return _rbrace.end;
+}
+
+ItemKind StructDefItem::item_kind() const {
+  return ItemKind::StructDef;
 }

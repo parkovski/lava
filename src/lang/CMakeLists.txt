@@ -1,6 +1,11 @@
 set(SOURCES
+  firstpass.cpp
   lexer.cpp
-  syntax.cpp
+  nodes.cpp
+  parser.cpp
+  symbol.cpp
+  token.cpp
+  visitor.cpp
 )
 
 add_library(lava-lang STATIC ${SOURCES})

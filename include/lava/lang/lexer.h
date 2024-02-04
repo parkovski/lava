@@ -2,18 +2,19 @@
 #define LAVA_LANG_LEXER_H_
 
 #include "token.h"
-#include "sourcedoc.h"
 
 namespace lava::lang {
 
 struct Lexer {
 private:
-  SourceDoc *_doc;
-  std::string_view _text;
-  SourceLoc _loc;
+  const SourceDoc *doc;
+  std::string_view text;
+  SourceLoc loc;
 
 public:
-  explicit Lexer(SourceDoc &doc) noexcept;
+  explicit Lexer(const SourceDoc &doc) noexcept;
+
+  const SourceDoc &get_doc() { return *doc; }
 
   Token lex();
 
