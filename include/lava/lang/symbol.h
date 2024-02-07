@@ -11,6 +11,8 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/container/small_vector.hpp>
 
+#include "instr.h"
+
 namespace lava::lang {
 
   struct InternString {
@@ -126,6 +128,12 @@ public:
 
   const Symbol *operator[](size_t index) const {
     return _symbols_ordered[index].get();
+  }
+
+  void clear() {
+    _using.clear();
+    _symbols_ordered.clear();
+    _symbols.clear();
   }
 
   bool has(InternString name) const {
@@ -401,6 +409,9 @@ struct FunctionType : Type {
   TypeKind kind() const override;
   size_t hash() const override;
   bool operator==(const FunctionType &other) const;
+
+  // Compares only argument types, not names.
+  bool are_types_same(const FunctionType &other) const;
 };
 
 } // namespace lava::lang
@@ -444,11 +455,17 @@ struct TypeAlias : Symbol {
   TypeAlias &operator=(const TypeAlias&) = default;
 };
 
+struct BasicBlock {
+  std::vector<Instruction> instrs;
+};
+
 struct Function : Symbol {
 private:
   const FunctionType *_type;
   Namespace _args_ns;
   Namespace _locals_ns;
+  std::vector<BasicBlock> _bbs;
+  unsigned _registers;
 
   void add_args();
 
@@ -457,11 +474,26 @@ public:
 
   const FunctionType *type() const { return _type; }
 
+  // To be used to set an equivalent type with only differering arg names.
+  void set_type(const FunctionType *type);
+
   Namespace &args_namespace() { return _args_ns; }
   const Namespace &args_namespace() const { return _args_ns; }
 
   Namespace &locals_namespace() { return _locals_ns; }
   const Namespace &locals_namespace() const { return _locals_ns; }
+
+  void push_basicblock(BasicBlock &&bb) {
+    _bbs.emplace_back(std::move(bb));
+  }
+
+  unsigned next_register() {
+    unsigned r = _registers;
+    ++_registers;
+    return r;
+  }
+
+  const std::vector<BasicBlock> &basicblocks() const { return _bbs; }
 };
 
 struct Variable : Symbol {

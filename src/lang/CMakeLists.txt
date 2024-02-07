@@ -1,5 +1,6 @@
 set(SOURCES
   firstpass.cpp
+  iremit.cpp
   lexer.cpp
   nodes.cpp
   parser.cpp

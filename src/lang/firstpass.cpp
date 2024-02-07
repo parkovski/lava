@@ -55,8 +55,11 @@ void FirstPass::visit(const FunDefItem &item) {
       std::make_unique<Function>(name, &type, *_current_ns)
      )) {
     auto fn = dynamic_cast<Function*>(_current_ns->get(name));
-    if (!fn || type != *fn->type()) {
+    if (!fn || !type.are_types_same(*fn->type())) {
       throw std::runtime_error{"Function declaration/definition mismatch"};
+    } else {
+      // Set the type to have correct arg names.
+      fn->set_type(&type);
     }
   }
 }
@@ -78,6 +81,7 @@ void TypeVisitor::visit(const BinaryExpr &binary) {
     NodeVisitor::visit(*binary.left());
     assert(type == nullptr && _current_ns);
     NodeVisitor::visit(*binary.right());
+    assert(type);
   } else {
     throw std::runtime_error{"Expression not supported for type"};
   }

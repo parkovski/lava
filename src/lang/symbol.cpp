@@ -288,11 +288,28 @@ size_t FunctionType::hash() const {
   boost::hash_combine(hash, return_type->hash());
   for (auto const &arg : arg_types) {
     boost::hash_combine(hash, arg.type->hash());
+    boost::hash_combine(hash, arg.name);
   }
   return hash;
 }
 
 bool FunctionType::operator==(const FunctionType &other) const {
+  if (arg_types.size() != other.arg_types.size()) {
+    return false;
+  }
+  if (*return_type != *other.return_type) {
+    return false;
+  }
+  for (size_t i = 0; i < arg_types.size(); ++i) {
+    if (arg_types[i].type != other.arg_types[i].type ||
+        arg_types[i].name != other.arg_types[i].name) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool FunctionType::are_types_same(const FunctionType &other) const {
   if (arg_types.size() != other.arg_types.size()) {
     return false;
   }
@@ -320,6 +337,12 @@ Function::Function(InternString name, const FunctionType *type,
   , _args_ns{current_ns}
   , _locals_ns{_args_ns}
 {
+  add_args();
+}
+
+void Function::set_type(const FunctionType *type) {
+  _type = type;
+  _args_ns.clear();
   add_args();
 }
 

@@ -31,6 +31,9 @@ target_link_libraries(print-syntax lava-lang fmt::fmt)
 add_executable(print-ops print-ops.cpp)
 target_link_libraries(print-ops lava-lang fmt::fmt)
 
+add_executable(print-ir print-ir.cpp)
+target_link_libraries(print-ir lava-lang fmt::fmt)
+
 include(CTest)
 include(Catch)
 catch_discover_tests(test)
