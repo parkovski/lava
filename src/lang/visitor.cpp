@@ -35,6 +35,21 @@ void NodeVisitor::visit(const Expr &expr) {
   case ExprKind::Scope:
     visit(static_cast<const ScopeExpr&>(expr));
     break;
+  case ExprKind::Return:
+    visit(static_cast<const ReturnExpr&>(expr));
+    break;
+  case ExprKind::If:
+    visit(static_cast<const IfExpr&>(expr));
+    break;
+  case ExprKind::While:
+    visit(static_cast<const WhileExpr&>(expr));
+    break;
+  case ExprKind::Loop:
+    visit(static_cast<const LoopExpr&>(expr));
+    break;
+  case ExprKind::BreakContinue:
+    visit(static_cast<const BreakContinueExpr&>(expr));
+    break;
   }
 }
 
@@ -69,6 +84,38 @@ void NodeVisitor::visit(const InvokeExpr &expr) {
 void NodeVisitor::visit(const ScopeExpr &expr) {
   for (auto const &inner_expr: expr.exprs()) {
     visit(*inner_expr.value);
+  }
+}
+
+void NodeVisitor::visit(const ReturnExpr &expr) {
+  if (expr.expr()) {
+    visit(*expr.expr());
+  }
+}
+
+void NodeVisitor::visit(const IfExpr &expr) {
+  visit(*expr.expr());
+  visit(expr.scope());
+  for (auto const &else_ : expr.elses()) {
+    if (else_.expr()) {
+      visit(*else_.expr());
+    }
+    visit(else_.scope());
+  }
+}
+
+void NodeVisitor::visit(const WhileExpr &expr) {
+  visit(*expr.expr());
+  visit(expr.scope());
+}
+
+void NodeVisitor::visit(const LoopExpr &expr) {
+  visit(expr.scope());
+}
+
+void NodeVisitor::visit(const BreakContinueExpr &expr) {
+  if (expr.expr()) {
+    visit(*expr.expr());
   }
 }
 

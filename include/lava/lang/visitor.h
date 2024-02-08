@@ -17,6 +17,11 @@ struct NodeVisitor {
   virtual void visit(const ParenExpr &expr);
   virtual void visit(const InvokeExpr &expr);
   virtual void visit(const ScopeExpr &expr);
+  virtual void visit(const ReturnExpr &expr);
+  virtual void visit(const IfExpr &expr);
+  virtual void visit(const WhileExpr &expr);
+  virtual void visit(const LoopExpr &expr);
+  virtual void visit(const BreakContinueExpr &expr);
 
   virtual void visit(const Item &item);
   virtual void visit(const EmptyItem &item);

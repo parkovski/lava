@@ -55,6 +55,9 @@ public:
   std::optional<ScopeExpr> parse_scope_expr();
   std::unique_ptr<InvokeExpr> parse_invoke_expr(std::unique_ptr<Expr> left);
   std::unique_ptr<Expr> parse_primary();
+  std::unique_ptr<IfExpr> parse_if();
+  std::unique_ptr<WhileExpr> parse_while();
+  std::unique_ptr<LoopExpr> parse_loop();
 
 private:
   static unsigned get_prefix_prec(int op, int flags);

@@ -53,6 +53,11 @@ enum class ExprKind {
   Paren,
   Invoke,
   Scope,
+  Return,
+  If,
+  While,
+  Loop,
+  BreakContinue,
 };
 
 struct Expr : Node {
@@ -329,6 +334,159 @@ public:
   ExprKind expr_kind() const override;
 
   const ExprsWithDelimiter &exprs() const { return _exprs; }
+};
+
+struct ReturnExpr final : Expr {
+private:
+  Token _return;
+  std::unique_ptr<Expr> _expr;
+
+public:
+  ReturnExpr(Token return_, std::unique_ptr<Expr> expr)
+    : _return{return_}
+    , _expr{std::move(expr)}
+  {}
+
+  ReturnExpr(Token return_)
+    : _return{return_}
+    , _expr{}
+  {}
+
+  ~ReturnExpr();
+
+  SourceLoc start() const override;
+  SourceLoc end() const override;
+  ExprKind expr_kind() const override;
+
+  const Expr *expr() const { return _expr.get(); }
+};
+
+struct ElsePart {
+private:
+  Token _else;
+  Token _if;
+  std::unique_ptr<Expr> _expr;
+  ScopeExpr _scope;
+
+public:
+  ElsePart(Token else_, Token if_, std::unique_ptr<Expr> expr, ScopeExpr scope)
+    : _else{else_}
+    , _if{if_}
+    , _expr{std::move(expr)}
+    , _scope{std::move(scope)}
+  {}
+
+  ElsePart(Token else_, ScopeExpr scope)
+    : _else{else_}
+    , _if{}
+    , _expr{}
+    , _scope{std::move(scope)}
+  {}
+
+  ElsePart(ElsePart&&) = default;
+  ElsePart &operator=(ElsePart&&) = default;
+
+  SourceLoc start() const { return _else.start; }
+  SourceLoc end() const { return _scope.end(); }
+  const Expr *expr() const { return _expr.get(); }
+  const ScopeExpr &scope() const { return _scope; }
+};
+
+struct IfExpr final : Expr {
+private:
+  Token _if;
+  std::unique_ptr<Expr> _expr;
+  ScopeExpr _scope;
+  std::vector<ElsePart> _elses;
+
+public:
+  IfExpr(Token if_, std::unique_ptr<Expr> expr, ScopeExpr scope,
+         std::vector<ElsePart> elses)
+    : _if{if_}
+    , _expr{std::move(expr)}
+    , _scope{std::move(scope)}
+    , _elses{std::move(elses)}
+  {}
+
+  ~IfExpr();
+
+  SourceLoc start() const override;
+  SourceLoc end() const override;
+  ExprKind expr_kind() const override;
+
+  const Expr *expr() const { return _expr.get(); }
+  const ScopeExpr &scope() const { return _scope; }
+  const std::vector<ElsePart> &elses() const { return _elses; }
+};
+
+struct WhileExpr final : Expr {
+private:
+  Token _while;
+  std::unique_ptr<Expr> _expr;
+  ScopeExpr _scope;
+
+public:
+  WhileExpr (Token while_, std::unique_ptr<Expr> expr, ScopeExpr scope)
+    : _while{while_}
+    , _expr{std::move(expr)}
+    , _scope{std::move(scope)}
+  {}
+
+  ~WhileExpr();
+
+  SourceLoc start() const override;
+  SourceLoc end() const override;
+  ExprKind expr_kind() const override;
+
+  const Expr *expr() const { return _expr.get(); }
+  const ScopeExpr &scope() const { return _scope; }
+};
+
+struct LoopExpr final : Expr {
+private:
+  Token _loop;
+  ScopeExpr _scope;
+
+public:
+  LoopExpr(Token loop, ScopeExpr scope)
+    : _loop{loop}
+    , _scope{std::move(scope)}
+  {}
+
+  ~LoopExpr();
+
+  SourceLoc start() const override;
+  SourceLoc end() const override;
+  ExprKind expr_kind() const override;
+
+  const ScopeExpr &scope() const { return _scope; }
+};
+
+struct BreakContinueExpr final : Expr {
+private:
+  Token _break_or_continue;
+  std::unique_ptr<Expr> _expr;
+
+public:
+  BreakContinueExpr(Token break_or_continue, std::unique_ptr<Expr> expr)
+    : _break_or_continue{break_or_continue}
+    , _expr{std::move(expr)}
+  {}
+
+  BreakContinueExpr(Token break_or_continue)
+    : _break_or_continue(break_or_continue)
+    , _expr{nullptr}
+  {}
+
+  ~BreakContinueExpr();
+
+  SourceLoc start() const override;
+  SourceLoc end() const override;
+  ExprKind expr_kind() const override;
+
+  bool is_break() const { return _break_or_continue.what == TkBreak; }
+  bool is_continue() const { return _break_or_continue.what == TkContinue; }
+  const Expr *expr() const { return _expr.get(); }
 };
 
 enum class ItemKind {

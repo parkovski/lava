@@ -9,9 +9,12 @@ using namespace lava::lang;
 static const unsigned CallPrec = 17;
 
 #define ERROR(err) \
-  fprintf(stderr, "%s:%d:%d: error: %s\n", \
+  fprintf(stderr, "%s:%d:%d: error: %s (found %.*s)\n", \
           token.doc->name.c_str(), \
-          token.start.line, token.start.column, err)
+          token.start.line, token.start.column, err, \
+          (int)get_token_name(token.what).size(), \
+          get_token_name(token.what).data())
+
 
 Parser::Parser(Lexer &lexer) noexcept
   : lexer{&lexer}
@@ -268,6 +271,36 @@ std::unique_ptr<StructDefItem> Parser::parse_struct_or_union() {
 std::unique_ptr<Expr> Parser::parse_expr(int flags, unsigned prec) {
   std::unique_ptr<Expr> expr;
 
+  switch (token.what) {
+  case TkLeftBrace:
+    return std::make_unique<ScopeExpr>(parse_scope_expr().value());
+
+  case TkIf:
+    return parse_if();
+
+  case TkWhile:
+    return parse_while();
+
+  case TkLoop:
+    return parse_loop();
+
+  case TkBreak:
+  case TkContinue:
+    {
+      Token break_or_continue = take();
+      if (token.what != TkSemi) {
+        expr = parse_expr(flags, 1);
+        return std::make_unique<BreakContinueExpr>(
+          break_or_continue,
+          std::move(expr)
+        );
+      } else {
+        return std::make_unique<BreakContinueExpr>(break_or_continue);
+      }
+    }
+    break;
+  }
+
   if (auto prefix_prec = get_prefix_prec(token.what, flags); prefix_prec > 0) {
     Token op = take();
     auto right = parse_expr(flags, prefix_prec);
@@ -471,6 +504,51 @@ std::unique_ptr<Expr> Parser::parse_primary() {
   }
 
   return expr;
+}
+
+std::unique_ptr<IfExpr> Parser::parse_if() {
+  assert(token.what == TkIf);
+  auto tk_if = take();
+
+  auto expr = parse_expr();
+  auto scope = parse_scope_expr();
+
+  std::vector<ElsePart> elses;
+  while (token.what == TkElse) {
+    Token tk_else = take();
+    if (token.what == TkIf) {
+      Token tk_if = take();
+      auto else_if_expr = parse_expr();
+      auto body = parse_scope_expr();
+      elses.emplace_back(tk_else, tk_if, std::move(else_if_expr),
+                         std::move(body).value());
+    } else {
+      auto body = parse_scope_expr();
+      elses.emplace_back(tk_else, std::move(body).value());
+    }
+  }
+
+  return std::make_unique<IfExpr>(
+    tk_if, std::move(expr), std::move(scope).value(), std::move(elses)
+  );
+}
+
+std::unique_ptr<WhileExpr> Parser::parse_while() {
+  assert(token.what == TkWhile);
+  auto tk_while = take();
+
+  auto expr = parse_expr();
+  auto scope = parse_scope_expr();
+  return std::make_unique<WhileExpr>(
+    tk_while, std::move(expr), std::move(scope).value()
+  );
+}
+
+std::unique_ptr<LoopExpr> Parser::parse_loop() {
+  assert(token.what == TkLoop);
+  auto tk_loop = take();
+  auto scope = parse_scope_expr();
+  return std::make_unique<LoopExpr>(tk_loop, std::move(scope).value());
 }
 
 unsigned Parser::get_prefix_prec(int op, int flags) {

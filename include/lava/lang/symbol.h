@@ -493,6 +493,7 @@ public:
     return r;
   }
 
+  std::vector<BasicBlock> &basicblocks() { return _bbs; }
   const std::vector<BasicBlock> &basicblocks() const { return _bbs; }
 };
 

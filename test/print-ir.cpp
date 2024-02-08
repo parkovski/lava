@@ -55,6 +55,7 @@ int main(int argc, char *argv[]) {
     if (auto fn = dynamic_cast<Function*>(sym)) {
       fmt::print("function {}:\n", symtab.get_string(fn->name()));
       for (size_t j = 0; j < fn->basicblocks().size(); ++j) {
+        fmt::print("#{}:\n", j);
         auto const &bb = fn->basicblocks()[j];
         for (size_t k = 0; k < bb.instrs.size(); ++k) {
           fmt::print("{}\n", instr_to_string(bb.instrs[k]));

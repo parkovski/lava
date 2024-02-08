@@ -97,6 +97,8 @@ struct BinaryArgs {
 
 struct CallArgs {
   unsigned fn;
+  unsigned arg_count;
+  unsigned *args;
 };
 
 struct ReturnArgs {
@@ -109,6 +111,7 @@ struct JumpArgs {
 
 struct JumpIfArgs {
   unsigned bb;
+  unsigned bb_else;
   unsigned cond;
 };
 
@@ -128,6 +131,24 @@ struct Instruction {
     JumpArgs jmp;
     JumpIfArgs jmpif;
   };
+
+  Instruction() : op{Op::Nop} {}
+  Instruction(LdI32Args ldi32) : op{Op::LdI32}, ldi32{ldi32} {}
+  Instruction(LdI64Args ldi64) : op{Op::LdI64}, ldi64{ldi64} {}
+  Instruction(LdF32Args ldf32) : op{Op::LdF32}, ldf32{ldf32} {}
+  Instruction(LdF64Args ldf64) : op{Op::LdF64}, ldf64{ldf64} {}
+  Instruction(LdStrArgs ldstr) : op{Op::LdStr}, ldstr{ldstr} {}
+  Instruction(LdVarArgs ldvar) : op{Op::LdVar}, ldvar{ldvar} {}
+  Instruction(Op op, UnaryArgs unary) : op{op}, unary{unary} {}
+  Instruction(Op op, BinaryArgs binary) : op{op}, binary{binary} {}
+  Instruction(CallArgs call) : op{Op::Call}, call{call} {}
+  Instruction(ReturnArgs ret) : op{Op::Ret}, ret{ret} {}
+  Instruction(JumpArgs jmp) : op{Op::Jmp}, jmp{jmp} {}
+  Instruction(JumpIfArgs jmpif) : op{Op::JmpIf}, jmpif{jmpif} {}
+
+  Instruction(Instruction&&);
+  Instruction &operator=(Instruction&&);
+  ~Instruction();
 };
 
 std::string instr_to_string(const Instruction &instr);

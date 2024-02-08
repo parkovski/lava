@@ -76,8 +76,18 @@ std::string lava::lang::instr_to_string(const Instruction &instr) {
       << " $" << instr.unary.src;
     break;
 
+  case Op::Call:
+    ss << "Call $" << instr.call.fn;
+    for (unsigned i = 0; i < instr.call.arg_count; ++i) {
+      ss << ", $" << instr.call.args[i];
+    }
+    break;
+
   case Op::Ret:
-    ss << "Ret $" << instr.ret.value;
+    ss << "Ret";
+    if (instr.ret.value != (unsigned)-1) {
+      ss << " $" << instr.ret.value;
+    }
     break;
 
   case Op::Jmp:
@@ -85,7 +95,8 @@ std::string lava::lang::instr_to_string(const Instruction &instr) {
     break;
 
   case Op::JmpIf:
-    ss << "Jmp #" << instr.jmpif.bb << " if $" << instr.jmpif.cond;
+    ss << "JmpIf $" << instr.jmpif.cond << ", #" << instr.jmpif.bb << ", #"
+      << instr.jmpif.bb_else;
     break;
 
   default:
@@ -94,6 +105,23 @@ std::string lava::lang::instr_to_string(const Instruction &instr) {
   }
 
   return std::move(ss).str();
+}
+
+Instruction::Instruction(Instruction &&other) {
+  *this = std::move(other);
+}
+
+Instruction &Instruction::operator=(Instruction &&other) {
+  if (&other == this) return *this;
+  memcpy(this, &other, sizeof(Instruction));
+  other.op = Op::Nop;
+  return *this;
+}
+
+Instruction::~Instruction() {
+  if (op == Op::Call) {
+    delete [] call.args;
+  }
 }
 
 IREmitter::IREmitter(SymbolTable &symtab)
@@ -106,54 +134,39 @@ void IREmitter::visit(const LiteralExpr &expr) {
   case LiteralType::Int:
     _current_reg = _current_fn->next_register();
     if (expr.int_value() <= UINT32_MAX) {
-      _current_bb.instrs.emplace_back(Instruction{
-        .op = Op::LdI32,
-        .ldi32 = {
-          .dest = _current_reg,
-          .value = (uint32_t)expr.int_value(),
-        }
+      _current_bb.instrs.emplace_back(LdI32Args {
+        .dest = _current_reg,
+        .value = (uint32_t)expr.int_value(),
       });
     } else {
-      _current_bb.instrs.emplace_back(Instruction{
-        .op = Op::LdI64,
-        .ldi64 = {
-          .dest = _current_reg,
-          .value = expr.int_value(),
-        }
+      _current_bb.instrs.emplace_back(LdI64Args {
+        .dest = _current_reg,
+        .value = expr.int_value(),
       });
     }
     break;
   case LiteralType::Float:
     _current_reg = _current_fn->next_register();
-    _current_bb.instrs.emplace_back(Instruction{
-      .op = Op::LdF32,
-      .ldf32 = {
-        .dest = _current_reg,
-        .value = expr.float_value(),
-      }
+    _current_bb.instrs.emplace_back(LdF32Args {
+      .dest = _current_reg,
+      .value = expr.float_value(),
     });
     break;
   case LiteralType::Double:
     _current_reg = _current_fn->next_register();
-    _current_bb.instrs.emplace_back(Instruction{
-      .op = Op::LdF64,
-      .ldf64 = {
-        .dest = _current_reg,
-        .value = expr.double_value(),
-      }
+    _current_bb.instrs.emplace_back(LdF64Args {
+      .dest = _current_reg,
+      .value = expr.double_value(),
     });
     break;
   case LiteralType::String:
     {
       auto intern_string = _symtab->intern(expr.string_value());
       _current_reg = _current_fn->next_register();
-      _current_bb.instrs.emplace_back(Instruction{
-        .op = Op::LdStr,
-        .ldstr = {
-          .dest = _current_reg,
-          .offset = (unsigned)intern_string.offset,
-          .size = (unsigned)intern_string.size,
-        },
+      _current_bb.instrs.emplace_back(LdStrArgs {
+        .dest = _current_reg,
+        .offset = (unsigned)intern_string.offset,
+        .size = (unsigned)intern_string.size,
       });
     }
     break;
@@ -163,13 +176,10 @@ void IREmitter::visit(const LiteralExpr &expr) {
 void IREmitter::visit(const IdentExpr &expr) {
   _current_reg = _current_fn->next_register();
   auto intern_string = _symtab->intern(expr.value());
-  _current_bb.instrs.emplace_back(Instruction{
-    .op = Op::LdVar,
-    .ldvar = {
-      .dest = _current_reg,
-      .offset = (unsigned)intern_string.offset,
-      .size = (unsigned)intern_string.size,
-    },
+  _current_bb.instrs.emplace_back(LdVarArgs {
+    .dest = _current_reg,
+    .offset = (unsigned)intern_string.offset,
+    .size = (unsigned)intern_string.size,
   });
 }
 
@@ -204,20 +214,16 @@ void IREmitter::visit(const PrefixExpr &expr) {
   case TkDot:
     throw std::runtime_error{"Not supported: . (prefix)"};
   case TkReturn:
-    _current_bb.instrs.emplace_back(Instruction{
-      .op = Op::Ret,
-      .ret = { .value = _current_reg }
+    _current_bb.instrs.emplace_back(ReturnArgs {
+      .value = _current_reg,
     });
     return;
   }
 
   _current_reg = _current_fn->next_register();
-  _current_bb.instrs.emplace_back(Instruction{
-    .op = op,
-    .unary = {
-      .dest = _current_reg,
-      .src = expr_reg,
-    },
+  _current_bb.instrs.emplace_back(op, UnaryArgs {
+    .dest = _current_reg,
+    .src = expr_reg,
   });
 }
 
@@ -306,24 +312,222 @@ void IREmitter::visit(const BinaryExpr &expr) {
   }
 
   _current_reg = _current_fn->next_register();
-  _current_bb.instrs.emplace_back(Instruction{
-    .op = op,
-    .binary = {
-      .dest = _current_reg,
-      .src = { left_reg, right_reg }
-    },
+  _current_bb.instrs.emplace_back(op, BinaryArgs {
+    .dest = _current_reg,
+    .src = { left_reg, right_reg },
   });
 }
 
 void IREmitter::visit(const InvokeExpr &expr) {
-  _current_bb.instrs.emplace_back(Instruction{
-    .op = Op::Call,
-    .call = { .fn = 0 }
-  });
+  unsigned arg_count = (unsigned)expr.args().size();
+  unsigned *args = new unsigned[arg_count];
+  try {
+    for (unsigned i = 0; i < arg_count; ++i) {
+      NodeVisitor::visit(*expr.args()[i].value);
+      args[i] = _current_reg;
+    }
+    NodeVisitor::visit(*expr.expr());
+    _current_bb.instrs.emplace_back(CallArgs {
+      .fn = _current_reg,
+      .arg_count = arg_count,
+      .args = args,
+    });
+  } catch (...) {
+    delete [] args;
+    throw;
+  }
 }
 
 void IREmitter::visit(const ScopeExpr &expr) {
   NodeVisitor::visit(expr);
+}
+
+void IREmitter::visit(const ReturnExpr &expr) {
+  if (expr.expr()) {
+    NodeVisitor::visit(*expr.expr());
+    _current_bb.instrs.emplace_back(ReturnArgs {
+      .value = _current_reg,
+    });
+  } else {
+    _current_bb.instrs.emplace_back(ReturnArgs {
+      .value = (unsigned)-1,
+    });
+  }
+  _current_fn->push_basicblock(std::move(_current_bb));
+  _current_bb = BasicBlock{};
+}
+
+void IREmitter::visit(const IfExpr &expr) {
+  NodeVisitor::visit(*expr.expr());
+  auto if_bb_index = _current_fn->basicblocks().size();
+  _current_bb.instrs.emplace_back(JumpIfArgs {
+    .bb = (unsigned)_current_fn->basicblocks().size() + 1,
+    .bb_else = (unsigned)-1,
+    .cond = _current_reg,
+  });
+  _current_fn->push_basicblock(std::move(_current_bb));
+  _current_bb = BasicBlock{};
+
+  NodeVisitor::visit(expr.scope());
+
+  bool seen_plain_else = false;
+  for (auto const &else_ : expr.elses()) {
+    if (else_.expr()) {
+      _current_fn->basicblocks()[if_bb_index].instrs.back().jmpif.bb_else =
+        (unsigned)_current_fn->basicblocks().size() + 1;
+      _current_fn->push_basicblock(std::move(_current_bb));
+      _current_bb = BasicBlock{};
+      NodeVisitor::visit(*else_.expr());
+
+      if_bb_index = _current_fn->basicblocks().size();
+      _current_bb.instrs.emplace_back(JumpIfArgs {
+        .bb = (unsigned)_current_fn->basicblocks().size() + 1,
+        .bb_else = (unsigned)-1,
+        .cond = _current_reg,
+      });
+      _current_fn->push_basicblock(std::move(_current_bb));
+      _current_bb = BasicBlock{};
+    } else {
+      if (seen_plain_else) {
+        throw std::runtime_error{"duplicate else block"};
+      } else {
+        seen_plain_else = true;
+      }
+      _current_fn->basicblocks()[if_bb_index].instrs.back().jmpif.bb_else =
+        (unsigned)_current_fn->basicblocks().size() + 1;
+      _current_fn->push_basicblock(std::move(_current_bb));
+      _current_bb = BasicBlock{};
+    }
+    NodeVisitor::visit(else_.scope());
+  }
+
+  if (_current_fn->basicblocks()[if_bb_index].instrs.back().jmpif.bb_else ==
+    (unsigned)-1) {
+    _current_fn->basicblocks()[if_bb_index].instrs.back().jmpif.bb_else =
+      (unsigned)_current_fn->basicblocks().size() + 1;
+    _current_fn->push_basicblock(std::move(_current_bb));
+    _current_bb = BasicBlock{};
+  }
+}
+
+void IREmitter::visit(const WhileExpr &expr) {
+  _current_bb.instrs.emplace_back(JumpArgs {
+    .bb = (unsigned)_current_fn->basicblocks().size() + 1,
+  });
+  _current_fn->push_basicblock(std::move(_current_bb));
+  _current_bb = BasicBlock{};
+  unsigned loop_to = (unsigned)_current_fn->basicblocks().size();
+  NodeVisitor::visit(*expr.expr());
+  unsigned bb_if = (unsigned)_current_fn->basicblocks().size();
+  _current_bb.instrs.emplace_back(JumpIfArgs {
+    .bb = (unsigned)_current_fn->basicblocks().size() + 1,
+    .bb_else = (unsigned)-1,
+    .cond = _current_reg,
+  });
+  _current_fn->push_basicblock(std::move(_current_bb));
+  _current_bb = BasicBlock{};
+
+  auto prev_continue = _current_continue;
+  _current_continue = loop_to;
+  NodeVisitor::visit(expr.scope());
+  _current_continue = prev_continue;
+  _current_bb.instrs.emplace_back(JumpArgs {
+    .bb = loop_to,
+  });
+  _current_fn->push_basicblock(std::move(_current_bb));
+  _current_bb = BasicBlock{};
+  _current_fn->basicblocks()[bb_if].instrs.back().jmpif.bb_else =
+    (unsigned)_current_fn->basicblocks().size();
+  fix_breaks(loop_to, (unsigned)_current_fn->basicblocks().size());
+}
+
+void IREmitter::visit(const LoopExpr &expr) {
+  _current_bb.instrs.emplace_back(JumpArgs {
+    .bb = (unsigned)_current_fn->basicblocks().size() + 1,
+  });
+  _current_fn->push_basicblock(std::move(_current_bb));
+  _current_bb = BasicBlock{};
+  unsigned loop_to = (unsigned)_current_fn->basicblocks().size();
+  auto prev_continue = _current_continue;
+  _current_continue = loop_to;
+  NodeVisitor::visit(expr.scope());
+  _current_continue = prev_continue;
+  _current_bb.instrs.emplace_back(JumpArgs {
+    .bb = loop_to,
+  });
+  _current_fn->push_basicblock(std::move(_current_bb));
+  _current_bb = BasicBlock{};
+  fix_breaks(loop_to, (unsigned)_current_fn->basicblocks().size());
+}
+
+void IREmitter::visit(const BreakContinueExpr &expr) {
+  if (expr.is_break()) {
+    _current_bb.instrs.emplace_back(JumpArgs {
+      .bb = (unsigned)-1,
+    });
+  } else {
+    _current_bb.instrs.emplace_back(JumpArgs {
+      .bb = _current_continue,
+    });
+  }
+  _current_fn->push_basicblock(std::move(_current_bb));
+  _current_bb = BasicBlock{};
+}
+
+void IREmitter::fix_breaks(unsigned from, unsigned to) {
+  for (unsigned i = from; i < to; ++i) {
+    auto &bb = _current_fn->basicblocks()[i];
+    for (auto &instr : bb.instrs) {
+      if (instr.op == Op::Jmp && instr.jmp.bb == (unsigned)-1) {
+        instr.jmp.bb = to;
+      }
+    }
+  }
+}
+
+bool IREmitter::simplify_jumps() {
+  bool made_edit = false;
+  for (size_t i = 0; i < _current_fn->basicblocks().size(); ++i) {
+    auto &bb = _current_fn->basicblocks()[i];
+    if (bb.instrs.size() && bb.instrs[0].op == Op::Jmp) {
+      made_edit = true;
+      auto target = bb.instrs[0].jmp.bb;
+      if (target >= i) --target;
+      for (size_t j = 0; j < _current_fn->basicblocks().size(); ++j) {
+        auto &bb2 = _current_fn->basicblocks()[j];
+        for (size_t k = 0; k < bb2.instrs.size(); ++k) {
+          auto &instr = bb2.instrs[k];
+          if (instr.op == Op::Jmp) {
+            if (instr.jmp.bb == i) {
+              instr.jmp.bb = target;
+            } else if (instr.jmp.bb > i) {
+              --instr.jmp.bb;
+            }
+          } else if (instr.op == Op::JmpIf) {
+            if (instr.jmpif.bb == i) {
+              instr.jmp.bb = target;
+            } else if (instr.jmpif.bb > i) {
+              --instr.jmpif.bb;
+            }
+
+            if (instr.jmpif.bb_else == i) {
+              instr.jmpif.bb_else = target;
+            } else if (instr.jmpif.bb_else > i) {
+              --instr.jmpif.bb_else;
+            }
+
+            if (instr.jmpif.bb == instr.jmpif.bb_else) {
+              auto bb = instr.jmpif.bb;
+              instr.op = Op::Jmp;
+              instr.jmp.bb = bb;
+            }
+          }
+        }
+      }
+      _current_fn->basicblocks().erase(_current_fn->basicblocks().begin() + i);
+    }
+  }
+  return made_edit;
 }
 
 void IREmitter::visit(const FunDefItem &item) {
@@ -341,9 +545,13 @@ void IREmitter::visit(const FunDefItem &item) {
   auto *prev_ns = _current_ns;
   _current_ns = &fn->locals_namespace();
   NodeVisitor::visit(item);
-  if (!_current_bb.instrs.empty()) {
-    _current_fn->push_basicblock(std::move(_current_bb));
+  if (_current_bb.instrs.empty()) {
+    _current_bb.instrs.emplace_back(ReturnArgs {
+      .value = (unsigned)-1,
+    });
   }
+  _current_fn->push_basicblock(std::move(_current_bb));
+  while (simplify_jumps());
   _current_ns = prev_ns;
   _current_fn = nullptr;
 }

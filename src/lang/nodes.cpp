@@ -179,6 +179,91 @@ ExprKind ScopeExpr::expr_kind() const {
 
 // ------------------------------------------------------------------------- //
 
+ReturnExpr::~ReturnExpr() {}
+
+SourceLoc ReturnExpr::start() const {
+  return _return.start;
+}
+
+SourceLoc ReturnExpr::end() const {
+  return _expr ? _expr->end() : _return.end;
+}
+
+ExprKind ReturnExpr::expr_kind() const {
+  return ExprKind::Return;
+}
+
+// ------------------------------------------------------------------------- //
+
+IfExpr::~IfExpr() {}
+
+SourceLoc IfExpr::start() const {
+  return _if.start;
+}
+
+SourceLoc IfExpr::end() const {
+  if (_elses.empty()) {
+    return _scope.end();
+  } else {
+    return _elses.back().end();
+  }
+}
+
+ExprKind IfExpr::expr_kind() const {
+  return ExprKind::If;
+}
+
+// ------------------------------------------------------------------------- //
+
+WhileExpr::~WhileExpr() {}
+
+SourceLoc WhileExpr::start() const {
+  return _while.start;
+}
+
+SourceLoc WhileExpr::end() const {
+  return _scope.end();
+}
+
+ExprKind WhileExpr::expr_kind() const {
+  return ExprKind::While;
+}
+
+// ------------------------------------------------------------------------- //
+
+LoopExpr::~LoopExpr() {}
+
+
+SourceLoc LoopExpr::start() const {
+  return _loop.start;
+}
+
+SourceLoc LoopExpr::end() const {
+  return _scope.end();
+}
+
+ExprKind LoopExpr::expr_kind() const {
+  return ExprKind::Loop;
+}
+
+// ------------------------------------------------------------------------- //
+
+BreakContinueExpr::~BreakContinueExpr() {}
+
+SourceLoc BreakContinueExpr::start() const {
+  return _break_or_continue.start;
+}
+
+SourceLoc BreakContinueExpr::end() const {
+  return _expr ? _expr->end() : _break_or_continue.end;
+}
+
+ExprKind BreakContinueExpr::expr_kind() const {
+  return ExprKind::BreakContinue;
+}
+
+// ------------------------------------------------------------------------- //
+
 NodeKind Item::node_kind() const {
   return NodeKind::Item;
 }

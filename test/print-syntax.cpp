@@ -127,10 +127,66 @@ struct Printer {
   }
 
   void print_scope_expr(const ScopeExpr &scope) {
-    fmt::print("{}{{\n", _indent);
+    fmt::print("{{\n", _indent);
     indent();
+    for (auto const &expr : scope.exprs()) {
+      fmt::print("{}", _indent);
+      print_expr(*expr.value);
+      fmt::print("\n");
+    }
     dedent();
     fmt::print("{}}}\n", _indent);
+  }
+
+  void print_return_expr(const ReturnExpr &ret) {
+    if (ret.expr()) {
+      fmt::print("return ");
+      print_expr(*ret.expr());
+    } else {
+      fmt::print("return");
+    }
+  }
+
+  void print_if_expr(const IfExpr &if_) {
+    fmt::print("if ");
+    print_expr(*if_.expr());
+    print_scope_expr(if_.scope());
+
+    auto const &elses = if_.elses();
+    for (auto const &else_ : elses) {
+      if (else_.expr()) {
+        fmt::print("{}else if ", _indent);
+        print_expr(*else_.expr());
+        print_scope_expr(else_.scope());
+      } else {
+        fmt::print("{}else ", _indent);
+        print_scope_expr(else_.scope());
+      }
+    }
+  }
+
+  void print_while_expr(const WhileExpr &while_) {
+    fmt::print("while ");
+    print_expr(*while_.expr());
+    print_scope_expr(while_.scope());
+  }
+
+  void print_loop_expr(const LoopExpr &loop) {
+    fmt::print("loop ");
+    print_scope_expr(loop.scope());
+  }
+
+  void print_break_continue_expr(const BreakContinueExpr &bc) {
+    if (bc.is_break()) {
+      fmt::print("break");
+    } else {
+      fmt::print("continue");
+    }
+
+    if (bc.expr()) {
+      fmt::print(" ");
+      print_expr(*bc.expr());
+    }
   }
 
   void print_expr(const Expr &expr) {
@@ -158,6 +214,21 @@ struct Printer {
       break;
     case ExprKind::Scope:
       print_scope_expr(static_cast<const ScopeExpr&>(expr));
+      break;
+    case ExprKind::Return:
+      print_return_expr(static_cast<const ReturnExpr&>(expr));
+      break;
+    case ExprKind::If:
+      print_if_expr(static_cast<const IfExpr&>(expr));
+      break;
+    case ExprKind::While:
+      print_while_expr(static_cast<const WhileExpr&>(expr));
+      break;
+    case ExprKind::Loop:
+      print_loop_expr(static_cast<const LoopExpr&>(expr));
+      break;
+    case ExprKind::BreakContinue:
+      print_break_continue_expr(static_cast<const BreakContinueExpr&>(expr));
       break;
     }
   }
